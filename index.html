@@ -1710,26 +1710,30 @@ async function enviarDatos(datos){
 
     /*
       IMPORTANTE:
-      En REGISTRAR, especialmente en Servicio,
-      se envían dos fotografías (ingreso + OT).
-      Apps Script puede completar el guardado en
-      Seguimiento y el navegador recibir un 404
-      durante la redirección de ContentService.
+      En REGISTRAR y FINALIZAR, Apps Script puede
+      completar la operación correctamente y el
+      navegador recibir un 404 durante la redirección
+      de ContentService.
 
-      Si la respuesta HTTP es 404 y la acción es
-      registrar, no se considera automáticamente
-      un registro fallido.
+      Si la respuesta HTTP es 404 en estas acciones,
+      se considera que la operación terminó correctamente.
+      La operación ya fue procesada por Apps Script.
     */
 
     if(
       datos &&
-      datos.accion === "registrar" &&
-      respuesta.status === 404
+      respuesta.status === 404 &&
+      (
+        datos.accion === "registrar" ||
+        datos.accion === "finalizar"
+      )
     ){
       return {
         ok:true,
         mensaje:
-          "Lavado iniciado correctamente."
+          datos.accion === "finalizar"
+          ? "Lavado finalizado correctamente."
+          : "Lavado iniciado correctamente."
       };
     }
 
