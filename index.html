@@ -1793,175 +1793,101 @@ async function enviarDatos(datos){
 async function registrar(){
 
 const boton =
-document.getElementById(
-"btnRegistrar"
-);
+document.getElementById("btnRegistrar");
 
 const loading =
-document.getElementById(
-"loadingRegistro"
-);
-
+document.getElementById("loadingRegistro");
 
 try{
-
 
 const tipo =
 document.querySelector(
 'input[name="tipo"]:checked'
 ).value;
 
-
 const ot =
-document.getElementById(
-"ot"
-).value.trim();
-
+document.getElementById("ot").value.trim();
 
 const placa =
-document.getElementById(
-"placa"
-).value.trim();
-
+document.getElementById("placa").value.trim();
 
 const vin =
-document.getElementById(
-"vin"
-).value.trim();
-
+document.getElementById("vin").value.trim();
 
 const marca =
-document.getElementById(
-"marca"
-).value;
-
+document.getElementById("marca").value;
 
 const modelo = "";
-const servicio =
-document.getElementById(
-"servicio"
-).value.trim();
 
+const servicio =
+document.getElementById("servicio").value.trim();
 
 const observaciones =
-document.getElementById(
-"observaciones"
-).value.trim();
-
+document.getElementById("observaciones").value.trim();
 
 const archivoIngreso =
-document.getElementById(
-"fotoIngreso"
-).files[0];
-
+document.getElementById("fotoIngreso").files[0];
 
 const archivoOT =
-document.getElementById(
-"fotoOT"
-).files[0];
-
+document.getElementById("fotoOT").files[0];
 
 const archivoVIN =
-document.getElementById(
-"fotoVIN"
-).files[0];
+document.getElementById("fotoVIN").files[0];
 
-
-/* =================================================
-   VALIDACIONES
-================================================= */
-
-
-if(
-tipo === "Servicio" &&
-!placa
-){
-
-mostrarAlerta(
-"Debe ingresar la placa.",
-"error"
-);
-
-return;
-
+if(tipo === "Servicio" && !placa){
+  mostrarAlerta("Debe ingresar la placa.","error");
+  return;
 }
 
-
-if(
-!marca ||
-!servicio
-){
-
-mostrarAlerta(
-"Complete todos los campos obligatorios.",
-"error"
-);
-
-return;
-
+if(!marca || !servicio){
+  mostrarAlerta(
+    "Complete todos los campos obligatorios.",
+    "error"
+  );
+  return;
 }
-
 
 if(!archivoIngreso){
-
-mostrarAlerta(
-"Debe adjuntar la foto de ingreso.",
-"error"
-);
-
-return;
-
+  mostrarAlerta(
+    "Debe adjuntar la foto de ingreso.",
+    "error"
+  );
+  return;
 }
-
 
 boton.disabled = true;
-
 loading.style.display = "block";
 
-
-/* FOTO INGRESO */
-
 const fotoIngreso =
-await comprimirFoto(
-archivoIngreso
-);
-
-
-/* FOTO OT */
+await comprimirFoto(archivoIngreso);
 
 let fotoOT = "";
-
 if(archivoOT){
-
-fotoOT =
-await comprimirFoto(
-archivoOT
-);
-
+  fotoOT = await comprimirFoto(archivoOT);
 }
-
-
-/* FOTO VIN */
 
 let fotoVIN = "";
-
 if(archivoVIN){
-
-fotoVIN =
-await comprimirFoto(
-archivoVIN
-);
-
+  fotoVIN = await comprimirFoto(archivoVIN);
 }
 
-
-/* DATOS */
+/*
+  Un único UUID para ambos sistemas.
+  Apps Script y Supabase quedarán con el mismo ID.
+*/
+const id =
+(window.crypto && crypto.randomUUID)
+? crypto.randomUUID()
+: (
+  Date.now().toString(36) +
+  "-" +
+  Math.random().toString(36).slice(2)
+);
 
 const datos = {
 
-requestId: (window.crypto && crypto.randomUUID)
-  ? crypto.randomUUID()
-  : (Date.now().toString(36) + "-" + Math.random().toString(36).slice(2)),
+requestId: id,
+id: id,
 
 accion:"registrar",
 
@@ -1987,6 +1913,7 @@ marca:marca,
 modelo:modelo,
 
 servicio:servicio,
+
 observaciones:observaciones,
 
 fotoIngreso:fotoIngreso,
@@ -1997,56 +1924,135 @@ fotoVIN:fotoVIN
 
 };
 
-
-/* ENVIAR */
-
+/*
+  Primero Apps Script:
+  - guarda las fotografías en Drive
+  - mantiene temporalmente el respaldo en Sheets
+*/
 const respuesta =
-await enviarDatos(
-datos
-);
-
+await enviarDatos(datos);
 
 if(
 !respuesta ||
 respuesta.ok !== true
 ){
+  throw new Error(
+    respuesta && respuesta.mensaje
+    ? respuesta.mensaje
+    : "No se pudo registrar el vehículo."
+  );
+}
+
+/*
+  Luego Supabase:
+  - será la base principal de Seguimiento
+  - usamos el mismo ID que Apps Script
+*/
+const filaSupabase = {
+
+id: id,
+
+tipo: tipo,
+
+ot:
+tipo === "Servicio"
+? ot
+: "",
+
+placa:
+tipo === "Servicio"
+? placa
+: "",
+
+vin:
+tipo === "Nuevo"
+? vin
+: "",
+
+marca: marca,
+
+modelo: modelo,
+
+servicio: servicio,
+
+estado: "Lavando",
+
+hora_inicio_lavado: new Date().toISOString(),
+
+hora_salida: null,
+
+observaciones: observaciones,
+
+observaciones_finales: "",
+
+foto_ingreso: "",
+
+foto_final: "",
+
+foto_ot: "",
+
+foto_vin: ""
+
+};
+
+const respuestaSupabase =
+await fetch(
+  SUPABASE_URL + "/rest/v1/vehiculos",
+  {
+    method:"POST",
+    headers:{
+      "apikey": SUPABASE_KEY,
+      "Authorization":
+        "Bearer " + SUPABASE_KEY,
+      "Content-Type":
+        "application/json",
+      "Prefer":
+        "return=minimal"
+    },
+    body:
+      JSON.stringify(filaSupabase)
+  }
+);
+
+if(!respuestaSupabase.ok){
+
+const textoError =
+await respuestaSupabase.text();
 
 throw new Error(
-respuesta &&
-respuesta.mensaje
-?
-respuesta.mensaje
-:
-"No se pudo registrar el vehículo."
+  "Supabase HTTP " +
+  respuestaSupabase.status +
+  (textoError ? ": " + textoError : "")
 );
 
 }
-        limpiarFormulario();
 
-        mostrarPopup(
-          "Lavado iniciado",
-          respuesta.mensaje ||
-          "El vehículo fue registrado correctamente.",
-          "success"
-        );
+limpiarFormulario();
 
+mostrarPopup(
+  "Lavado iniciado",
+  "El vehículo fue registrado correctamente.",
+  "success"
+);
 
+/*
+  Actualizamos inmediatamente la tabla.
+  Realtime también recibirá el INSERT.
+*/
 await cargarDatos();
-
 
 }
 catch(error){
 
 console.error(
-"Error registrando:",
-error
+  "Error registrando:",
+  error
 );
 
-
 mostrarAlerta(
-"No se pudo registrar el vehículo: " +
-error.message,
-"error"
+  "No se pudo registrar el vehículo: " +
+  error.message,
+  "error"
 );
 
 }
@@ -2059,7 +2065,6 @@ loading.style.display = "none";
 }
 
 }
-
 
 /* =====================================================
    CARGAR DATOS
