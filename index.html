@@ -2541,140 +2541,74 @@ document.getElementById(
 
 async function finalizar(){
 
-const boton =
-document.getElementById(
-"btnFinalizar"
-);
-
-
-const loading =
-document.getElementById(
-"loadingFinalizar"
-);
-
+const boton = document.getElementById("btnFinalizar");
+const loading = document.getElementById("loadingFinalizar");
 
 try{
 
+const id = document.getElementById("idFinalizar").value;
+const archivo = document.getElementById("fotoFinal").files[0];
+const observaciones = document.getElementById("observacionesFinales").value.trim();
 
-const id =
-document.getElementById(
-"idFinalizar"
-).value;
-
-
-const archivo =
-document.getElementById(
-"fotoFinal"
-).files[0];
-
-
-const observaciones =
-document.getElementById(
-"observacionesFinales"
-).value
-.trim();
-
-
-if(!id){
-
-throw new Error(
-"No se encontró el vehículo."
-);
-
-}
-
+if(!id) throw new Error("No se encontró el vehículo.");
 
 if(!archivo){
-
-mostrarAlerta(
-"Debe adjuntar la foto final.",
-"error"
-);
-
+mostrarAlerta("Debe adjuntar la foto final.","error");
 return;
-
 }
-
 
 boton.disabled = true;
+loading.style.display = "block";
 
-loading.style.display =
-"block";
+const foto = await comprimirFoto(archivo);
 
-
-const foto =
-await comprimirFoto(
-archivo
-);
-
-
-const respuesta =
-await enviarDatos({
-
+/* 1. Finalizar en Google Apps Script */
+const respuesta = await enviarDatos({
 accion:"finalizar",
-
 id:id,
-
 fotoFinal:foto,
+observacionesFinales:observaciones
+},{reintentos:1,timeout:30000});
 
-observacionesFinales:
-observaciones
+if(!respuesta || respuesta.ok !== true){
+throw new Error(respuesta && respuesta.mensaje ? respuesta.mensaje : "No se pudo finalizar el lavado.");
+}
 
+/* 2. Actualizar Supabase con el mismo ID */
+const respuestaSupabase = await fetch(
+SUPABASE_URL + "/rest/v1/vehiculos?id=eq." + encodeURIComponent(id),
+{
+method:"PATCH",
+headers:{
+"apikey":SUPABASE_KEY,
+"Authorization":"Bearer " + SUPABASE_KEY,
+"Content-Type":"application/json",
+"Prefer":"return=minimal"
+},
+body:JSON.stringify({
+estado:"Finalizado",
+hora_salida:new Date().toISOString(),
+observaciones_finales:observaciones
+})
 });
 
-
-if(
-!respuesta ||
-respuesta.ok !== true
-){
-
-throw new Error(
-respuesta &&
-respuesta.mensaje
-?
-respuesta.mensaje
-:
-"No se pudo finalizar el lavado."
-);
-
+if(!respuestaSupabase.ok){
+const textoError = await respuestaSupabase.text();
+throw new Error("El lavado se finalizó en Google Sheets, pero no se pudo actualizar Supabase. Supabase HTTP " + respuestaSupabase.status + (textoError ? ": " + textoError : ""));
 }
 
-
+/* 3. Cerrar y actualizar */
 cerrarModal();
-
-
-mostrarAlerta(
-respuesta.mensaje ||
-"Lavado finalizado correctamente.",
-"success"
-);
-
-
+mostrarAlerta("Lavado finalizado correctamente.","success");
 await cargarDatos();
 
+}catch(error){
+console.error("Error finalizando:",error);
+mostrarAlerta("No se pudo finalizar: " + error.message,"error");
 
-}
-catch(error){
-
-console.error(
-"Error finalizando:",
-error
-);
-
-
-mostrarAlerta(
-"No se pudo finalizar: " +
-error.message,
-"error"
-);
-
-}
-finally{
-
+}finally{
 boton.disabled = false;
-
 loading.style.display = "none";
-
 }
 
 }
