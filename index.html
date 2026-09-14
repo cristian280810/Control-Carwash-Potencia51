@@ -1277,9 +1277,7 @@ Modelo
 Servicio
 </th>
 
-<th>
-Responsable
-</th>
+
 
 <th>
 Estado
@@ -1591,47 +1589,91 @@ function comprimirFoto(file){
 
 return new Promise(function(resolve,reject){
 
-const reader = new FileReader();
+const reader =
+new FileReader();
 
-reader.onload = function(e){
 
-const img = new Image();
+reader.onload =
+function(e){
 
-img.onload = function(){
+const img =
+new Image();
 
-let width = img.width;
-let height = img.height;
 
-/*
-  1200 px es suficiente para evidencia fotográfica
-  y reduce considerablemente el tamaño del envío.
-*/
-const max = 1200;
+img.onload =
+function(){
+
+let width =
+img.width;
+
+let height =
+img.height;
+
+const max =
+1400;
+
 
 if(width > max){
-  height = Math.round(height * max / width);
-  width = max;
+
+height =
+Math.round(
+height * max / width
+);
+
+width =
+max;
+
 }
 
-const canvas = document.createElement("canvas");
-canvas.width = width;
-canvas.height = height;
 
-const ctx = canvas.getContext("2d");
-ctx.drawImage(img,0,0,width,height);
+const canvas =
+document.createElement("canvas");
+
+
+canvas.width =
+width;
+
+canvas.height =
+height;
+
+
+const ctx =
+canvas.getContext("2d");
+
+
+ctx.drawImage(
+img,
+0,
+0,
+width,
+height
+);
+
 
 resolve(
-  canvas.toDataURL("image/jpeg",0.65)
+canvas.toDataURL(
+"image/jpeg",
+0.70
+)
 );
 
 };
 
-img.onerror = reject;
-img.src = e.target.result;
+
+img.onerror =
+reject;
+
+
+img.src =
+e.target.result;
 
 };
 
-reader.onerror = reject;
+
+reader.onerror =
+reject;
+
+
 reader.readAsDataURL(file);
 
 });
@@ -1643,43 +1685,40 @@ reader.readAsDataURL(file);
    ENVIAR DATOS
 ===================================================== */
 
-async function enviarDatos(datos, opciones = {}){
+async function enviarDatos(datos){
 
 if(
 !API_URL ||
-API_URL === "PEGA_AQUI_TU_URL_DE_APPS_SCRIPT"
+API_URL ===
+"PEGA_AQUI_TU_URL_DE_APPS_SCRIPT"
 ){
-  throw new Error(
-    "No has configurado la URL de Google Apps Script."
-  );
+
+throw new Error(
+"No has configurado la URL de Google Apps Script."
+);
+
 }
 
-/*
-  Las operaciones de consulta pueden reintentarse.
-  Las operaciones que modifican datos deben enviarse
-  una sola vez desde el navegador para evitar duplicados.
-*/
-const reintentos =
-  Number.isInteger(opciones.reintentos)
-    ? opciones.reintentos
-    : (datos.accion === "obtenerSeguimiento" ? 2 : 1);
 
-const timeout =
-  opciones.timeout || 30000;
+const controlador =
+  typeof AbortController !== "undefined"
+    ? new AbortController()
+    : null;
 
-let ultimoError = null;
+const temporizador =
+  controlador
+    ? setTimeout(function(){
+        controlador.abort();
+      }, 25000)
+    : null;
 
-for(let intento = 1; intento <= reintentos; intento++){
+let respuesta;
 
-  const controlador = new AbortController();
+try{
 
-  const temporizador = setTimeout(function(){
-    controlador.abort();
-  }, timeout);
-
-  try{
-
-    const respuesta = await fetch(API_URL,{
+  respuesta = await fetch(
+    API_URL + (API_URL.includes("?") ? "&" : "?") + "t=" + Date.now(),
+    {
       method:"POST",
       headers:{
         "Content-Type":"text/plain;charset=utf-8"
@@ -1687,52 +1726,66 @@ for(let intento = 1; intento <= reintentos; intento++){
       body:JSON.stringify(datos),
       redirect:"follow",
       cache:"no-store",
-      signal:controlador.signal
-    });
-
-    clearTimeout(temporizador);
-
-    if(!respuesta.ok){
-      throw new Error("Error HTTP " + respuesta.status);
+      signal: controlador ? controlador.signal : undefined
     }
+  );
 
-    const texto = await respuesta.text();
+} catch(error){
 
-    if(!texto){
-      throw new Error(
-        "Apps Script no devolvió ninguna respuesta."
-      );
-    }
-
-    try{
-      return JSON.parse(texto);
-    }catch(error){
-      throw new Error(
-        "La respuesta de Apps Script no es un JSON válido."
-      );
-    }
-
-  }catch(error){
-
-    clearTimeout(temporizador);
-    ultimoError = error;
-
-    if(error && error.name === "AbortError"){
-      ultimoError = new Error(
-        "Tiempo de espera agotado al conectar con Apps Script."
-      );
-    }
-
-    if(intento < reintentos){
-      await new Promise(function(resolve){
-        setTimeout(resolve,1000 * intento);
-      });
-    }
+  if(error && error.name === "AbortError"){
+    throw new Error("Tiempo de espera agotado al conectar con Apps Script.");
   }
+
+  throw new Error(
+    "No se pudo conectar con Apps Script: " +
+    (error && error.message ? error.message : error)
+  );
+
+} finally {
+
+  if(temporizador){
+    clearTimeout(temporizador);
+  }
+
 }
 
-throw ultimoError ||
-  new Error("No se pudo conectar con Apps Script.");
+
+if(!respuesta.ok){
+
+throw new Error(
+"Error HTTP " +
+respuesta.status
+);
+
+}
+
+
+const texto =
+await respuesta.text();
+
+
+if(!texto){
+
+throw new Error(
+"Apps Script no devolvió ninguna respuesta."
+);
+
+}
+
+
+try{
+
+return JSON.parse(texto);
+
+}
+catch(error){
+
+throw new Error(
+"La respuesta de Apps Script no es un JSON válido."
+);
+
+}
+
 }
 
 
@@ -1743,156 +1796,276 @@ throw ultimoError ||
 async function registrar(){
 
 const boton =
-document.getElementById("btnRegistrar");
+document.getElementById(
+"btnRegistrar"
+);
 
 const loading =
-document.getElementById("loadingRegistro");
+document.getElementById(
+"loadingRegistro"
+);
 
-/*
-  Un requestId identifica esta operación.
-  Si por una falla de red el mismo request llegara
-  nuevamente al servidor, Apps Script lo reconocerá
-  y no creará otro registro.
-*/
-const requestId =
-  (window.crypto && crypto.randomUUID)
-    ? crypto.randomUUID()
-    : (Date.now().toString(36) + Math.random().toString(36).slice(2));
 
 try{
 
+
 const tipo =
-document.querySelector('input[name="tipo"]:checked').value;
+document.querySelector(
+'input[name="tipo"]:checked'
+).value;
+
 
 const ot =
-document.getElementById("ot").value.trim();
+document.getElementById(
+"ot"
+).value.trim();
+
 
 const placa =
-document.getElementById("placa").value.trim();
+document.getElementById(
+"placa"
+).value.trim();
+
 
 const vin =
-document.getElementById("vin").value.trim();
+document.getElementById(
+"vin"
+).value.trim();
+
 
 const marca =
-document.getElementById("marca").value;
+document.getElementById(
+"marca"
+).value;
+
 
 const modelo = "";
+
+
 const responsable = "";
 
+
 const servicio =
-document.getElementById("servicio").value.trim();
+document.getElementById(
+"servicio"
+).value.trim();
+
 
 const observaciones =
-document.getElementById("observaciones").value.trim();
+document.getElementById(
+"observaciones"
+).value.trim();
+
 
 const archivoIngreso =
-document.getElementById("fotoIngreso").files[0];
+document.getElementById(
+"fotoIngreso"
+).files[0];
+
 
 const archivoOT =
-document.getElementById("fotoOT").files[0];
+document.getElementById(
+"fotoOT"
+).files[0];
+
 
 const archivoVIN =
-document.getElementById("fotoVIN").files[0];
+document.getElementById(
+"fotoVIN"
+).files[0];
 
-/* VALIDACIONES */
 
-if(tipo === "Servicio" && !placa){
-  mostrarAlerta("Debe ingresar la placa.","error");
-  return;
-}
+/* =================================================
+   VALIDACIONES
+================================================= */
 
-if(!marca || !servicio){
-  mostrarAlerta("Complete todos los campos obligatorios.","error");
-  return;
-}
 
-if(!archivoIngreso){
-  mostrarAlerta("Debe adjuntar la foto de ingreso.","error");
-  return;
-}
-
-/*
-  Deshabilitamos inmediatamente el botón.
-  El registro no tendrá reintentos automáticos.
-*/
-boton.disabled = true;
-loading.style.display = "block";
-
-/*
-  Las fotos se comprimen en paralelo para reducir
-  el tiempo total de preparación.
-*/
-const resultadoFotos = await Promise.all([
-  comprimirFoto(archivoIngreso),
-  archivoOT ? comprimirFoto(archivoOT) : Promise.resolve(""),
-  archivoVIN ? comprimirFoto(archivoVIN) : Promise.resolve("")
-]);
-
-const fotoIngreso = resultadoFotos[0];
-const fotoOT = resultadoFotos[1];
-const fotoVIN = resultadoFotos[2];
-
-const datos = {
-  accion:"registrar",
-  requestId:requestId,
-  tipo:tipo,
-  ot:tipo === "Servicio" ? ot : "",
-  placa:tipo === "Servicio" ? placa : "",
-  vin:tipo === "Nuevo" ? vin : "",
-  marca:marca,
-  modelo:modelo,
-  servicio:servicio,
-  responsable:responsable,
-  observaciones:observaciones,
-  fotoIngreso:fotoIngreso,
-  fotoOT:fotoOT,
-  fotoVIN:fotoVIN
-};
-
-/*
-  IMPORTANTE:
-  reintentos = 1 para no volver a crear registros.
-*/
-const respuesta =
-  await enviarDatos(datos,{
-    reintentos:1,
-    timeout:30000
-  });
-
-if(!respuesta || respuesta.ok !== true){
-  throw new Error(
-    respuesta && respuesta.mensaje
-      ? respuesta.mensaje
-      : "No se pudo registrar el vehículo."
-  );
-}
-
-limpiarFormulario();
-
-mostrarPopup(
-  "Lavado iniciado",
-  respuesta.mensaje || "El vehículo fue registrado correctamente.",
-  "success"
-);
-
-/*
-  Actualizamos Seguimiento después de registrar.
-*/
-await cargarDatos();
-
-}catch(error){
-
-console.error("Error registrando:",error);
+if(
+tipo === "Servicio" &&
+!placa
+){
 
 mostrarAlerta(
-  "No se pudo registrar el vehículo: " + error.message,
-  "error"
+"Debe ingresar la placa.",
+"error"
 );
 
-}finally{
+return;
 
-  boton.disabled = false;
-  loading.style.display = "none";
+}
+
+
+if(
+!marca ||
+!servicio
+){
+
+mostrarAlerta(
+"Complete todos los campos obligatorios.",
+"error"
+);
+
+return;
+
+}
+
+
+if(!archivoIngreso){
+
+mostrarAlerta(
+"Debe adjuntar la foto de ingreso.",
+"error"
+);
+
+return;
+
+}
+
+
+boton.disabled = true;
+
+loading.style.display = "block";
+
+
+/* FOTO INGRESO */
+
+const fotoIngreso =
+await comprimirFoto(
+archivoIngreso
+);
+
+
+/* FOTO OT */
+
+let fotoOT = "";
+
+if(archivoOT){
+
+fotoOT =
+await comprimirFoto(
+archivoOT
+);
+
+}
+
+
+/* FOTO VIN */
+
+let fotoVIN = "";
+
+if(archivoVIN){
+
+fotoVIN =
+await comprimirFoto(
+archivoVIN
+);
+
+}
+
+
+/* DATOS */
+
+const datos = {
+
+requestId: (window.crypto && crypto.randomUUID)
+  ? crypto.randomUUID()
+  : (Date.now().toString(36) + "-" + Math.random().toString(36).slice(2)),
+
+accion:"registrar",
+
+tipo:tipo,
+
+ot:
+tipo === "Servicio"
+? ot
+: "",
+
+placa:
+tipo === "Servicio"
+? placa
+: "",
+
+vin:
+tipo === "Nuevo"
+? vin
+: "",
+
+marca:marca,
+
+modelo:modelo,
+
+servicio:servicio,
+
+responsable:responsable,
+
+observaciones:observaciones,
+
+fotoIngreso:fotoIngreso,
+
+fotoOT:fotoOT,
+
+fotoVIN:fotoVIN
+
+};
+
+
+/* ENVIAR */
+
+const respuesta =
+await enviarDatos(
+datos
+);
+
+
+if(
+!respuesta ||
+respuesta.ok !== true
+){
+
+throw new Error(
+respuesta &&
+respuesta.mensaje
+?
+respuesta.mensaje
+:
+"No se pudo registrar el vehículo."
+);
+
+}
+        limpiarFormulario();
+
+        mostrarPopup(
+          "Lavado iniciado",
+          respuesta.mensaje ||
+          "El vehículo fue registrado correctamente.",
+          "success"
+        );
+
+
+await cargarDatos();
+
+
+}
+catch(error){
+
+console.error(
+"Error registrando:",
+error
+);
+
+
+mostrarAlerta(
+"No se pudo registrar el vehículo: " +
+error.message,
+"error"
+);
+
+}
+finally{
+
+boton.disabled = false;
+
+loading.style.display = "none";
 
 }
 
@@ -1979,7 +2152,7 @@ document.getElementById(
 ).innerHTML =
 `
 <tr>
-<td colspan="11" class="empty">
+<td colspan="10" class="empty">
 No se pudo cargar la información.
 </td>
 </tr>
@@ -2197,9 +2370,6 @@ accion:"iniciar",
 
 id:id
 
-},{
-reintentos:1,
-timeout:30000
 });
 
 
@@ -2381,9 +2551,6 @@ fotoFinal:foto,
 observacionesFinales:
 observaciones
 
-},{
-reintentos:1,
-timeout:30000
 });
 
 
@@ -2458,7 +2625,7 @@ document.getElementById(
 tbody.innerHTML =
 `
 <tr>
-<td colspan="11" class="empty">
+<td colspan="10" class="empty">
 ${esc(mensaje)}
 </td>
 </tr>
@@ -2541,7 +2708,7 @@ return;
 tbody.innerHTML =
 `
 <tr>
-<td colspan="11" class="empty">
+<td colspan="10" class="empty">
 🔎 Buscando información...
 </td>
 </tr>
@@ -2713,9 +2880,7 @@ ${esc(r.modelo)}
 <td>
 ${esc(r.servicio)}
 </td>
-<td>
-${esc(r.responsable)}
-</td>
+
 <td>
 ${esc(r.estado)}
 </td>
@@ -2742,7 +2907,7 @@ document.querySelectorAll(
 
 
 let csv =
-"Fecha,Tipo,OT,Placa,VIN,Marca,Modelo,Servicio,Responsable,Estado,Salida\n";
+"Fecha,Tipo,OT,Placa,VIN,Marca,Modelo,Servicio,Estado,Salida\n";
 
 
 let cantidad = 0;
@@ -3095,9 +3260,7 @@ document.addEventListener(
 "DOMContentLoaded",
 function(){
 
-cambiarTipo("Servicio");
-
-cargarDatos();
+  cambiarTipo("Servicio");
 
 }
 );
