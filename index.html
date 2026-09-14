@@ -712,11 +712,11 @@ Marca *
 </label>
 
 <select id="marca">
-    
+
 <option value="">
 Seleccione la marca
 </option>
-    
+
 <option value="Chery">
 Chery
 </option>
@@ -1456,6 +1456,8 @@ const API_URL =
 ===================================================== */
 
 let registros = [];
+let cargandoDatos = false;
+const MAX_INTENTOS_CARGA = 3;
 
 
 /* =====================================================
@@ -1690,77 +1692,102 @@ reader.readAsDataURL(file);
 async function enviarDatos(datos){
 
 if(
-!API_URL ||
-API_URL ===
-"PEGA_AQUI_TU_URL_DE_APPS_SCRIPT"
+    !API_URL ||
+    API_URL === "PEGA_AQUI_TU_URL_DE_APPS_SCRIPT"
 ){
 
-throw new Error(
-"No has configurado la URL de Google Apps Script."
+    throw new Error(
+        "No has configurado la URL de Google Apps Script."
+    );
+
+}
+
+/*
+  Apps Script puede tardar o fallar temporalmente.
+  Usamos timeout y reintentos para evitar errores intermitentes.
+*/
+const MAX_INTENTOS = 3;
+let ultimoError = null;
+
+for(let intento = 1; intento <= MAX_INTENTOS; intento++){
+
+    try{
+
+        const controlador = new AbortController();
+
+        const temporizador = setTimeout(function(){
+            controlador.abort();
+        }, 15000);
+
+        const respuesta = await fetch(
+            API_URL,
+            {
+                method:"POST",
+                headers:{
+                    "Content-Type":"text/plain;charset=utf-8"
+                },
+                body:JSON.stringify(datos),
+                redirect:"follow",
+                signal:controlador.signal,
+                cache:"no-store"
+            }
+        );
+
+        clearTimeout(temporizador);
+
+        if(!respuesta.ok){
+
+            throw new Error(
+                "Error HTTP " + respuesta.status
+            );
+
+        }
+
+        const texto = await respuesta.text();
+
+        if(!texto){
+
+            throw new Error(
+                "Apps Script no devolvió ninguna respuesta."
+            );
+
+        }
+
+        try{
+
+            return JSON.parse(texto);
+
+        }
+        catch(error){
+
+            throw new Error(
+                "La respuesta de Apps Script no es un JSON válido."
+            );
+
+        }
+
+    }
+    catch(error){
+
+        ultimoError = error;
+
+        if(intento < MAX_INTENTOS){
+
+            await new Promise(function(resolve){
+                setTimeout(resolve, 800 * intento);
+            });
+
+        }
+
+    }
+
+}
+
+throw ultimoError || new Error(
+    "No se pudo conectar con Google Apps Script."
 );
 
 }
-
-
-const respuesta =
-await fetch(
-API_URL,
-{
-
-method:"POST",
-
-headers:{
-"Content-Type":
-"text/plain;charset=utf-8"
-},
-
-body:
-JSON.stringify(datos),
-
-redirect:"follow"
-
-}
-);
-
-
-if(!respuesta.ok){
-
-throw new Error(
-"Error HTTP " +
-respuesta.status
-);
-
-}
-
-
-const texto =
-await respuesta.text();
-
-
-if(!texto){
-
-throw new Error(
-"Apps Script no devolvió ninguna respuesta."
-);
-
-}
-
-
-try{
-
-return JSON.parse(texto);
-
-}
-catch(error){
-
-throw new Error(
-"La respuesta de Apps Script no es un JSON válido."
-);
-
-}
-
-}
-
 
 /* =====================================================
    REGISTRAR VEHÍCULO
@@ -2047,97 +2074,160 @@ loading.style.display = "none";
 
 async function cargarDatos(){
 
-try{
-
-
-document.getElementById(
-"tablaSeguimiento"
-).innerHTML =
-`
-<tr>
-<td colspan="8" class="empty">
-Cargando información...
-</td>
-</tr>
-`;
-
-
-const respuesta =
-await enviarDatos({
-
-accion:"obtenerSeguimiento"
-
-});
-
-
-if(
-!respuesta ||
-respuesta.ok !== true
-){
-
-throw new Error(
-respuesta &&
-respuesta.mensaje
-?
-respuesta.mensaje
-:
-"No se pudieron obtener los registros."
-);
-
+if(cargandoDatos){
+    return;
 }
 
+cargandoDatos = true;
 
-registros =
-respuesta.registros ||
-[];
+const tabla = document.getElementById("tablaSeguimiento");
 
+try{
 
-renderSeguimiento();
+    if(tabla){
 
+        tabla.innerHTML =
+        `
+        <tr>
+            <td colspan="8" class="empty">
+                ⏳ Conectando con el sistema...
+            </td>
+        </tr>
+        `;
+
+    }
+
+    let respuesta = null;
+    let ultimoError = null;
+
+    /*
+      Hasta 3 intentos completos para cubrir fallos temporales.
+    */
+    for(let intento = 1; intento <= MAX_INTENTOS_CARGA; intento++){
+
+        try{
+
+            respuesta = await enviarDatos({
+                accion:"obtenerSeguimiento"
+            });
+
+            if(
+                !respuesta ||
+                respuesta.ok !== true
+            ){
+
+                throw new Error(
+                    respuesta && respuesta.mensaje
+                    ? respuesta.mensaje
+                    : "Google Apps Script no pudo devolver los registros."
+                );
+
+            }
+
+            break;
+
+        }
+        catch(error){
+
+            ultimoError = error;
+
+            if(intento < MAX_INTENTOS_CARGA){
+
+                if(tabla){
+
+                    tabla.innerHTML =
+                    `
+                    <tr>
+                        <td colspan="8" class="empty">
+                            ⏳ Reintentando conexión (${intento + 1}/${MAX_INTENTOS_CARGA})...
+                        </td>
+                    </tr>
+                    `;
+
+                }
+
+                await new Promise(function(resolve){
+                    setTimeout(resolve, 1200 * intento);
+                });
+
+            }
+
+        }
+
+    }
+
+    if(
+        !respuesta ||
+        respuesta.ok !== true
+    ){
+
+        throw ultimoError || new Error(
+            "No se pudo conectar con Google Apps Script."
+        );
+
+    }
+
+    registros = respuesta.registros || [];
+
+    renderSeguimiento();
 
 }
 catch(error){
 
-console.error(
-"Error cargando datos:",
-error
-);
+    console.error(
+        "Error cargando datos:",
+        error
+    );
 
+    if(tabla){
 
-document.getElementById(
-"tablaSeguimiento"
-).innerHTML =
-`
-<tr>
-<td colspan="8" class="empty">
-No se pudo cargar la información.
-</td>
-</tr>
-`;
+        let mensaje = "No se pudo conectar con el sistema.";
 
+        if(String(error.message || "").includes("404")){
 
-document.getElementById(
-"tablaHistorial"
-).innerHTML =
-`
-<tr>
-<td colspan="11" class="empty">
-No se pudo cargar la información.
-</td>
-</tr>
-`;
+            mensaje =
+                "Google Apps Script respondió con HTTP 404. Se hicieron varios reintentos. Si vuelve a ocurrir, revise que la URL de implementación del Apps Script siga activa.";
 
+        }
+        else if(error.name === "AbortError"){
 
-mostrarAlerta(
-"No se pudieron cargar los datos: " +
-error.message,
-"error"
-);
+            mensaje =
+                "La conexión tardó demasiado. Vuelva a intentar.";
+
+        }
+        else{
+
+            mensaje =
+                "No se pudo cargar la información: " +
+                error.message;
+
+        }
+
+        tabla.innerHTML =
+        `
+        <tr>
+            <td colspan="8" class="empty">
+                ${esc(mensaje)}
+                <br><br>
+                <button
+                    class="btn btn-primary"
+                    onclick="cargarDatos()">
+                    🔄 Reintentar
+                </button>
+            </td>
+        </tr>
+        `;
+
+    }
+
+}
+finally{
+
+    cargandoDatos = false;
 
 }
 
 }
-
 
 /* =====================================================
    SEGUIMIENTO
@@ -3228,12 +3318,10 @@ return "pendiente";
 ===================================================== */
 
 document.addEventListener(
-"DOMContentLoaded",
-function(){
+  "DOMContentLoaded",
+  function(){
 
-cambiarTipo("Servicio");
-
-cargarDatos();
+    cambiarTipo("Servicio");
 
 }
 );
