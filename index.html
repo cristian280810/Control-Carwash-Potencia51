@@ -2449,143 +2449,170 @@ document.getElementById(
    FINALIZAR LAVADO
 ===================================================== */
 
+async function confirmarFinalizacion(id){
+
+  for(let intento = 1; intento <= 3; intento++){
+
+    try{
+
+      const respuesta = await enviarDatos({
+        accion:"obtenerSeguimiento"
+      });
+
+      const registros =
+        respuesta && Array.isArray(respuesta.registros)
+        ? respuesta.registros
+        : [];
+
+      const sigueActivo = registros.some(function(registro){
+        return String(registro.id) === String(id);
+      });
+
+      if(!sigueActivo){
+        return true;
+      }
+
+    }catch(error){
+      console.warn("No se pudo verificar el estado:", error);
+    }
+
+    if(intento < 3){
+      await new Promise(function(resolve){
+        setTimeout(resolve, 1500);
+      });
+    }
+  }
+
+  return false;
+}
+
+
+/* =====================================================
+   FINALIZAR LAVADO
+   ===================================================== */
+
 async function finalizar(){
 
-const boton =
-document.getElementById(
-"btnFinalizar"
-);
+  const boton =
+    document.getElementById("btnFinalizar");
 
+  const loading =
+    document.getElementById("loadingFinalizar");
 
-const loading =
-document.getElementById(
-"loadingFinalizar"
-);
+  let id = "";
+  let finalizado = false;
 
+  try{
 
-try{
+    id = document.getElementById("idFinalizar").value;
 
+    const archivo =
+      document.getElementById("fotoFinal").files[0];
 
-const id =
-document.getElementById(
-"idFinalizar"
-).value;
+    const observaciones =
+      document.getElementById("observacionesFinales")
+        .value
+        .trim();
 
+    if(!id){
+      throw new Error("No se encontró el vehículo.");
+    }
 
-const archivo =
-document.getElementById(
-"fotoFinal"
-).files[0];
+    if(!archivo){
+      mostrarAlerta(
+        "Debe adjuntar la foto final.",
+        "error"
+      );
+      return;
+    }
 
+    boton.disabled = true;
+    loading.style.display = "block";
 
-const observaciones =
-document.getElementById(
-"observacionesFinales"
-).value
-.trim();
+    const foto = await comprimirFoto(archivo);
 
+    try{
 
-if(!id){
+      const respuesta = await enviarDatos({
+        accion:"finalizar",
+        id:id,
+        fotoFinal:foto,
+        observacionesFinales:observaciones
+      });
 
-throw new Error(
-"No se encontró el vehículo."
-);
+      if(!respuesta || respuesta.ok !== true){
+        throw new Error(
+          respuesta && respuesta.mensaje
+          ? respuesta.mensaje
+          : "No se pudo finalizar el lavado."
+        );
+      }
 
-}
+      finalizado = true;
 
+    }catch(errorEnvio){
 
-if(!archivo){
+      /*
+        Apps Script puede terminar correctamente la operación
+        en Google Sheets, pero el navegador puede perder la
+        respuesta HTTP por la redirección de ContentService.
+        En ese caso NO volvemos a finalizar el vehículo:
+        verificamos si el ID ya desapareció de Seguimiento.
+      */
 
-mostrarAlerta(
-"Debe adjuntar la foto final.",
-"error"
-);
+      console.warn(
+        "Respuesta de finalizar no confirmada. Verificando estado real...",
+        errorEnvio
+      );
 
-return;
+      finalizado = await confirmarFinalizacion(id);
 
-}
+      if(!finalizado){
+        throw errorEnvio;
+      }
+    }
 
+    if(finalizado){
 
-boton.disabled = true;
+      /* Cerrar el modal ANTES de cualquier actualización visual. */
+      cerrarModal();
 
-loading.style.display =
-"block";
+      mostrarAlerta(
+        "Lavado finalizado correctamente.",
+        "success"
+      );
 
+      /*
+        La actualización de Seguimiento es secundaria.
+        Si falla, no debe volver a abrir el modal ni mostrar
+        un error porque la finalización ya fue confirmada.
+      */
+      try{
+        await cargarDatos();
+      }catch(errorCarga){
+        console.warn(
+          "El lavado ya fue finalizado, pero no se pudo actualizar la vista:",
+          errorCarga
+        );
+      }
+    }
 
-const foto =
-await comprimirFoto(
-archivo
-);
+  }catch(error){
 
+    console.error("Error finalizando:", error);
 
-const respuesta =
-await enviarDatos({
+    mostrarAlerta(
+      "No se pudo finalizar: " +
+      error.message,
+      "error"
+    );
 
-accion:"finalizar",
+  }finally{
 
-id:id,
+    boton.disabled = false;
+    loading.style.display = "none";
 
-fotoFinal:foto,
-
-observacionesFinales:
-observaciones
-
-});
-
-
-if(
-!respuesta ||
-respuesta.ok !== true
-){
-
-throw new Error(
-respuesta &&
-respuesta.mensaje
-?
-respuesta.mensaje
-:
-"No se pudo finalizar el lavado."
-);
-
-}
-
-
-cerrarModal();
-
-
-mostrarAlerta(
-respuesta.mensaje ||
-"Lavado finalizado correctamente.",
-"success"
-);
-
-
-await cargarDatos();
-
-
-}
-catch(error){
-
-console.error(
-"Error finalizando:",
-error
-);
-
-
-mostrarAlerta(
-"No se pudo finalizar: " +
-error.message,
-"error"
-);
-
-}
-finally{
-
-boton.disabled = false;
-
-loading.style.display = "none";
-
-}
+  }
 
 }
 
