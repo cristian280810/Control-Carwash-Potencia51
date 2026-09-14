@@ -338,15 +338,6 @@ th{
 .col-modelo{
     display:none !important;
 }
-
-/* =====================================================
-   OCULTAR RESPONSABLE
-===================================================== */
-
-.campo-responsable{
-    display:none !important;
-}
-
 @media(max-width:800px){
 
     .menu{
@@ -936,24 +927,6 @@ Shampoo x 2 (no es el proveedor, es stock)
 </div>
 
 
-<!-- =====================================================
-     RESPONSABLE OCULTO
-===================================================== -->
-
-<div
-class="form-group campo-responsable">
-
-<label>
-Responsable
-</label>
-
-<input
-id="responsable"
-type="text"
-value="">
-
-</div>
-
 
 <!-- =====================================================
      FOTO INGRESO
@@ -1047,6 +1020,7 @@ class="section">
 <h2>
 Seguimiento
 </h2>
+<p>Vehículos actualmente activos</p>
 
 
 <div class="search">
@@ -1687,108 +1661,106 @@ reader.readAsDataURL(file);
 
 async function enviarDatos(datos){
 
-if(
-!API_URL ||
-API_URL ===
-"PEGA_AQUI_TU_URL_DE_APPS_SCRIPT"
-){
+  if(
+    !API_URL ||
+    API_URL ===
+    "PEGA_AQUI_TU_URL_DE_APPS_SCRIPT"
+  ){
 
-throw new Error(
-"No has configurado la URL de Google Apps Script."
-);
+    throw new Error(
+      "No has configurado la URL de Google Apps Script."
+    );
+  }
 
-}
+  const controller =
+    new AbortController();
 
+  const timeout =
+    setTimeout(function(){
+      controller.abort();
+    }, 25000);
 
-const controlador =
-  typeof AbortController !== "undefined"
-    ? new AbortController()
-    : null;
+  try{
 
-const temporizador =
-  controlador
-    ? setTimeout(function(){
-        controlador.abort();
-      }, 25000)
-    : null;
+    const separador =
+      API_URL.includes("?")
+      ? "&"
+      : "?";
 
-let respuesta;
+    const respuesta =
+      await fetch(
+        API_URL +
+        separador +
+        "t=" +
+        Date.now(),
+        {
+          method:"POST",
 
-try{
+          headers:{
+            "Content-Type":
+              "text/plain;charset=utf-8"
+          },
 
-  respuesta = await fetch(
-    API_URL + (API_URL.includes("?") ? "&" : "?") + "t=" + Date.now(),
-    {
-      method:"POST",
-      headers:{
-        "Content-Type":"text/plain;charset=utf-8"
-      },
-      body:JSON.stringify(datos),
-      redirect:"follow",
-      cache:"no-store",
-      signal: controlador ? controlador.signal : undefined
+          body:
+            JSON.stringify(datos),
+
+          redirect:"follow",
+
+          cache:"no-store",
+
+          signal:
+            controller.signal
+        }
+      );
+
+    if(!respuesta.ok){
+
+      throw new Error(
+        "Error HTTP " +
+        respuesta.status
+      );
     }
-  );
 
-} catch(error){
+    const texto =
+      await respuesta.text();
 
-  if(error && error.name === "AbortError"){
-    throw new Error("Tiempo de espera agotado al conectar con Apps Script.");
+    if(!texto){
+
+      throw new Error(
+        "Apps Script no devolvió ninguna respuesta."
+      );
+    }
+
+    try{
+
+      return JSON.parse(texto);
+
+    }
+    catch(error){
+
+      throw new Error(
+        "La respuesta de Apps Script no es un JSON válido."
+      );
+    }
+
   }
+  catch(error){
 
-  throw new Error(
-    "No se pudo conectar con Apps Script: " +
-    (error && error.message ? error.message : error)
-  );
+    if(error.name === "AbortError"){
 
-} finally {
+      throw new Error(
+        "La solicitud tardó demasiado. Verifique la conexión."
+      );
+    }
 
-  if(temporizador){
-    clearTimeout(temporizador);
+    throw error;
+
   }
+  finally{
 
+    clearTimeout(timeout);
+  }
 }
-
-
-if(!respuesta.ok){
-
-throw new Error(
-"Error HTTP " +
-respuesta.status
-);
-
-}
-
-
-const texto =
-await respuesta.text();
-
-
-if(!texto){
-
-throw new Error(
-"Apps Script no devolvió ninguna respuesta."
-);
-
-}
-
-
-try{
-
-return JSON.parse(texto);
-
-}
-catch(error){
-
-throw new Error(
-"La respuesta de Apps Script no es un JSON válido."
-);
-
-}
-
-}
-
-
 /* =====================================================
    REGISTRAR VEHÍCULO
 ===================================================== */
@@ -1840,11 +1812,6 @@ document.getElementById(
 
 
 const modelo = "";
-
-
-const responsable = "";
-
-
 const servicio =
 document.getElementById(
 "servicio"
@@ -1995,9 +1962,6 @@ marca:marca,
 modelo:modelo,
 
 servicio:servicio,
-
-responsable:responsable,
-
 observaciones:observaciones,
 
 fotoIngreso:fotoIngreso,
@@ -3018,9 +2982,6 @@ document.getElementById("placa").value = "";
 document.getElementById("vin").value = "";
 
 document.getElementById("modelo").value = "";
-
-document.getElementById("responsable").value = "";
-
 document.getElementById("observaciones").value = "";
 
 document.getElementById("marca").value = "";
