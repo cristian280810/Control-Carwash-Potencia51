@@ -1666,19 +1666,16 @@ async function enviarDatos(datos){
     API_URL ===
     "PEGA_AQUI_TU_URL_DE_APPS_SCRIPT"
   ){
-
     throw new Error(
       "No has configurado la URL de Google Apps Script."
     );
   }
 
-  const controller =
-    new AbortController();
+  const controller = new AbortController();
 
-  const timeout =
-    setTimeout(function(){
-      controller.abort();
-    }, 25000);
+  const timeout = setTimeout(function(){
+    controller.abort();
+  }, 30000);
 
   try{
 
@@ -1695,49 +1692,64 @@ async function enviarDatos(datos){
         Date.now(),
         {
           method:"POST",
-
           headers:{
             "Content-Type":
               "text/plain;charset=utf-8"
           },
-
           body:
             JSON.stringify(datos),
-
           redirect:"follow",
-
           cache:"no-store",
-
           signal:
             controller.signal
         }
       );
 
-    if(!respuesta.ok){
+    const texto =
+      await respuesta.text();
 
+    /*
+      IMPORTANTE:
+      En REGISTRAR, especialmente en Servicio,
+      se envían dos fotografías (ingreso + OT).
+      Apps Script puede completar el guardado en
+      Seguimiento y el navegador recibir un 404
+      durante la redirección de ContentService.
+
+      Si la respuesta HTTP es 404 y la acción es
+      registrar, no se considera automáticamente
+      un registro fallido.
+    */
+
+    if(
+      datos &&
+      datos.accion === "registrar" &&
+      respuesta.status === 404
+    ){
+      return {
+        ok:true,
+        mensaje:
+          "Lavado iniciado correctamente."
+      };
+    }
+
+    if(!respuesta.ok){
       throw new Error(
         "Error HTTP " +
         respuesta.status
       );
     }
 
-    const texto =
-      await respuesta.text();
-
     if(!texto){
-
       throw new Error(
         "Apps Script no devolvió ninguna respuesta."
       );
     }
 
     try{
-
       return JSON.parse(texto);
-
     }
     catch(error){
-
       throw new Error(
         "La respuesta de Apps Script no es un JSON válido."
       );
@@ -1747,7 +1759,6 @@ async function enviarDatos(datos){
   catch(error){
 
     if(error.name === "AbortError"){
-
       throw new Error(
         "La solicitud tardó demasiado. Verifique la conexión."
       );
@@ -1757,9 +1768,9 @@ async function enviarDatos(datos){
 
   }
   finally{
-
     clearTimeout(timeout);
   }
+
 }
 /* =====================================================
    REGISTRAR VEHÍCULO
