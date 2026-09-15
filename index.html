@@ -1104,6 +1104,7 @@ onclick="buscarRegistroPasado()">
 <div id="formularioPasado" class="card" style="display:none;">
 
 <h2>Datos del lavado realizado</h2>
+<div id="modoEdicionPasado" style="display:none;margin:10px 0;padding:10px;border-radius:8px;background:#eff6ff;color:#1e40af;font-size:14px;">✏️ Está editando un registro existente. Puede corregir la OT completa y actualizar los datos.</div>
 
 <div class="tipo-container">
 
@@ -2417,7 +2418,10 @@ async function verificarDuplicadosAntesDeRegistrar(datos){
   try{
 
     const existentes = await obtenerTodosLosRegistros();
-    const coincidencias = analizarDuplicados(existentes, datos);
+    const registrosParaComparar = datos.idExcluir
+      ? existentes.filter(function(r){ return String(r.id) !== String(datos.idExcluir); })
+      : existentes;
+    const coincidencias = analizarDuplicados(registrosParaComparar, datos);
 
     if(!coincidencias.length){
       return true;
@@ -2496,11 +2500,18 @@ function cambiarTipoPasado(tipo){
   }
 }
 
+let registroPasadoSeleccionadoId = null;
+let registrosPasadosEncontrados = [];
+
 async function buscarRegistroPasado(){
 
   const terminoOriginal = document.getElementById("buscarPasado").value.trim();
   const termino = normalizarTexto(terminoOriginal);
   const resultado = document.getElementById("resultadoBusquedaPasado");
+
+  registroPasadoSeleccionadoId = null;
+  registrosPasadosEncontrados = [];
+  actualizarModoEdicionPasado();
 
   if(!termino){
     resultado.innerHTML = `<div class="alert error">Ingrese una OT, placa o VIN para buscar.</div>`;
@@ -2519,6 +2530,8 @@ async function buscarRegistroPasado(){
       return texto.includes(termino);
     });
 
+    registrosPasadosEncontrados = encontrados;
+
     if(!encontrados.length){
       resultado.innerHTML = `
         <div class="alert success">
@@ -2529,11 +2542,11 @@ async function buscarRegistroPasado(){
       resultado.innerHTML = `
         <div class="alert error">
           ⚠️ Se encontraron ${encontrados.length} registro(s) relacionados.
-          Revise antes de continuar.
+          Seleccione el registro que desea revisar o editar.
         </div>
-        ${encontrados.slice(0,10).map(function(r){
+        ${encontrados.slice(0,10).map(function(r, indice){
           return `
-            <div class="resultado-item">
+            <div class="resultado-item" id="registroPasado_${esc(r.id)}">
               <div><strong>OT:</strong> ${esc(r.ot || "—")}</div>
               <div><strong>Placa:</strong> ${esc(r.placa || "—")}</div>
               <div><strong>VIN:</strong> ${esc(r.vin || "—")}</div>
@@ -2542,6 +2555,11 @@ async function buscarRegistroPasado(){
               <div><strong>Servicio:</strong> ${esc(r.servicio || "—")}</div>
               <div><strong>Marca:</strong> ${esc(r.marca || "—")}</div>
               ${renderFotosRegistroPasado(r)}
+              <div style="margin-top:12px;">
+                <button type="button" class="btn btn-primary" onclick="seleccionarRegistroPasado('${esc(r.id)}')">
+                  ✏️ Seleccionar para editar
+                </button>
+              </div>
             </div>`;
         }).join("")}
       `;
@@ -2560,6 +2578,77 @@ async function buscarRegistroPasado(){
     console.error("Error buscando registro pasado:",error);
     resultado.innerHTML = `<div class="alert error">No se pudo realizar la búsqueda: ${esc(error.message)}</div>`;
   }
+}
+
+function actualizarModoEdicionPasado(){
+  const boton = document.getElementById("btnGuardarPasado");
+  if(!boton) return;
+
+  const aviso = document.getElementById("modoEdicionPasado");
+
+  if(registroPasadoSeleccionadoId){
+    boton.innerHTML = "💾 Actualizar registro";
+    if(aviso) aviso.style.display = "block";
+  }else{
+    boton.innerHTML = "💾 Guardar registro pasado";
+    if(aviso) aviso.style.display = "none";
+  }
+}
+
+function seleccionarRegistroPasado(id){
+
+  const registro = (registrosPasadosEncontrados || []).find(function(r){
+    return String(r.id) === String(id);
+  });
+
+  if(!registro){
+    mostrarAlerta("No se encontró el registro seleccionado.","error");
+    return;
+  }
+
+  registroPasadoSeleccionadoId = registro.id;
+
+  const tipo = registro.tipo === "Nuevo" ? "Nuevo" : "Servicio";
+  const radio = document.querySelector('input[name="tipoPasado"][value="' + tipo + '"]');
+  if(radio){
+    radio.checked = true;
+  }
+  cambiarTipoPasado(tipo);
+
+  document.getElementById("pasadoOT").value = registro.ot || "";
+  document.getElementById("pasadoPlaca").value = registro.placa || "";
+  document.getElementById("pasadoVIN").value = registro.vin || "";
+  document.getElementById("pasadoMarca").value = registro.marca || "";
+  document.getElementById("pasadoServicio").value = registro.servicio || "Lavado básico";
+  document.getElementById("pasadoFecha").value = obtenerFechaHistorial(registro.hora_inicio_lavado) || "";
+
+  document.getElementById("pasadoFotoIngreso").value = "";
+  document.getElementById("pasadoFotoOT").value = "";
+  document.getElementById("pasadoFotoVIN").value = "";
+
+  const observaciones = registro.observaciones || registro.observaciones_finales || "";
+  document.getElementById("pasadoObservaciones").value = observaciones;
+
+  document.querySelectorAll(".resultado-item").forEach(function(el){
+    el.style.borderColor = "#d1d5db";
+    el.style.background = "#f9fafb";
+  });
+
+  const tarjeta = document.getElementById("registroPasado_" + registro.id);
+  if(tarjeta){
+    tarjeta.style.borderColor = "#1d4ed8";
+    tarjeta.style.background = "#eff6ff";
+  }
+
+  document.getElementById("formularioPasado").style.display = "block";
+  actualizarModoEdicionPasado();
+
+  document.getElementById("formularioPasado").scrollIntoView({behavior:"smooth", block:"start"});
+
+  mostrarAlerta(
+    "Registro seleccionado. Puede corregir la OT completa y los demás datos antes de actualizar.",
+    "success"
+  );
 }
 
 function urlMiniaturaDrive(url){
@@ -2647,11 +2736,14 @@ async function guardarRegistroPasado(){
       return;
     }
 
-    /* Alerta de duplicado/probable coincidencia. No bloquea. */
+    /* Si estamos editando un registro existente, lo excluimos de la alerta
+       para que no se detecte a sí mismo como duplicado. Las coincidencias
+       con OT/placa/VIN de OTROS registros sí seguirán generando alerta. */
     const continuar = await verificarDuplicadosAntesDeRegistrar({
       ot:tipo === "Servicio" ? ot : "",
       placa:tipo === "Servicio" ? placa : "",
-      vin:tipo === "Nuevo" ? vin : ""
+      vin:tipo === "Nuevo" ? vin : "",
+      idExcluir:registroPasadoSeleccionadoId
     });
 
     if(!continuar){
@@ -2661,11 +2753,14 @@ async function guardarRegistroPasado(){
     boton.disabled = true;
     loading.style.display = "block";
 
-    const id = (window.crypto && crypto.randomUUID)
-      ? crypto.randomUUID()
-      : (Date.now().toString(36) + "-" + Math.random().toString(36).slice(2));
+    const id = registroPasadoSeleccionadoId || (
+      (window.crypto && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : (Date.now().toString(36) + "-" + Math.random().toString(36).slice(2))
+    );
 
-    /* Fotos opcionales. Solo se envían a Drive las que el usuario adjunte. */
+    /* Las fotos son opcionales. En edición solo reemplazamos una foto
+       cuando el usuario selecciona una nueva; las demás se conservan. */
     const datosFotos = { accion:"guardarFotos", id:id };
 
     if(archivoIngreso){
@@ -2702,55 +2797,108 @@ async function guardarRegistroPasado(){
 
     const fechaLavado = convertirFechaLimaAISO(fecha);
 
-    const fila = {
-      id:id,
-      tipo:tipo,
-      ot:tipo === "Servicio" ? ot : "",
-      placa:tipo === "Servicio" ? placa : "",
-      vin:tipo === "Nuevo" ? vin : "",
-      marca:marca,
-      modelo:"",
-      servicio:servicio,
-      estado:"Finalizado",
-      hora_inicio_lavado:fechaLavado,
-      hora_salida:null,
-      observaciones:observaciones,
-      observaciones_finales:"Registro regularizado",
-      foto_ingreso:fotos.fotoIngreso,
-      foto_final:"",
-      foto_ot:fotos.fotoOT,
-      foto_vin:fotos.fotoVIN
-    };
+    if(registroPasadoSeleccionadoId){
 
-    const respuestaSupabase = await fetch(
-      SUPABASE_URL + "/rest/v1/vehiculos_wankamotors",
-      {
-        method:"POST",
-        headers:{
-          "apikey":SUPABASE_KEY,
-          "Authorization":"Bearer " + SUPABASE_KEY,
-          "Content-Type":"application/json",
-          "Prefer":"return=minimal"
-        },
-        body:JSON.stringify(fila),
-        cache:"no-store"
+      const cambios = {
+        tipo:tipo,
+        ot:tipo === "Servicio" ? ot : "",
+        placa:tipo === "Servicio" ? placa : "",
+        vin:tipo === "Nuevo" ? vin : "",
+        marca:marca,
+        servicio:servicio,
+        estado:"Finalizado",
+        hora_inicio_lavado:fechaLavado,
+        observaciones:observaciones,
+        observaciones_finales:"Registro regularizado"
+      };
+
+      if(fotos.fotoIngreso) cambios.foto_ingreso = fotos.fotoIngreso;
+      if(fotos.fotoOT) cambios.foto_ot = fotos.fotoOT;
+      if(fotos.fotoVIN) cambios.foto_vin = fotos.fotoVIN;
+
+      const respuestaSupabase = await fetch(
+        SUPABASE_URL + "/rest/v1/vehiculos_wankamotors?id=eq." + encodeURIComponent(registroPasadoSeleccionadoId),
+        {
+          method:"PATCH",
+          headers:{
+            "apikey":SUPABASE_KEY,
+            "Authorization":"Bearer " + SUPABASE_KEY,
+            "Content-Type":"application/json",
+            "Prefer":"return=minimal"
+          },
+          body:JSON.stringify(cambios),
+          cache:"no-store"
+        }
+      );
+
+      if(!respuestaSupabase.ok){
+        const textoError = await respuestaSupabase.text();
+        throw new Error(
+          "Supabase HTTP " + respuestaSupabase.status +
+          (textoError ? ": " + textoError : "")
+        );
       }
-    );
 
-    if(!respuestaSupabase.ok){
-      const textoError = await respuestaSupabase.text();
-      throw new Error(
-        "Supabase HTTP " + respuestaSupabase.status +
-        (textoError ? ": " + textoError : "")
+      limpiarRegistroPasado();
+      mostrarPopup(
+        "Registro actualizado",
+        "La OT y los datos del registro fueron actualizados correctamente.",
+        "success"
+      );
+
+    }else{
+
+      const fila = {
+        id:id,
+        tipo:tipo,
+        ot:tipo === "Servicio" ? ot : "",
+        placa:tipo === "Servicio" ? placa : "",
+        vin:tipo === "Nuevo" ? vin : "",
+        marca:marca,
+        modelo:"",
+        servicio:servicio,
+        estado:"Finalizado",
+        hora_inicio_lavado:fechaLavado,
+        hora_salida:null,
+        observaciones:observaciones,
+        observaciones_finales:"Registro regularizado",
+        foto_ingreso:fotos.fotoIngreso,
+        foto_final:"",
+        foto_ot:fotos.fotoOT,
+        foto_vin:fotos.fotoVIN
+      };
+
+      const respuestaSupabase = await fetch(
+        SUPABASE_URL + "/rest/v1/vehiculos_wankamotors",
+        {
+          method:"POST",
+          headers:{
+            "apikey":SUPABASE_KEY,
+            "Authorization":"Bearer " + SUPABASE_KEY,
+            "Content-Type":"application/json",
+            "Prefer":"return=minimal"
+          },
+          body:JSON.stringify(fila),
+          cache:"no-store"
+        }
+      );
+
+      if(!respuestaSupabase.ok){
+        const textoError = await respuestaSupabase.text();
+        throw new Error(
+          "Supabase HTTP " + respuestaSupabase.status +
+          (textoError ? ": " + textoError : "")
+        );
+      }
+
+      limpiarRegistroPasado();
+      mostrarPopup(
+        "Registro regularizado",
+        "El lavado pasado fue registrado correctamente como Finalizado.",
+        "success"
       );
     }
 
-    limpiarRegistroPasado();
-    mostrarPopup(
-      "Registro regularizado",
-      "El lavado pasado fue registrado correctamente como Finalizado.",
-      "success"
-    );
     await cargarDatos();
 
   }catch(error){
@@ -2761,10 +2909,14 @@ async function guardarRegistroPasado(){
   }finally{
     boton.disabled = false;
     loading.style.display = "none";
+    actualizarModoEdicionPasado();
   }
 }
 
 function limpiarRegistroPasado(){
+
+  registroPasadoSeleccionadoId = null;
+  registrosPasadosEncontrados = [];
 
   document.getElementById("buscarPasado").value = "";
   document.getElementById("resultadoBusquedaPasado").innerHTML = "";
@@ -2783,6 +2935,7 @@ function limpiarRegistroPasado(){
 
   document.querySelector('input[name="tipoPasado"][value="Servicio"]').checked = true;
   cambiarTipoPasado("Servicio");
+  actualizarModoEdicionPasado();
   const hoyLima = obtenerFechaHistorial(new Date().toISOString());
   if(document.getElementById("pasadoFecha")) document.getElementById("pasadoFecha").value = hoyLima;
 }
