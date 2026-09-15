@@ -2315,30 +2315,35 @@ function normalizarOT(valor){
 }
 
 function tieneMismosDigitosCortos(a,b){
-  const x = String(a || "").replace(/\D/g, "");
-  const y = String(b || "").replace(/\D/g, "");
+  const textoA = String(a || "").trim();
+  const textoB = String(b || "").trim();
+  const x = textoA.replace(/\D/g, "");
+  const y = textoB.replace(/\D/g, "");
 
   if(!x || !y) return false;
   if(x === y) return true;
 
+  /* Evitamos falsas coincidencias por compartir dígitos. */
   const corto = x.length <= y.length ? x : y;
   const largo = x.length <= y.length ? y : x;
 
-  /* Solo usamos esta coincidencia flexible para OT cortas.
-     Ej.: 688 puede alertar frente a 8/668/2026. */
   if(corto.length < 3 || corto.length > 5) return false;
 
-  const conteo = {};
-  for(const digito of largo){
-    conteo[digito] = (conteo[digito] || 0) + 1;
+  /* Ej.: 1412 coincide con OT8/1412/2026. */
+  if(largo.indexOf(corto) !== -1) return true;
+
+  /* También permite alertar por un posible error de un solo dígito,
+     como 688 frente a 668. */
+  if(x.length === y.length && x.length >= 3 && x.length <= 5){
+    let diferencias = 0;
+    for(let i = 0; i < x.length; i++){
+      if(x[i] !== y[i]) diferencias++;
+      if(diferencias > 1) return false;
+    }
+    return diferencias === 1;
   }
 
-  for(const digito of corto){
-    if(!conteo[digito]) return false;
-    conteo[digito]--;
-  }
-
-  return true;
+  return false;
 }
 
 async function obtenerTodosLosRegistros(){
@@ -2432,26 +2437,29 @@ async function verificarDuplicadosAntesDeRegistrar(datos){
     const hayExacta = coincidencias.some(function(x){ return x.exacta; });
 
     if(hayExacta){
-      mensaje += "⚠️ POSIBLE REGISTRO DUPLICADO\\n\\n";
+      mensaje += "⚠️ SE ENCONTRÓ UNA COINCIDENCIA\n\n";
     }else{
-      mensaje += "⚠️ POSIBLE COINCIDENCIA\\n\\n";
+      mensaje += "⚠️ POSIBLE COINCIDENCIA DE OT\n\n";
     }
+
+    mensaje += "Se encontró el siguiente registro relacionado con los datos que está editando:\n\n";
 
     coincidencias.slice(0,5).forEach(function(x, indice){
       const r = x.registro;
       mensaje +=
-        (indice + 1) + ". " +
-        "OT: " + (r.ot || "—") +
-        " | Placa: " + (r.placa || "—") +
-        " | VIN: " + (r.vin || "—") +
-        " | Estado: " + (r.estado || "—") +
-        "\\n";
+        "REGISTRO " + (indice + 1) + "\n" +
+        "• OT: " + (r.ot || "—") + "\n" +
+        "• Placa: " + (r.placa || "—") + "\n" +
+        "• VIN: " + (r.vin || "—") + "\n" +
+        "• Estado: " + (r.estado || "—") + "\n" +
+        "• Motivo: " + (x.motivos.join(", ") || "coincidencia") + "\n\n";
     });
 
-    mensaje +=
-      "\\nMotivo: " +
-      coincidencias[0].motivos.join(", ") +
-      ".\\n\\n¿Desea continuar de todas formas?";
+    if(coincidencias.length > 5){
+      mensaje += "Y " + (coincidencias.length - 5) + " registro(s) adicional(es).\n\n";
+    }
+
+    mensaje += "¿Desea continuar con la actualización de todas formas?";
 
     return window.confirm(mensaje);
 
@@ -2647,8 +2655,14 @@ function seleccionarRegistroPasado(id){
 
   mostrarAlerta(
     "Registro seleccionado. Puede corregir la OT completa y los demás datos antes de actualizar.",
-    "success"
+    "success",
+    false
   );
+
+  // Llevar al formulario de edición y evitar que la alerta devuelva la pantalla al inicio.
+  setTimeout(function(){
+    document.getElementById("formularioPasado").scrollIntoView({behavior:"smooth", block:"start"});
+  }, 50);
 }
 
 function urlMiniaturaDrive(url){
@@ -4207,7 +4221,7 @@ document.addEventListener(
    ALERTAS
 ===================================================== */
 
-function mostrarAlerta(mensaje,tipo){
+function mostrarAlerta(mensaje,tipo,noScroll){
 
 const alerta =
 document.getElementById("alerta");
@@ -4231,6 +4245,7 @@ alerta.className =
 tipo;
 
 
+if(noScroll !== false){
 window.scrollTo({
 
 top:0,
@@ -4238,6 +4253,7 @@ top:0,
 behavior:"smooth"
 
 });
+}
 
 
 setTimeout(function(){
