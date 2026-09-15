@@ -699,7 +699,8 @@ VIN
 <input
 id="vin"
 type="text"
-placeholder="VIN">
+placeholder="VIN"
+oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,17)">
 
 </div>
 
@@ -721,7 +722,12 @@ Foto del VIN
 id="fotoVIN"
 type="file"
 accept="image/*"
-capture="environment">
+capture="environment"
+onchange="leerVINDesdeFoto(this,'vin','estadoOCRVIN')">
+
+<small id="estadoOCRVIN" style="display:block;margin-top:6px;color:#666;">
+Al seleccionar la foto, el sistema intentará leer automáticamente el VIN.
+</small>
 
 </div>
 
@@ -1364,7 +1370,7 @@ id="tablaHistorial">
       </div>
       <div class="form-group">
         <label>Número de VIN</label>
-        <input id="editarVIN" type="text">
+        <input id="editarVIN" type="text" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,17)">
       </div>
       <div class="form-group">
         <label>Marca</label>
@@ -1394,8 +1400,10 @@ id="tablaHistorial">
       </div>
       <div class="form-group">
         <label>Foto de VIN</label>
-        <input id="editarFotoVIN" type="file" accept="image/*">
+        <input id="editarFotoVIN" type="file" accept="image/*"
+               onchange="leerVINDesdeFoto(this,'editarVIN','estadoOCREditarVIN')">
         <small id="estadoFotoVIN" style="display:block;margin-top:5px;"></small>
+        <small id="estadoOCREditarVIN" style="display:block;margin-top:5px;color:#666;"></small>
       </div>
     </div>
 
@@ -1515,6 +1523,8 @@ Cancelar
 </div>
 
 
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 
@@ -1843,6 +1853,320 @@ async function enviarDrive(datos){
 /* =====================================================
    REGISTRAR VEHÍCULO
 ===================================================== */
+
+
+/* =====================================================
+   LECTURA AUTOMÁTICA DEL VIN DESDE LA FOTO
+   1) Primero intenta leer QR.
+   2) Si no hay QR o el QR no contiene el VIN, usa OCR.
+   Esto permite trabajar con ambos tipos de etiquetas:
+   - VIN impreso directamente.
+   - VIN acompañado de un código QR.
+===================================================== */
+
+function extraerCandidatoVIN(texto){
+
+  if(!texto) return "";
+
+  const limpio=String(texto).toUpperCase().replace(/[^A-Z0-9]/g,"");
+
+  /* VIN válido: 17 caracteres y no contiene I, O ni Q. */
+  for(let i=0;i<=limpio.length-17;i++){
+    const parte=limpio.slice(i,i+17);
+    if(/^[A-HJ-NPR-Z0-9]{17}$/.test(parte)){
+      return parte;
+    }
+  }
+
+  const bloques=String(texto).toUpperCase().match(/[A-Z0-9]{17,}/g)||[];
+
+  for(const bloque of bloques){
+    const b=bloque.replace(/[^A-Z0-9]/g,"");
+    for(let i=0;i<=b.length-17;i++){
+      const parte=b.slice(i,i+17);
+      if(/^[A-HJ-NPR-Z0-9]{17}$/.test(parte)){
+        return parte;
+      }
+    }
+  }
+
+  return "";
+}
+
+function leerImagenComoDataURL(file){
+
+  return new Promise(function(resolve,reject){
+
+    const reader=new FileReader();
+
+    reader.onload=function(e){ resolve(e.target.result); };
+    reader.onerror=function(){ reject(new Error("No se pudo leer la fotografía del VIN.")); };
+
+    reader.readAsDataURL(file);
+  });
+}
+
+function prepararImagenParaQR(file){
+
+  return new Promise(function(resolve,reject){
+
+    const reader=new FileReader();
+
+    reader.onload=function(e){
+
+      const img=new Image();
+
+      img.onload=function(){
+
+        let width=img.width;
+        let height=img.height;
+        const max=2200;
+
+        if(width>max){
+          height=Math.round(height*max/width);
+          width=max;
+        }
+
+        const canvas=document.createElement("canvas");
+        canvas.width=width;
+        canvas.height=height;
+
+        const ctx=canvas.getContext("2d",{willReadFrequently:true});
+        ctx.drawImage(img,0,0,width,height);
+
+        resolve(canvas);
+      };
+
+      img.onerror=function(){
+        reject(new Error("No se pudo preparar la fotografía para leer el QR."));
+      };
+
+      img.src=e.target.result;
+    };
+
+    reader.onerror=function(){
+      reject(new Error("No se pudo leer la fotografía del VIN."));
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
+function intentarLeerQR(canvas){
+
+  if(!window.jsQR) return "";
+
+  const ctx=canvas.getContext("2d",{willReadFrequently:true});
+  const imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
+
+  const codigo=window.jsQR(
+    imageData.data,
+    imageData.width,
+    imageData.height,
+    {
+      inversionAttempts:"attemptBoth"
+    }
+  );
+
+  if(codigo && codigo.data){
+    return extraerCandidatoVIN(codigo.data);
+  }
+
+  return "";
+}
+
+function prepararImagenParaOCR(file){
+
+  return new Promise(function(resolve,reject){
+
+    const reader=new FileReader();
+
+    reader.onload=function(e){
+
+      const img=new Image();
+
+      img.onload=function(){
+
+        let width=img.width;
+        let height=img.height;
+        const max=1800;
+
+        if(width>max){
+          height=Math.round(height*max/width);
+          width=max;
+        }
+
+        const canvas=document.createElement("canvas");
+        canvas.width=width;
+        canvas.height=height;
+
+        const ctx=canvas.getContext("2d");
+        ctx.drawImage(img,0,0,width,height);
+
+        const imageData=ctx.getImageData(0,0,width,height);
+        const data=imageData.data;
+
+        for(let i=0;i<data.length;i+=4){
+
+          const gris=
+            0.299*data[i]+
+            0.587*data[i+1]+
+            0.114*data[i+2];
+
+          const contraste=Math.max(
+            0,
+            Math.min(255,((gris-128)*1.35)+128)
+          );
+
+          data[i]=contraste;
+          data[i+1]=contraste;
+          data[i+2]=contraste;
+        }
+
+        ctx.putImageData(imageData,0,0);
+        resolve(canvas.toDataURL("image/jpeg",0.90));
+      };
+
+      img.onerror=function(){
+        reject(new Error("No se pudo preparar la fotografía del VIN."));
+      };
+
+      img.src=e.target.result;
+    };
+
+    reader.onerror=function(){
+      reject(new Error("No se pudo leer la fotografía del VIN."));
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
+async function leerVINDesdeFoto(input,campoVINId,estadoId){
+
+  const campo=document.getElementById(campoVINId);
+  const estado=document.getElementById(estadoId);
+
+  if(!input || !campo) return;
+
+  const archivo=input.files && input.files[0];
+
+  if(!archivo){
+    if(estado) estado.textContent="";
+    return;
+  }
+
+  if(estado){
+    estado.textContent="🔎 Revisando la foto: buscando QR...";
+    estado.style.color="#1d4ed8";
+  }
+
+  try{
+
+    /* -------------------------------------------------
+       PASO 1: intentar leer el QR de la foto.
+       Algunos vehículos traen QR y otros solo el VIN.
+    ------------------------------------------------- */
+    let vinDetectado="";
+
+    if(window.jsQR){
+      const canvasQR=await prepararImagenParaQR(archivo);
+      vinDetectado=intentarLeerQR(canvasQR);
+    }
+
+    if(vinDetectado){
+
+      campo.value=vinDetectado;
+
+      if(estado){
+        estado.textContent=
+          "✅ VIN leído desde el QR: "+vinDetectado+
+          ". Verifica que sea correcto antes de guardar.";
+        estado.style.color="#166534";
+      }
+
+      return;
+    }
+
+    /* -------------------------------------------------
+       PASO 2: si no hay QR útil, usar OCR sobre el texto.
+    ------------------------------------------------- */
+    if(estado){
+      estado.textContent="🔎 No se encontró un VIN en el QR. Leyendo el texto de la fotografía...";
+      estado.style.color="#1d4ed8";
+    }
+
+    if(!window.Tesseract || !window.Tesseract.recognize){
+      throw new Error("El lector OCR todavía no está disponible.");
+    }
+
+    const imagenOCR=await prepararImagenParaOCR(archivo);
+
+    const resultado=await Tesseract.recognize(
+      imagenOCR,
+      "eng",
+      {
+        logger:function(info){
+          if(!estado) return;
+
+          if(info.status==="recognizing text" &&
+             typeof info.progress==="number"){
+            estado.textContent=
+              "🔎 Leyendo VIN... "+
+              Math.round(info.progress*100)+"%";
+          }
+        }
+      }
+    );
+
+    const texto=
+      resultado &&
+      resultado.data &&
+      resultado.data.text
+        ? resultado.data.text
+        : "";
+
+    vinDetectado=extraerCandidatoVIN(texto);
+
+    if(vinDetectado){
+
+      campo.value=vinDetectado;
+
+      if(estado){
+        estado.textContent=
+          "✅ VIN detectado por lectura de texto: "+vinDetectado+
+          ". Verifica que sea correcto antes de guardar.";
+        estado.style.color="#166534";
+      }
+
+    }else{
+
+      const textoLimpio=String(texto)
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g,"");
+
+      if(textoLimpio.length>=10 && textoLimpio.length<=25){
+        campo.value=textoLimpio.slice(0,17);
+      }
+
+      if(estado){
+        estado.textContent=
+          "⚠️ No se pudo identificar un VIN de 17 caracteres. Revísalo y corrígelo manualmente.";
+        estado.style.color="#92400e";
+      }
+    }
+
+  }catch(error){
+
+    console.error("Error leyendo VIN desde foto:",error);
+
+    if(estado){
+      estado.textContent=
+        "⚠️ No se pudo leer automáticamente el VIN. Puedes ingresarlo manualmente.";
+      estado.style.color="#92400e";
+    }
+  }
+}
 
 async function registrar(){
 
