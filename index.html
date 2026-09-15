@@ -1849,6 +1849,16 @@ if(tipo === "Servicio" && !placa){
   return;
 }
 
+if(tipo === "Servicio" && !ot){
+  mostrarAlerta("Debe ingresar el número de OT.","error");
+  return;
+}
+
+if(tipo === "Nuevo" && !vin){
+  mostrarAlerta("Debe ingresar el VIN.","error");
+  return;
+}
+
 if(!marca || !servicio){
   mostrarAlerta("Complete todos los campos obligatorios.","error");
   return;
@@ -1861,104 +1871,16 @@ if(!archivoIngreso){
 
 boton.disabled = true;
 loading.style.display = "block";
-loading.textContent = "⏳ Preparando fotografías...";
+loading.textContent = "⏳ Registrando vehículo...";
 
-const fotoIngreso = await comprimirFoto(archivoIngreso);
-let fotoOT = "";
-let fotoVIN = "";
-
-if(archivoOT){ fotoOT = await comprimirFoto(archivoOT); }
-if(archivoVIN){ fotoVIN = await comprimirFoto(archivoVIN); }
-
+/*
+  PASO 1:
+  Primero registramos el vehículo en Supabase.
+  Así el registro no queda bloqueado esperando a Google Drive.
+*/
 const id = (window.crypto && crypto.randomUUID)
   ? crypto.randomUUID()
   : (Date.now().toString(36) + "-" + Math.random().toString(36).slice(2));
-
-/*
-  IMPORTANTE:
-  Las fotografías se envían por separado a Apps Script.
-  Esto evita que una sola petición sea demasiado pesada
-  y hace más estable la comunicación con Google Drive.
-*/
-
-const fotos = {
-  fotoIngreso: "",
-  fotoOT: "",
-  fotoVIN: ""
-};
-
-loading.textContent = "⏳ Guardando foto de ingreso...";
-
-const respuestaIngreso = await enviarDrive({
-  accion:"guardarFotos",
-  id:id,
-  fotoIngreso:fotoIngreso
-});
-
-if(!respuestaIngreso || respuestaIngreso.ok !== true || !respuestaIngreso.fotoIngreso){
-  throw new Error(
-    respuestaIngreso && respuestaIngreso.mensaje
-      ? respuestaIngreso.mensaje
-      : "No se pudo guardar la foto de ingreso en Drive."
-  );
-}
-
-fotos.fotoIngreso = respuestaIngreso.fotoIngreso;
-
-/* OT y VIN son peticiones independientes; se guardan en paralelo
-   para reducir considerablemente el tiempo total de registro. */
-const tareasFotos = [];
-
-if(fotoOT){
-  tareasFotos.push(
-    (async function(){
-      const respuestaOT = await enviarDrive({
-        accion:"guardarFotos",
-        id:id,
-        fotoOT:fotoOT
-      });
-
-      if(!respuestaOT || respuestaOT.ok !== true || !respuestaOT.fotoOT){
-        throw new Error(
-          respuestaOT && respuestaOT.mensaje
-            ? respuestaOT.mensaje
-            : "No se pudo guardar la foto de OT en Drive."
-        );
-      }
-
-      fotos.fotoOT = respuestaOT.fotoOT;
-    })()
-  );
-}
-
-if(fotoVIN){
-  tareasFotos.push(
-    (async function(){
-      const respuestaVIN = await enviarDrive({
-        accion:"guardarFotos",
-        id:id,
-        fotoVIN:fotoVIN
-      });
-
-      if(!respuestaVIN || respuestaVIN.ok !== true || !respuestaVIN.fotoVIN){
-        throw new Error(
-          respuestaVIN && respuestaVIN.mensaje
-            ? respuestaVIN.mensaje
-            : "No se pudo guardar la foto de VIN en Drive."
-        );
-      }
-
-      fotos.fotoVIN = respuestaVIN.fotoVIN;
-    })()
-  );
-}
-
-if(tareasFotos.length){
-  loading.textContent = "⏳ Guardando fotografías adicionales...";
-  await Promise.all(tareasFotos);
-}
-
-loading.textContent = "⏳ Guardando vehículo en Supabase...";
 
 const ahora = new Date().toISOString();
 
@@ -1976,10 +1898,10 @@ const filaSupabase = {
   hora_salida:null,
   observaciones:observaciones,
   observaciones_finales:"",
-  foto_ingreso:fotos.fotoIngreso || "",
+  foto_ingreso:"",
   foto_final:"",
-  foto_ot:fotos.fotoOT || "",
-  foto_vin:fotos.fotoVIN || ""
+  foto_ot:"",
+  foto_vin:""
 };
 
 const respuestaSupabase = await fetch(
@@ -2004,40 +1926,153 @@ if(!respuestaSupabase.ok){
   );
 }
 
+/*
+  El registro ya está confirmado.
+  Limpiamos y avisamos inmediatamente al usuario.
+*/
 limpiarFormulario();
 loading.style.display = "none";
+boton.disabled = false;
 
-/* Mostrar confirmación sin depender de una función inexistente */
-if(typeof mostrarPopup === "function"){
-  mostrarPopup(
-    "Lavado iniciado",
-    "El vehículo y sus fotografías fueron guardados correctamente.",
-    "success"
-  );
-}else{
-  mostrarAlerta(
-    "Lavado iniciado. El vehículo y sus fotografías fueron guardados correctamente.",
-    "success"
-  );
-}
+mostrarAlerta(
+  "Lavado iniciado correctamente. El vehículo ya fue registrado.",
+  "success"
+);
 
-/* Actualizar la pantalla en segundo plano para no hacer esperar al usuario */
-cargarDatos().catch(function(error){
-  console.warn("No se pudo actualizar la pantalla después del registro:", error);
-});
+/*
+  PASO 2:
+  Las fotografías se guardan después del registro.
+  Esto evita que una demora de Google Drive impida registrar el vehículo.
+*/
+(async function(){
+
+  try{
+
+    const fotos = {
+      fotoIngreso:"",
+      fotoOT:"",
+      fotoVIN:""
+    };
+
+    const fotoIngreso = await comprimirFoto(archivoIngreso);
+    const fotoOT = archivoOT ? await comprimirFoto(archivoOT) : "";
+    const fotoVIN = archivoVIN ? await comprimirFoto(archivoVIN) : "";
+
+    /*
+      Ingreso primero; OT y VIN pueden ir en paralelo.
+    */
+    const respuestaIngreso = await enviarDrive({
+      accion:"guardarFotos",
+      id:id,
+      fotoIngreso:fotoIngreso
+    });
+
+    if(!respuestaIngreso || respuestaIngreso.ok !== true || !respuestaIngreso.fotoIngreso){
+      throw new Error(
+        respuestaIngreso && respuestaIngreso.mensaje
+          ? respuestaIngreso.mensaje
+          : "No se pudo guardar la foto de ingreso."
+      );
+    }
+
+    fotos.fotoIngreso = respuestaIngreso.fotoIngreso;
+
+    const tareas = [];
+
+    if(fotoOT){
+      tareas.push(
+        enviarDrive({
+          accion:"guardarFotos",
+          id:id,
+          fotoOT:fotoOT
+        }).then(function(r){
+          if(!r || r.ok !== true || !r.fotoOT){
+            throw new Error("No se pudo guardar la foto de OT.");
+          }
+          fotos.fotoOT = r.fotoOT;
+        })
+      );
+    }
+
+    if(fotoVIN){
+      tareas.push(
+        enviarDrive({
+          accion:"guardarFotos",
+          id:id,
+          fotoVIN:fotoVIN
+        }).then(function(r){
+          if(!r || r.ok !== true || !r.fotoVIN){
+            throw new Error("No se pudo guardar la foto de VIN.");
+          }
+          fotos.fotoVIN = r.fotoVIN;
+        })
+      );
+    }
+
+    await Promise.all(tareas);
+
+    /*
+      Actualizamos las URL de las fotografías en el mismo registro.
+    */
+    const respuestaFotos = await fetch(
+      SUPABASE_URL + "/rest/v1/vehiculos?id=eq." + encodeURIComponent(id),
+      {
+        method:"PATCH",
+        headers:{
+          "apikey":SUPABASE_KEY,
+          "Authorization":"Bearer " + SUPABASE_KEY,
+          "Content-Type":"application/json",
+          "Prefer":"return=minimal"
+        },
+        body:JSON.stringify({
+          foto_ingreso:fotos.fotoIngreso,
+          foto_ot:fotos.fotoOT,
+          foto_vin:fotos.fotoVIN
+        })
+      }
+    );
+
+    if(!respuestaFotos.ok){
+      throw new Error("No se pudieron actualizar las fotografías en Supabase.");
+    }
+
+    console.log("Fotografías guardadas correctamente para:", id);
+
+    cargarDatos().catch(function(error){
+      console.warn("No se pudo actualizar la pantalla:", error);
+    });
+
+  }catch(error){
+
+    /*
+      El vehículo ya está registrado aunque una fotografía falle.
+      Dejamos constancia en consola para poder revisar el problema.
+    */
+    console.error("Vehículo registrado, pero hubo un problema con las fotografías:", error);
+
+    mostrarAlerta(
+      "El vehículo fue registrado, pero una fotografía no pudo guardarse. Revise el historial.",
+      "error"
+    );
+
+    cargarDatos().catch(function(error2){
+      console.warn("No se pudo actualizar la pantalla:", error2);
+    });
+  }
+
+})();
 
 }catch(error){
 
 console.error("Error registrando:",error);
+
+boton.disabled = false;
+loading.style.display = "none";
+
 mostrarAlerta(
   "No se pudo registrar el vehículo: " + error.message,
   "error"
 );
-
-}finally{
-
-boton.disabled = false;
-loading.style.display = "none";
 
 }
 
