@@ -294,6 +294,11 @@ th{
     font-weight:bold;
 }
 
+.pendiente{
+    background:#fef3c7;
+    color:#92400e;
+}
+
 .iniciar{
     background:#dbeafe;
     color:#1e40af;
@@ -1061,7 +1066,7 @@ placeholder="OT, placa, VIN o marca"
 oninput="renderSeguimiento()">
 
 
-
+<div></div>
 
 </div>
 
@@ -2127,8 +2132,10 @@ function renderSeguimiento(){
  
  
       return (
-        !buscar || 
-        texto.includes(buscar)
+        (
+          !buscar || 
+          texto.includes(buscar)
+        )
       ); 
  
     }); 
@@ -2201,21 +2208,24 @@ function renderSeguimiento(){
  
  
     /* ---------------------------------------------
-       VEHÍCULO EN LAVADO
-       Todos los registros de Seguimiento están en
-       estado "Lavando".
+       VEHÍCULO LAVANDO
     --------------------------------------------- */
 
-    acciones = 
-    `
-      <button class="btn btn-secondary btn-editar" onclick="abrirEditar('${esc(r.id)}')" title="Editar datos">✏️</button>
-      <button 
-        class="btn btn-success" 
-        onclick="abrirFinalizar('${esc(r.id)}')">
-        ✅ Finalizar lavado
-      </button>
-    `; 
-
+    if(r.estado === "Lavando"){ 
+ 
+      acciones = 
+      `
+        <button class="btn btn-secondary btn-editar" onclick="abrirEditar('${esc(r.id)}')" title="Editar datos">✏️</button>
+        <button 
+          class="btn btn-success" 
+          onclick="abrirFinalizar('${esc(r.id)}')">
+          ✅ Finalizar lavado
+        </button>
+      `; 
+ 
+    } 
+ 
+ 
     tbody.innerHTML += 
     ` 
  
@@ -2345,14 +2355,13 @@ async function guardarEdicion(){
     const ot = document.getElementById("editarOT").value.trim();
     const placa = document.getElementById("editarPlaca").value.trim();
     const vin = document.getElementById("editarVIN").value.trim();
-    const marca = document.getElementById("editarMarca").value.trim();
-
-    const archivoIngreso = document.getElementById("editarFotoIngreso").files[0];
-    const archivoOT = document.getElementById("editarFotoOT").files[0];
-    const archivoVIN = document.getElementById("editarFotoVIN").files[0];
+    const marca = document.getElementById("editarMarca").value;
 
     if(!id){
-      throw new Error("No se encontró el vehículo.");
+      throw new Error("No se encontró el ID del vehículo.");
+    }
+    if(!marca){
+      throw new Error("Debe seleccionar una marca.");
     }
 
     const registro = registros.find(function(r){
@@ -2360,39 +2369,37 @@ async function guardarEdicion(){
     });
 
     if(!registro){
-      throw new Error("No se encontró el vehículo.");
+      throw new Error("No se encontró el vehículo en Seguimiento.");
     }
+
+    const archivoIngreso = document.getElementById("editarFotoIngreso").files[0];
+    const archivoOT = document.getElementById("editarFotoOT").files[0];
+    const archivoVIN = document.getElementById("editarFotoVIN").files[0];
 
     boton.disabled = true;
     loading.style.display = "block";
 
-    /*
-      Las fotos existentes NO se reemplazan.
-      Solo enviamos a Drive las que actualmente están faltantes.
-    */
-    const datosFotos = {
-      accion:"guardarFotos",
-      id:id
-    };
-
+    /* ---------------------------------------------
+       1. Guardar SOLO fotografías que estén faltantes.
+       Las fotografías existentes jamás se reemplazan.
+    --------------------------------------------- */
+    const datosFotos = { accion:"guardarFotos", id:id };
     let subioFotos = false;
 
     if(!registro.fotoIngreso && archivoIngreso){
       datosFotos.fotoIngreso = await comprimirFoto(archivoIngreso);
       subioFotos = true;
     }
-
     if(!registro.fotoOT && archivoOT){
       datosFotos.fotoOT = await comprimirFoto(archivoOT);
       subioFotos = true;
     }
-
     if(!registro.fotoVIN && archivoVIN){
       datosFotos.fotoVIN = await comprimirFoto(archivoVIN);
       subioFotos = true;
     }
 
-    let fotosActualizadas = {
+    const fotosActualizadas = {
       fotoIngreso: registro.fotoIngreso || "",
       fotoOT: registro.fotoOT || "",
       fotoVIN: registro.fotoVIN || ""
@@ -2409,45 +2416,62 @@ async function guardarEdicion(){
         );
       }
 
-      /* Solo actualizamos los enlaces que Drive realmente devolvió. */
-      if(respuestaFotos.fotoIngreso){
-        fotosActualizadas.fotoIngreso = respuestaFotos.fotoIngreso;
-      }
-      if(respuestaFotos.fotoOT){
-        fotosActualizadas.fotoOT = respuestaFotos.fotoOT;
-      }
-      if(respuestaFotos.fotoVIN){
-        fotosActualizadas.fotoVIN = respuestaFotos.fotoVIN;
-      }
+      if(respuestaFotos.fotoIngreso) fotosActualizadas.fotoIngreso = respuestaFotos.fotoIngreso;
+      if(respuestaFotos.fotoOT) fotosActualizadas.fotoOT = respuestaFotos.fotoOT;
+      if(respuestaFotos.fotoVIN) fotosActualizadas.fotoVIN = respuestaFotos.fotoVIN;
     }
 
-    const respuesta = await fetch(
-      SUPABASE_URL + "/rest/v1/vehiculos?id=eq." + encodeURIComponent(id),
-      {
-        method:"PATCH",
-        headers:{
-          "apikey":SUPABASE_KEY,
-          "Authorization":"Bearer " + SUPABASE_KEY,
-          "Content-Type":"application/json",
-          "Prefer":"return=minimal"
-        },
-        body:JSON.stringify({
-          ot:ot,
-          placa:placa,
-          vin:vin,
-          marca:marca,
-          foto_ingreso:fotosActualizadas.fotoIngreso,
-          foto_ot:fotosActualizadas.fotoOT,
-          foto_vin:fotosActualizadas.fotoVIN
-        })
-      }
-    );
+    /* ---------------------------------------------
+       2. Actualizar Supabase.
+       No usamos return=representation: basta con HTTP 2xx.
+       Esto evita que una respuesta innecesaria del REST API
+       provoque un falso error después de guardar correctamente.
+    --------------------------------------------- */
+    const cambios = {
+      ot: ot,
+      placa: placa,
+      vin: vin,
+      marca: marca
+    };
+
+    if(!registro.fotoIngreso && fotosActualizadas.fotoIngreso){
+      cambios.foto_ingreso = fotosActualizadas.fotoIngreso;
+    }
+    if(!registro.fotoOT && fotosActualizadas.fotoOT){
+      cambios.foto_ot = fotosActualizadas.fotoOT;
+    }
+    if(!registro.fotoVIN && fotosActualizadas.fotoVIN){
+      cambios.foto_vin = fotosActualizadas.fotoVIN;
+    }
+
+    const urlSupabase = SUPABASE_URL + "/rest/v1/vehiculos?id=eq." + encodeURIComponent(id);
+
+    const respuesta = await fetch(urlSupabase, {
+      method:"PATCH",
+      headers:{
+        "apikey":SUPABASE_KEY,
+        "Authorization":"Bearer " + SUPABASE_KEY,
+        "Content-Type":"application/json",
+        "Prefer":"return=minimal"
+      },
+      body:JSON.stringify(cambios),
+      cache:"no-store"
+    });
 
     if(!respuesta.ok){
       const textoError = await respuesta.text();
+      let detalle = "";
+
+      try{
+        const errorJson = JSON.parse(textoError);
+        detalle = errorJson.message || errorJson.hint || errorJson.details || errorJson.code || "";
+      }catch(e){
+        detalle = String(textoError || "").replace(/\s+/g," ").slice(0,250);
+      }
+
       throw new Error(
         "Supabase HTTP " + respuesta.status +
-        (textoError ? ": " + textoError : "")
+        (detalle ? ": " + detalle : "")
       );
     }
 
@@ -2458,11 +2482,22 @@ async function guardarEdicion(){
         : "Los datos del vehículo fueron actualizados correctamente.",
       "success"
     );
+
     await cargarDatos();
 
   }catch(error){
     console.error("Error editando vehículo:",error);
-    mostrarAlerta("No se pudieron actualizar los datos: " + error.message,"error");
+
+    let mensaje = error && error.message
+      ? String(error.message)
+      : "Error desconocido.";
+
+    if(mensaje.length > 500){
+      mensaje = mensaje.slice(0,500) + "…";
+    }
+
+    mostrarAlerta("No se pudieron actualizar los datos: " + mensaje,"error");
+
   }finally{
     boton.disabled = false;
     loading.style.display = "none";
@@ -3332,17 +3367,37 @@ return String(valor)
 
 function claseEstado(estado){
 
-if(estado === "Lavando"){
-  return "iniciar";
+if(
+estado === "Pendiente"
+){
+
+return "pendiente";
+
 }
 
-if(estado === "Finalizado"){
-  return "finalizado";
-}
+
+if(
+estado === "Lavando"
+){
 
 return "iniciar";
 
 }
+
+
+if(
+estado === "Finalizado"
+){
+
+return "finalizado";
+
+}
+
+
+return "pendiente";
+
+}
+
 
 /* =====================================================
    INICIO
