@@ -360,6 +360,12 @@ th{
     cursor:pointer;
 }
 
+.btn-editar{
+    min-width:42px;
+    padding:8px 10px;
+    margin-right:6px;
+}
+
 /* =====================================================
    OCULTAR MODELO
 ===================================================== */
@@ -1098,7 +1104,7 @@ N°
 </th>
 
 <th>
-Fecha/hora de ingreso
+Fecha y hora de ingreso
 </th>
 
 <th>
@@ -1353,6 +1359,70 @@ id="tablaHistorial">
     </div>
 
 </div>
+
+<!-- =====================================================
+     MODAL EDITAR DATOS
+===================================================== -->
+
+<div id="modalEditar" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Editar datos del vehículo</h2>
+      <button class="close" onclick="cerrarEditar()">×</button>
+    </div>
+
+    <input type="hidden" id="idEditar">
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label>OT</label>
+        <input id="editarOT" type="text">
+      </div>
+      <div class="form-group">
+        <label>Placa</label>
+        <input id="editarPlaca" type="text">
+      </div>
+      <div class="form-group">
+        <label>Número de VIN</label>
+        <input id="editarVIN" type="text">
+      </div>
+      <div class="form-group">
+        <label>Marca</label>
+        <input id="editarMarca" type="text">
+      </div>
+    </div>
+
+    <div class="form-grid" style="margin-top:12px;">
+      <div class="form-group">
+        <label>Foto de ingreso</label>
+        <input id="editarFotoIngreso" type="file" accept="image/*">
+        <small id="estadoFotoIngreso" style="display:block;margin-top:5px;"></small>
+      </div>
+      <div class="form-group">
+        <label>Foto de OT</label>
+        <input id="editarFotoOT" type="file" accept="image/*">
+        <small id="estadoFotoOT" style="display:block;margin-top:5px;"></small>
+      </div>
+      <div class="form-group">
+        <label>Foto de VIN</label>
+        <input id="editarFotoVIN" type="file" accept="image/*">
+        <small id="estadoFotoVIN" style="display:block;margin-top:5px;"></small>
+      </div>
+    </div>
+
+    <div style="margin-top:8px;font-size:13px;color:#666;">
+      Las fotografías que ya existen se conservan. Solo se subirán las fotografías que estén faltantes y que selecciones.
+    </div>
+
+    <div id="loadingEditar" class="loading">⏳ Guardando cambios...</div>
+
+    <div class="actions">
+      <button id="btnGuardarEdicion" class="btn btn-primary" onclick="guardarEdicion()">💾 Guardar cambios</button>
+      <button class="btn btn-secondary" onclick="cerrarEditar()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- =====================================================
      MODAL FINALIZAR
@@ -2165,14 +2235,13 @@ function renderSeguimiento(){
     ){ 
  
       acciones = 
-      ` 
+      `
+        <button class="btn btn-secondary btn-editar" onclick="abrirEditar('${esc(r.id)}')" title="Editar datos">✏️</button>
         <button 
           class="btn btn-primary" 
           onclick="iniciar('${esc(r.id)}')">
-          
           ▶ Iniciar lavado
-          
-        </button> 
+        </button>
       `; 
  
     } 
@@ -2187,14 +2256,13 @@ function renderSeguimiento(){
     ){ 
  
       acciones = 
-      ` 
+      `
+        <button class="btn btn-secondary btn-editar" onclick="abrirEditar('${esc(r.id)}')" title="Editar datos">✏️</button>
         <button 
           class="btn btn-success" 
           onclick="abrirFinalizar('${esc(r.id)}')">
-          
           ✅ Finalizar lavado
-          
-        </button> 
+        </button>
       `; 
  
     } 
@@ -2274,6 +2342,196 @@ function renderSeguimiento(){
   }); 
  
 }
+
+/* =====================================================
+   EDITAR DATOS DEL VEHÍCULO
+===================================================== */
+
+function abrirEditar(id){
+
+  const registro = registros.find(function(r){
+    return String(r.id) === String(id);
+  });
+
+  if(!registro){
+    mostrarAlerta("No se encontró el vehículo.","error");
+    return;
+  }
+
+  document.getElementById("idEditar").value = registro.id || "";
+  document.getElementById("editarOT").value = registro.ot || "";
+  document.getElementById("editarPlaca").value = registro.placa || "";
+  document.getElementById("editarVIN").value = registro.vin || "";
+  document.getElementById("editarMarca").value = registro.marca || "";
+
+  const inputIngreso = document.getElementById("editarFotoIngreso");
+  const inputOT = document.getElementById("editarFotoOT");
+  const inputVIN = document.getElementById("editarFotoVIN");
+
+  inputIngreso.value = "";
+  inputOT.value = "";
+  inputVIN.value = "";
+
+  inputIngreso.disabled = !!registro.fotoIngreso;
+  inputOT.disabled = !!registro.fotoOT;
+  inputVIN.disabled = !!registro.fotoVIN;
+
+  document.getElementById("estadoFotoIngreso").textContent = registro.fotoIngreso
+    ? "✅ Ya existe una foto de ingreso"
+    : "⚠️ Foto faltante: puedes subirla";
+
+  document.getElementById("estadoFotoOT").textContent = registro.fotoOT
+    ? "✅ Ya existe una foto de OT"
+    : "⚠️ Foto faltante: puedes subirla";
+
+  document.getElementById("estadoFotoVIN").textContent = registro.fotoVIN
+    ? "✅ Ya existe una foto de VIN"
+    : "⚠️ Foto faltante: puedes subirla";
+
+  document.getElementById("loadingEditar").style.display = "none";
+  document.getElementById("btnGuardarEdicion").disabled = false;
+
+  document.getElementById("modalEditar").classList.add("active");
+}
+
+function cerrarEditar(){
+  document.getElementById("modalEditar").classList.remove("active");
+}
+
+async function guardarEdicion(){
+
+  const boton = document.getElementById("btnGuardarEdicion");
+  const loading = document.getElementById("loadingEditar");
+
+  try{
+    const id = document.getElementById("idEditar").value.trim();
+    const ot = document.getElementById("editarOT").value.trim();
+    const placa = document.getElementById("editarPlaca").value.trim();
+    const vin = document.getElementById("editarVIN").value.trim();
+    const marca = document.getElementById("editarMarca").value.trim();
+
+    const archivoIngreso = document.getElementById("editarFotoIngreso").files[0];
+    const archivoOT = document.getElementById("editarFotoOT").files[0];
+    const archivoVIN = document.getElementById("editarFotoVIN").files[0];
+
+    if(!id){
+      throw new Error("No se encontró el vehículo.");
+    }
+
+    const registro = registros.find(function(r){
+      return String(r.id) === String(id);
+    });
+
+    if(!registro){
+      throw new Error("No se encontró el vehículo.");
+    }
+
+    boton.disabled = true;
+    loading.style.display = "block";
+
+    /*
+      Las fotos existentes NO se reemplazan.
+      Solo enviamos a Drive las que actualmente están faltantes.
+    */
+    const datosFotos = {
+      accion:"guardarFotos",
+      id:id
+    };
+
+    let subioFotos = false;
+
+    if(!registro.fotoIngreso && archivoIngreso){
+      datosFotos.fotoIngreso = await comprimirFoto(archivoIngreso);
+      subioFotos = true;
+    }
+
+    if(!registro.fotoOT && archivoOT){
+      datosFotos.fotoOT = await comprimirFoto(archivoOT);
+      subioFotos = true;
+    }
+
+    if(!registro.fotoVIN && archivoVIN){
+      datosFotos.fotoVIN = await comprimirFoto(archivoVIN);
+      subioFotos = true;
+    }
+
+    let fotosActualizadas = {
+      fotoIngreso: registro.fotoIngreso || "",
+      fotoOT: registro.fotoOT || "",
+      fotoVIN: registro.fotoVIN || ""
+    };
+
+    if(subioFotos){
+      const respuestaFotos = await enviarDrive(datosFotos);
+
+      if(!respuestaFotos || respuestaFotos.ok !== true){
+        throw new Error(
+          respuestaFotos && respuestaFotos.mensaje
+            ? respuestaFotos.mensaje
+            : "No se pudieron guardar las fotografías en Drive."
+        );
+      }
+
+      /* Solo actualizamos los enlaces que Drive realmente devolvió. */
+      if(respuestaFotos.fotoIngreso){
+        fotosActualizadas.fotoIngreso = respuestaFotos.fotoIngreso;
+      }
+      if(respuestaFotos.fotoOT){
+        fotosActualizadas.fotoOT = respuestaFotos.fotoOT;
+      }
+      if(respuestaFotos.fotoVIN){
+        fotosActualizadas.fotoVIN = respuestaFotos.fotoVIN;
+      }
+    }
+
+    const respuesta = await fetch(
+      SUPABASE_URL + "/rest/v1/vehiculos?id=eq." + encodeURIComponent(id),
+      {
+        method:"PATCH",
+        headers:{
+          "apikey":SUPABASE_KEY,
+          "Authorization":"Bearer " + SUPABASE_KEY,
+          "Content-Type":"application/json",
+          "Prefer":"return=minimal"
+        },
+        body:JSON.stringify({
+          ot:ot,
+          placa:placa,
+          vin:vin,
+          marca:marca,
+          foto_ingreso:fotosActualizadas.fotoIngreso,
+          foto_ot:fotosActualizadas.fotoOT,
+          foto_vin:fotosActualizadas.fotoVIN
+        })
+      }
+    );
+
+    if(!respuesta.ok){
+      const textoError = await respuesta.text();
+      throw new Error(
+        "Supabase HTTP " + respuesta.status +
+        (textoError ? ": " + textoError : "")
+      );
+    }
+
+    cerrarEditar();
+    mostrarAlerta(
+      subioFotos
+        ? "Los datos y las fotografías faltantes fueron actualizados correctamente."
+        : "Los datos del vehículo fueron actualizados correctamente.",
+      "success"
+    );
+    await cargarDatos();
+
+  }catch(error){
+    console.error("Error editando vehículo:",error);
+    mostrarAlerta("No se pudieron actualizar los datos: " + error.message,"error");
+  }finally{
+    boton.disabled = false;
+    loading.style.display = "none";
+  }
+}
+
 
 /* =====================================================
    INICIAR LAVADO
