@@ -483,6 +483,15 @@ th{
 
 }
 
+
+
+/* PAGINACION DEL HISTORIAL */
+.paginacion-historial{display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap;padding:16px 0 4px;}
+.paginacion-historial button{min-width:36px;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;background:#fff;color:#111827;cursor:pointer;font-weight:600;}
+.paginacion-historial button:hover:not(:disabled){background:#f3f4f6;}
+.paginacion-historial button.activa{background:#111827;color:#fff;border-color:#111827;}
+.paginacion-historial button:disabled{opacity:.45;cursor:not-allowed;}
+.info-paginacion-historial{width:100%;text-align:center;font-size:13px;color:#6b7280;margin-top:4px;}
 </style>
 
 </head>
@@ -1200,6 +1209,20 @@ placeholder="OT, placa, VIN o marca">
 </div>
 
 
+<div>
+
+<label>
+Ordenar por fecha
+</label>
+
+<select id="ordenFechaHistorial" onchange="aplicarOrdenHistorial()">
+<option value="desc" selected>Descendente (más reciente primero)</option>
+<option value="asc">Ascendente (más antiguo primero)</option>
+</select>
+
+</div>
+
+
 </div>
 
 
@@ -1225,7 +1248,7 @@ onclick="limpiarHistorial()">
 
 <button
 class="btn btn-success"
-onclick="exportarCSV()">
+onclick="exportarExcel()">
 
 📥 Exportar
 
@@ -1301,6 +1324,8 @@ id="tablaHistorial">
 </tbody>
 
 </table>
+
+<div id="paginacionHistorial" class="paginacion-historial"></div>
 
 </div>
 
@@ -1443,6 +1468,7 @@ Cancelar
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 
 /* =====================================================
@@ -2412,6 +2438,10 @@ mostrarAlerta("No se pudo finalizar: " + error.message,"error");
    HISTORIAL
 ===================================================== */
 
+let historialActual = [];
+let paginaHistorialActual = 1;
+const REGISTROS_POR_PAGINA = 40;
+
 function mostrarMensajeHistorial(mensaje){
 
 const tbody =
@@ -2427,6 +2457,9 @@ ${esc(mensaje)}
 </td>
 </tr>
 `;
+
+const paginacion = document.getElementById("paginacionHistorial");
+if(paginacion) paginacion.innerHTML = "";
 
 }
 
@@ -2451,6 +2484,9 @@ document.getElementById(
 if(desde) desde.value = "";
 if(hasta) hasta.value = "";
 if(buscar) buscar.value = "";
+
+historialActual = [];
+paginaHistorialActual = 1;
 
 mostrarMensajeHistorial(
 "Seleccione uno o más filtros y presione Buscar."
@@ -2545,15 +2581,9 @@ const filtrados = (filas || []).map(function(r){
   return cumpleTexto && cumpleFecha;
 });
 
-// Asegura que la tabla quede ordenada por la misma fecha que se muestra
-// y que se utiliza para aplicar los filtros.
-filtrados.sort(function(a, b){
-  const fechaA = new Date(a.horaInicio || 0).getTime();
-  const fechaB = new Date(b.horaInicio || 0).getTime();
-  return fechaB - fechaA;
-});
-
-renderHistorial(filtrados);
+// Guarda los resultados filtrados y aplica el orden seleccionado.
+historialActual = filtrados;
+aplicarOrdenHistorial();
 
 }catch(error){
 
@@ -2562,6 +2592,194 @@ mostrarMensajeHistorial("No se pudo consultar el historial: " + error.message);
 
 }
 
+}
+
+
+function aplicarOrdenHistorial(){
+
+  const selector = document.getElementById("ordenFechaHistorial");
+  const orden = selector ? selector.value : "desc";
+
+  if(!historialActual || !historialActual.length){
+    return;
+  }
+
+  const registrosOrdenados = historialActual.slice().sort(function(a, b){
+
+    const fechaA = new Date(a.horaInicio || 0).getTime();
+    const fechaB = new Date(b.horaInicio || 0).getTime();
+
+    return orden === "asc"
+      ? fechaA - fechaB
+      : fechaB - fechaA;
+  });
+
+  paginaHistorialActual = 1;
+  renderHistorial(registrosOrdenados);
+}
+
+
+/* =====================================================
+   EXPORTAR EXCEL
+===================================================== */
+
+function exportarExcel(){
+
+  if(typeof XLSX === "undefined"){
+    mostrarAlerta(
+      "No se pudo cargar el módulo de Excel. Verifique su conexión a internet.",
+      "error"
+    );
+    return;
+  }
+
+  if(!historialActual || !historialActual.length){
+    mostrarAlerta(
+      "No hay información para exportar.",
+      "error"
+    );
+    return;
+  }
+
+  const selector = document.getElementById("ordenFechaHistorial");
+  const orden = selector ? selector.value : "desc";
+
+  const registros = historialActual.slice().sort(function(a, b){
+
+    const fechaA = new Date(a.horaInicio || 0).getTime();
+    const fechaB = new Date(b.horaInicio || 0).getTime();
+
+    return orden === "asc"
+      ? fechaA - fechaB
+      : fechaB - fechaA;
+  });
+
+  const datos = [[
+    "N°",
+    "Fecha",
+    "Tipo",
+    "OT",
+    "Placa",
+    "VIN",
+    "Marca",
+    "Modelo",
+    "Servicio",
+    "Salida",
+    "Fotos"
+  ]];
+
+  registros.forEach(function(r, indice){
+
+    const fotos = [];
+
+    if(r.fotoIngreso){
+      fotos.push("Ingreso");
+    }
+
+    if(r.fotoOT){
+      fotos.push("OT");
+    }
+
+    if(r.fotoVIN){
+      fotos.push("VIN");
+    }
+
+    if(r.fotoFinal){
+      fotos.push("Final");
+    }
+
+    datos.push([
+      indice + 1,
+      formatearFecha(r.horaInicio),
+      r.tipo || "",
+      r.ot || "",
+      r.placa || "",
+      r.vin || "",
+      r.marca || "",
+      r.modelo || "",
+      r.servicio || "",
+      formatearFecha(r.horaSalida),
+      fotos.join(" | ")
+    ]);
+  });
+
+  const hoja = XLSX.utils.aoa_to_sheet(datos);
+
+  // Anchos de columnas.
+  hoja["!cols"] = [
+    {wch:6},
+    {wch:20},
+    {wch:12},
+    {wch:16},
+    {wch:14},
+    {wch:20},
+    {wch:16},
+    {wch:16},
+    {wch:34},
+    {wch:20},
+    {wch:28}
+  ];
+
+  // Agrega hipervínculos reales a las fotos en Excel.
+  registros.forEach(function(r, indice){
+
+    const filaExcel = indice + 2;
+    const enlaces = [];
+
+    if(r.fotoIngreso){
+      enlaces.push("Ingreso: " + r.fotoIngreso);
+    }
+
+    if(r.fotoOT){
+      enlaces.push("OT: " + r.fotoOT);
+    }
+
+    if(r.fotoVIN){
+      enlaces.push("VIN: " + r.fotoVIN);
+    }
+
+    if(r.fotoFinal){
+      enlaces.push("Final: " + r.fotoFinal);
+    }
+
+    const celda = hoja["K" + filaExcel];
+
+    if(celda && enlaces.length){
+
+      celda.v = enlaces.map(function(x){
+        return x.split(": ")[0];
+      }).join(" | ");
+
+      // Excel admite un solo enlace por celda.
+      // Enlace principal: primera foto disponible.
+      const primerEnlace = enlaces[0].split(": ").slice(1).join(": ");
+
+      celda.l = {
+        Target: primerEnlace,
+        Tooltip: "Abrir foto"
+      };
+    }
+  });
+
+  const libro = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    libro,
+    hoja,
+    "Historial"
+  );
+
+  const fechaArchivo = new Date().toISOString().slice(0,10);
+
+  XLSX.writeFile(
+    libro,
+    "Historial_Carwash_" + fechaArchivo + ".xlsx"
+  );
+
+  mostrarAlerta(
+    "Excel generado correctamente.",
+    "success"
+  );
 }
 
 
@@ -2668,479 +2886,99 @@ function formatearFecha(fecha){
 
 function renderHistorial(registrosHistorial){
 
-const tbody =
-document.getElementById(
-"tablaHistorial"
-);
-
+const tbody = document.getElementById("tablaHistorial");
 tbody.innerHTML = "";
 
 if(!registrosHistorial || !registrosHistorial.length){
-
-mostrarMensajeHistorial(
-"No se encontraron registros con los filtros seleccionados."
-);
-
-return;
-
+  mostrarMensajeHistorial("No se encontraron registros con los filtros seleccionados.");
+  return;
 }
 
-registrosHistorial.forEach(function(r, indice){
+const totalRegistros = registrosHistorial.length;
+const totalPaginas = Math.ceil(totalRegistros / REGISTROS_POR_PAGINA);
+
+if(paginaHistorialActual > totalPaginas) paginaHistorialActual = totalPaginas;
+if(paginaHistorialActual < 1) paginaHistorialActual = 1;
+
+const inicio = (paginaHistorialActual - 1) * REGISTROS_POR_PAGINA;
+const fin = Math.min(inicio + REGISTROS_POR_PAGINA, totalRegistros);
+const registrosPagina = registrosHistorial.slice(inicio, fin);
+
+registrosPagina.forEach(function(r, indice){
 
 let fotos = "";
 
 if(r.fotoIngreso){
-  fotos +=
-  `<a class="foto-link"
-      href="${esc(r.fotoIngreso)}"
-      target="_blank"
-      rel="noopener">
-      Ingreso
-   </a>`;
+  fotos += `<a class="foto-link" href="${esc(r.fotoIngreso)}" target="_blank" rel="noopener">Ingreso</a>`;
 }
-
 if(r.fotoOT){
-  fotos +=
-  `<a class="foto-link"
-      href="${esc(r.fotoOT)}"
-      target="_blank"
-      rel="noopener">
-      OT
-   </a>`;
+  fotos += `<a class="foto-link" href="${esc(r.fotoOT)}" target="_blank" rel="noopener">OT</a>`;
 }
-
 if(r.fotoVIN){
-  fotos +=
-  `<a class="foto-link"
-      href="${esc(r.fotoVIN)}"
-      target="_blank"
-      rel="noopener">
-      VIN
-   </a>`;
+  fotos += `<a class="foto-link" href="${esc(r.fotoVIN)}" target="_blank" rel="noopener">VIN</a>`;
 }
-
 if(r.fotoFinal){
-  fotos +=
-  `<a class="foto-link"
-      href="${esc(r.fotoFinal)}"
-      target="_blank"
-      rel="noopener">
-      Final
-   </a>`;
+  fotos += `<a class="foto-link" href="${esc(r.fotoFinal)}" target="_blank" rel="noopener">Final</a>`;
 }
+if(!fotos) fotos = "—";
 
-if(!fotos){
-  fotos = "—";
-}
-
-tbody.innerHTML +=
-`
+tbody.innerHTML += `
 <tr>
-
-<td class="numero-historial">
-${indice + 1}
-</td>
-
-<td>
-${esc(formatearFecha(r.horaInicio))}
-</td>
-
-<td>
-${esc(r.tipo)}
-</td>
-
-<td>
-${esc(r.ot)}
-</td>
-
-<td>
-${esc(r.placa)}
-</td>
-
-<td>
-${esc(r.vin)}
-</td>
-
-<td>
-${esc(r.marca)}
-</td>
-
-<td class="col-modelo">
-${esc(r.modelo)}
-</td>
-
-<td>
-${esc(r.servicio)}
-</td>
-
-<td>
-${esc(formatearFecha(r.horaSalida))}
-</td>
-
-<td>
-<div class="fotos-historial">
-${fotos}
-</div>
-</td>
-
-</tr>
-`;
+<td class="numero-historial">${inicio + indice + 1}</td>
+<td>${esc(formatearFecha(r.horaInicio))}</td>
+<td>${esc(r.tipo)}</td>
+<td>${esc(r.ot)}</td>
+<td>${esc(r.placa)}</td>
+<td>${esc(r.vin)}</td>
+<td>${esc(r.marca)}</td>
+<td class="col-modelo">${esc(r.modelo)}</td>
+<td>${esc(r.servicio)}</td>
+<td>${esc(formatearFecha(r.horaSalida))}</td>
+<td><div class="fotos-historial">${fotos}</div></td>
+</tr>`;
 
 });
 
+renderPaginacionHistorial(totalRegistros, totalPaginas, inicio + 1, fin);
 }
 
-/* =====================================================
-   EXPORTAR CSV
-===================================================== */
+function renderPaginacionHistorial(totalRegistros, totalPaginas, desdeRegistro, hastaRegistro){
 
-function exportarCSV(){
+const contenedor = document.getElementById("paginacionHistorial");
+if(!contenedor) return;
 
-const filas =
-document.querySelectorAll(
-"#tablaHistorial tr"
-);
-
-let csv =
-"N°,Fecha,Tipo,OT,Placa,VIN,Marca,Modelo,Servicio,Salida,Fotos\n";
-
-let cantidad = 0;
-
-filas.forEach(function(fila){
-
-const columnas =
-fila.querySelectorAll("td");
-
-if(!columnas.length){
-return;
+if(totalPaginas <= 1){
+  contenedor.innerHTML = `<div class="info-paginacion-historial">Mostrando ${desdeRegistro}–${hastaRegistro} de ${totalRegistros} registros</div>`;
+  return;
 }
 
-const datos =
-Array
-.from(columnas)
-.map(function(td){
+let html = `<button type="button" onclick="cambiarPaginaHistorial(${paginaHistorialActual - 1})" ${paginaHistorialActual === 1 ? "disabled" : ""}>‹</button>`;
 
-return(
-'"' +
-td.innerText
-.replace(/"/g,'""') +
-'"'
-);
+for(let pagina = 1; pagina <= totalPaginas; pagina++){
+  html += `<button type="button" class="${pagina === paginaHistorialActual ? "activa" : ""}" onclick="cambiarPaginaHistorial(${pagina})">${pagina}</button>`;
+}
 
+html += `<button type="button" onclick="cambiarPaginaHistorial(${paginaHistorialActual + 1})" ${paginaHistorialActual === totalPaginas ? "disabled" : ""}>›</button>`;
+html += `<div class="info-paginacion-historial">Mostrando ${desdeRegistro}–${hastaRegistro} de ${totalRegistros} registros</div>`;
+
+contenedor.innerHTML = html;
+}
+
+function cambiarPaginaHistorial(pagina){
+
+const totalPaginas = Math.ceil((historialActual || []).length / REGISTROS_POR_PAGINA);
+if(!totalPaginas) return;
+
+paginaHistorialActual = Math.max(1, Math.min(pagina, totalPaginas));
+
+const selector = document.getElementById("ordenFechaHistorial");
+const orden = selector ? selector.value : "desc";
+
+const registrosOrdenados = historialActual.slice().sort(function(a,b){
+  const fechaA = new Date(a.horaInicio || 0).getTime();
+  const fechaB = new Date(b.horaInicio || 0).getTime();
+  return orden === "asc" ? fechaA - fechaB : fechaB - fechaA;
 });
 
-csv +=
-datos.join(",") +
-"\n";
-
-cantidad++;
-
-});
-
-if(!cantidad){
-
-mostrarAlerta(
-"No hay información para exportar.",
-"error"
-);
-
-return;
+renderHistorial(registrosOrdenados);
 }
-
-const blob =
-new Blob(
-[
-"\ufeff" +
-csv
-],
-{
-type:
-"text/csv;charset=utf-8;"
-}
-);
-
-const url =
-URL.createObjectURL(blob);
-
-const a =
-document.createElement("a");
-
-a.href = url;
-
-a.download =
-"Historial_Carwash.csv";
-
-document.body
-.appendChild(a);
-
-a.click();
-
-a.remove();
-
-URL.revokeObjectURL(url);
-
-}
-
-/* =====================================================
-   LIMPIAR FORMULARIO
-===================================================== */
-
-function limpiarFormulario(){
-
-document.getElementById("ot").value = "";
-
-document.getElementById("placa").value = "";
-
-document.getElementById("vin").value = "";
-
-document.getElementById("modelo").value = "";
-document.getElementById("observaciones").value = "";
-
-document.getElementById("marca").value = "";
-
-document.getElementById("servicio").value =
-"Lavado básico";
-
-
-/* LIMPIAR FOTOS */
-
-document.getElementById("fotoIngreso").value = "";
-
-document.getElementById("fotoOT").value = "";
-
-document.getElementById("fotoVIN").value = "";
-
-
-/* VOLVER A SERVICIO */
-
-document.querySelector(
-'input[name="tipo"][value="Servicio"]'
-).checked = true;
-
-
-cambiarTipo("Servicio");
-
-}
-
-
-
-/* =====================================================
-   POPUP DE MENSAJES
-===================================================== */
-
-function mostrarPopup(titulo, mensaje, tipo){
-
-  const popup =
-    document.getElementById("popupMensaje");
-
-  const icono =
-    document.getElementById("popupIcono");
-
-  const tituloElemento =
-    document.getElementById("popupTitulo");
-
-  const texto =
-    document.getElementById("popupTexto");
-
-
-  tituloElemento.textContent =
-    titulo || "Mensaje";
-
-  texto.textContent =
-    mensaje || "";
-
-
-  if(tipo === "error"){
-    icono.textContent = "❌";
-  }
-  else if(tipo === "success"){
-    icono.textContent = "✅";
-  }
-  else{
-    icono.textContent = "ℹ️";
-  }
-
-
-  popup.classList.add("active");
-
-}
-
-
-function cerrarPopup(){
-
-  document
-    .getElementById("popupMensaje")
-    .classList
-    .remove("active");
-
-}
-
-
-document.addEventListener(
-  "click",
-  function(event){
-
-    const popup =
-      document.getElementById("popupMensaje");
-
-    if(
-      popup &&
-      event.target === popup
-    ){
-      cerrarPopup();
-    }
-
-  }
-);
-
-
-/* =====================================================
-   ALERTAS
-===================================================== */
-
-function mostrarAlerta(mensaje,tipo){
-
-const alerta =
-document.getElementById("alerta");
-
-
-if(!alerta){
-
-console.log(mensaje);
-
-return;
-
-}
-
-
-alerta.textContent =
-mensaje;
-
-
-alerta.className =
-"alert " +
-tipo;
-
-
-window.scrollTo({
-
-top:0,
-
-behavior:"smooth"
-
-});
-
-
-setTimeout(function(){
-
-alerta.className =
-"alert";
-
-},6000);
-
-}
-
-
-/* =====================================================
-   ESCAPAR HTML
-===================================================== */
-
-function esc(valor){
-
-if(
-valor === null ||
-valor === undefined
-){
-
-return "";
-
-}
-
-
-return String(valor)
-
-.replace(
-/&/g,
-"&amp;"
-)
-
-.replace(
-/</g,
-"&lt;"
-)
-
-.replace(
-/>/g,
-"&gt;"
-)
-
-.replace(
-/"/g,
-"&quot;"
-)
-
-.replace(
-/'/g,
-"&#039;"
-);
-
-}
-
-
-/* =====================================================
-   CLASE ESTADO
-===================================================== */
-
-function claseEstado(estado){
-
-if(
-estado === "Pendiente"
-){
-
-return "pendiente";
-
-}
-
-
-if(
-estado === "Lavando"
-){
-
-return "iniciar";
-
-}
-
-
-if(
-estado === "Finalizado"
-){
-
-return "finalizado";
-
-}
-
-
-return "pendiente";
-
-}
-
-
-/* =====================================================
-   INICIO
-===================================================== */
-
-document.addEventListener(
-"DOMContentLoaded",
-function(){
-
-  cambiarTipo("Servicio");
-
-}
-);
-
-iniciarRealtimeSupabase();
-
-</script>
-
-</body>
-</html>
