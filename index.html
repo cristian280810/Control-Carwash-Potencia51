@@ -257,6 +257,33 @@ th{
     background:#f3f4f6;
 }
 
+.fotos-historial{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+    min-width:190px;
+}
+
+.foto-link{
+    display:inline-block;
+    padding:5px 8px;
+    border-radius:6px;
+    background:#111827;
+    color:white;
+    text-decoration:none;
+    font-size:12px;
+    font-weight:bold;
+}
+
+.foto-link:hover{
+    opacity:.85;
+}
+
+.numero-historial{
+    text-align:center;
+    font-weight:bold;
+}
+
 .badge{
     display:inline-block;
     padding:5px 9px;
@@ -1220,6 +1247,10 @@ onclick="exportarCSV()">
 <tr>
 
 <th>
+N°
+</th>
+
+<th>
 Fecha
 </th>
 
@@ -1251,14 +1282,16 @@ Modelo
 Servicio
 </th>
 
-
-
 <th>
 Estado
 </th>
 
 <th>
 Salida
+</th>
+
+<th>
+Fotos
 </th>
 
 </tr>
@@ -2393,7 +2426,7 @@ document.getElementById(
 tbody.innerHTML =
 `
 <tr>
-<td colspan="10" class="empty">
+<td colspan="12" class="empty">
 ${esc(mensaje)}
 </td>
 </tr>
@@ -2449,7 +2482,7 @@ if(desde && hasta && desde > hasta){
 
 tbody.innerHTML = `
 <tr>
-<td colspan="10" class="empty">
+<td colspan="12" class="empty">
 🔎 Buscando información...
 </td>
 </tr>
@@ -2615,32 +2648,90 @@ return;
 
 }
 
-registrosHistorial.forEach(function(r){
+registrosHistorial.forEach(function(r, indice){
+
+let fotos = "";
+
+if(r.fotoIngreso){
+  fotos +=
+  `<a class="foto-link"
+      href="${esc(r.fotoIngreso)}"
+      target="_blank"
+      rel="noopener">
+      Ingreso
+   </a>`;
+}
+
+if(r.fotoOT){
+  fotos +=
+  `<a class="foto-link"
+      href="${esc(r.fotoOT)}"
+      target="_blank"
+      rel="noopener">
+      OT
+   </a>`;
+}
+
+if(r.fotoVIN){
+  fotos +=
+  `<a class="foto-link"
+      href="${esc(r.fotoVIN)}"
+      target="_blank"
+      rel="noopener">
+      VIN
+   </a>`;
+}
+
+if(r.fotoFinal){
+  fotos +=
+  `<a class="foto-link"
+      href="${esc(r.fotoFinal)}"
+      target="_blank"
+      rel="noopener">
+      Final
+   </a>`;
+}
+
+if(!fotos){
+  fotos = "—";
+}
 
 tbody.innerHTML +=
 `
 <tr>
+
+<td class="numero-historial">
+${indice + 1}
+</td>
+
 <td>
 ${esc(formatearFecha(r.horaInicio))}
 </td>
+
 <td>
 ${esc(r.tipo)}
 </td>
+
 <td>
 ${esc(r.ot)}
 </td>
+
 <td>
 ${esc(r.placa)}
 </td>
+
 <td>
 ${esc(r.vin)}
 </td>
+
 <td>
 ${esc(r.marca)}
 </td>
+
 <td class="col-modelo">
 ${esc(r.modelo)}
 </td>
+
 <td>
 ${esc(r.servicio)}
 </td>
@@ -2648,9 +2739,17 @@ ${esc(r.servicio)}
 <td>
 ${esc(r.estado)}
 </td>
+
 <td>
 ${esc(formatearFecha(r.horaSalida))}
 </td>
+
+<td>
+<div class="fotos-historial">
+${fotos}
+</div>
+</td>
+
 </tr>
 `;
 
@@ -2669,26 +2768,19 @@ document.querySelectorAll(
 "#tablaHistorial tr"
 );
 
-
 let csv =
-"Fecha,Tipo,OT,Placa,VIN,Marca,Modelo,Servicio,Estado,Salida\n";
-
+"N°,Fecha,Tipo,OT,Placa,VIN,Marca,Modelo,Servicio,Estado,Salida,Fotos\n";
 
 let cantidad = 0;
-
 
 filas.forEach(function(fila){
 
 const columnas =
 fila.querySelectorAll("td");
 
-
 if(!columnas.length){
-
 return;
-
 }
-
 
 const datos =
 Array
@@ -2704,16 +2796,13 @@ td.innerText
 
 });
 
-
 csv +=
 datos.join(",") +
 "\n";
 
-
 cantidad++;
 
 });
-
 
 if(!cantidad){
 
@@ -2723,9 +2812,7 @@ mostrarAlerta(
 );
 
 return;
-
 }
-
 
 const blob =
 new Blob(
@@ -2739,35 +2826,27 @@ type:
 }
 );
 
-
 const url =
 URL.createObjectURL(blob);
 
-
 const a =
 document.createElement("a");
-
 
 a.href = url;
 
 a.download =
 "Historial_Carwash.csv";
 
-
 document.body
 .appendChild(a);
 
-
 a.click();
 
-
 a.remove();
-
 
 URL.revokeObjectURL(url);
 
 }
-
 
 /* =====================================================
    LIMPIAR FORMULARIO
