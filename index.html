@@ -2343,7 +2343,7 @@ function tieneMismosDigitosCortos(a,b){
 async function obtenerTodosLosRegistros(){
 
   const respuesta = await fetch(
-    SUPABASE_URL + "/rest/v1/vehiculos_wankamotors?select=id,tipo,ot,placa,vin,marca,servicio,estado,hora_inicio_lavado,created_at&order=created_at.desc",
+    SUPABASE_URL + "/rest/v1/vehiculos_wankamotors?select=id,tipo,ot,placa,vin,marca,servicio,estado,hora_inicio_lavado,created_at,foto_ingreso,foto_ot,foto_vin,foto_final&order=created_at.desc",
     {
       method:"GET",
       headers:{
