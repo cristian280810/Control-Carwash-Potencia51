@@ -294,11 +294,6 @@ th{
     font-weight:bold;
 }
 
-.pendiente{
-    background:#fef3c7;
-    color:#92400e;
-}
-
 .iniciar{
     background:#dbeafe;
     color:#1e40af;
@@ -1066,27 +1061,7 @@ placeholder="OT, placa, VIN o marca"
 oninput="renderSeguimiento()">
 
 
-<select
-id="filtroEstado"
-onchange="renderSeguimiento()">
 
-<option value="">
-Todos los estados
-</option>
-
-<option value="Pendiente">
-Pendiente
-</option>
-
-<option value="Lavando">
-Lavando
-</option>
-
-<option value="Finalizado">
-Finalizado
-</option>
-
-</select>
 
 </div>
 
@@ -2000,7 +1975,7 @@ async function cargarSeguimientoSupabase(){
 
   const respuesta = await fetch(
     SUPABASE_URL +
-    "/rest/v1/vehiculos?select=*&estado=in.(Pendiente,Lavando)&order=created_at.asc",
+    "/rest/v1/vehiculos?select=*&estado=eq.Lavando&order=created_at.asc",
     {
       method:"GET",
       headers:{
@@ -2128,9 +2103,6 @@ function renderSeguimiento(){
       .toLowerCase()
       .trim(); 
  
-  const estado = 
-    document.getElementById("filtroEstado").value; 
- 
   tbody.innerHTML = ""; 
  
  
@@ -2155,15 +2127,8 @@ function renderSeguimiento(){
  
  
       return (
-        (
-          !buscar || 
-          texto.includes(buscar)
-        )
-        &&
-        (
-          !estado || 
-          r.estado === estado
-        )
+        !buscar || 
+        texto.includes(buscar)
       ); 
  
     }); 
@@ -2236,58 +2201,21 @@ function renderSeguimiento(){
  
  
     /* ---------------------------------------------
-       VEHÍCULO PENDIENTE
+       VEHÍCULO EN LAVADO
+       Todos los registros de Seguimiento están en
+       estado "Lavando".
     --------------------------------------------- */
 
-    if(
-      r.estado === "Pendiente"
-    ){ 
- 
-      acciones = 
-      `
-        <button class="btn btn-secondary btn-editar" onclick="abrirEditar('${esc(r.id)}')" title="Editar datos">✏️</button>
-        <button 
-          class="btn btn-primary" 
-          onclick="iniciar('${esc(r.id)}')">
-          ▶ Iniciar lavado
-        </button>
-      `; 
- 
-    } 
-    
-    
-    /* ---------------------------------------------
-       VEHÍCULO LAVANDO
-    --------------------------------------------- */
+    acciones = 
+    `
+      <button class="btn btn-secondary btn-editar" onclick="abrirEditar('${esc(r.id)}')" title="Editar datos">✏️</button>
+      <button 
+        class="btn btn-success" 
+        onclick="abrirFinalizar('${esc(r.id)}')">
+        ✅ Finalizar lavado
+      </button>
+    `; 
 
-    else if(
-      r.estado === "Lavando"
-    ){ 
- 
-      acciones = 
-      `
-        <button class="btn btn-secondary btn-editar" onclick="abrirEditar('${esc(r.id)}')" title="Editar datos">✏️</button>
-        <button 
-          class="btn btn-success" 
-          onclick="abrirFinalizar('${esc(r.id)}')">
-          ✅ Finalizar lavado
-        </button>
-      `; 
- 
-    } 
-    
-    
-    /* ---------------------------------------------
-       VEHÍCULO FINALIZADO
-    --------------------------------------------- */
-
-    else{ 
- 
-      acciones = "—"; 
- 
-    } 
- 
- 
     tbody.innerHTML += 
     ` 
  
@@ -3404,37 +3332,17 @@ return String(valor)
 
 function claseEstado(estado){
 
-if(
-estado === "Pendiente"
-){
-
-return "pendiente";
-
+if(estado === "Lavando"){
+  return "iniciar";
 }
 
-
-if(
-estado === "Lavando"
-){
+if(estado === "Finalizado"){
+  return "finalizado";
+}
 
 return "iniciar";
 
 }
-
-
-if(
-estado === "Finalizado"
-){
-
-return "finalizado";
-
-}
-
-
-return "pendiente";
-
-}
-
 
 /* =====================================================
    INICIO
