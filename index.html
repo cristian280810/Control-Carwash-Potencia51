@@ -1861,6 +1861,7 @@ if(!archivoIngreso){
 
 boton.disabled = true;
 loading.style.display = "block";
+loading.textContent = "⏳ Preparando fotografías...";
 
 const fotoIngreso = await comprimirFoto(archivoIngreso);
 let fotoOT = "";
@@ -1874,23 +1875,79 @@ const id = (window.crypto && crypto.randomUUID)
   : (Date.now().toString(36) + "-" + Math.random().toString(36).slice(2));
 
 /*
-  1. Drive guarda únicamente las fotografías.
-  2. Drive devuelve los enlaces.
-  3. Supabase guarda TODOS los datos + enlaces.
+  IMPORTANTE:
+  Las fotografías se envían por separado a Apps Script.
+  Esto evita que una sola petición sea demasiado pesada
+  y hace más estable la comunicación con Google Drive.
 */
-const fotos = await enviarDrive({
+
+const fotos = {
+  fotoIngreso: "",
+  fotoOT: "",
+  fotoVIN: ""
+};
+
+loading.textContent = "⏳ Guardando foto de ingreso...";
+
+const respuestaIngreso = await enviarDrive({
   accion:"guardarFotos",
   id:id,
-  fotoIngreso:fotoIngreso,
-  fotoOT:fotoOT,
-  fotoVIN:fotoVIN
+  fotoIngreso:fotoIngreso
 });
 
-if(!fotos || fotos.ok !== true){
+if(!respuestaIngreso || respuestaIngreso.ok !== true || !respuestaIngreso.fotoIngreso){
   throw new Error(
-    fotos && fotos.mensaje ? fotos.mensaje : "No se pudieron guardar las fotografías en Drive."
+    respuestaIngreso && respuestaIngreso.mensaje
+      ? respuestaIngreso.mensaje
+      : "No se pudo guardar la foto de ingreso en Drive."
   );
 }
+
+fotos.fotoIngreso = respuestaIngreso.fotoIngreso;
+
+if(fotoOT){
+
+  loading.textContent = "⏳ Guardando foto de OT...";
+
+  const respuestaOT = await enviarDrive({
+    accion:"guardarFotos",
+    id:id,
+    fotoOT:fotoOT
+  });
+
+  if(!respuestaOT || respuestaOT.ok !== true || !respuestaOT.fotoOT){
+    throw new Error(
+      respuestaOT && respuestaOT.mensaje
+        ? respuestaOT.mensaje
+        : "No se pudo guardar la foto de OT en Drive."
+    );
+  }
+
+  fotos.fotoOT = respuestaOT.fotoOT;
+}
+
+if(fotoVIN){
+
+  loading.textContent = "⏳ Guardando foto de VIN...";
+
+  const respuestaVIN = await enviarDrive({
+    accion:"guardarFotos",
+    id:id,
+    fotoVIN:fotoVIN
+  });
+
+  if(!respuestaVIN || respuestaVIN.ok !== true || !respuestaVIN.fotoVIN){
+    throw new Error(
+      respuestaVIN && respuestaVIN.mensaje
+        ? respuestaVIN.mensaje
+        : "No se pudo guardar la foto de VIN en Drive."
+    );
+  }
+
+  fotos.fotoVIN = respuestaVIN.fotoVIN;
+}
+
+loading.textContent = "⏳ Guardando vehículo en Supabase...";
 
 const ahora = new Date().toISOString();
 
@@ -1937,19 +1994,56 @@ if(!respuestaSupabase.ok){
 }
 
 limpiarFormulario();
-mostrarPopup("Lavado iniciado","El vehículo y sus fotografías fueron guardados correctamente.","success");
+loading.style.display = "none";
+
+mostrarPopup(
+  "Lavado iniciado",
+  "El vehículo y sus fotografías fueron guardados correctamente.",
+  "success"
+);
+
 await cargarDatos();
 
 }catch(error){
 
 console.error("Error registrando:",error);
-mostrarAlerta("No se pudo registrar el vehículo: " + error.message,"error");
+mostrarAlerta(
+  "No se pudo registrar el vehículo: " + error.message,
+  "error"
+);
 
 }finally{
-  boton.disabled = false;
-  loading.style.display = "none";
+
+boton.disabled = false;
+loading.style.display = "none";
+
 }
 
+}
+
+/* =====================================================
+   LIMPIAR FORMULARIO
+===================================================== */
+function limpiarFormulario(){
+
+  const ids = ["ot","placa","vin","observaciones","fotoIngreso","fotoOT","fotoVIN"] ;
+
+  ids.forEach(function(id){
+    const elemento = document.getElementById(id);
+    if(elemento) elemento.value = "";
+  });
+
+  const marca = document.getElementById("marca");
+  if(marca) marca.value = "";
+
+  const servicio = document.getElementById("servicio");
+  if(servicio) servicio.value = "Lavado básico";
+
+  const tipoServicio = document.querySelector('input[name="tipo"][value="Servicio"]');
+  if(tipoServicio){
+    tipoServicio.checked = true;
+    cambiarTipo("Servicio");
+  }
 }
 
 /* =====================================================
