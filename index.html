@@ -1098,6 +1098,10 @@ N°
 </th>
 
 <th>
+Fecha y hora de ingreso
+</th>
+
+<th>
 Tipo
 </th>
 
@@ -2091,7 +2095,7 @@ function renderSeguimiento(){
     tbody.innerHTML = 
     ` 
       <tr> 
-        <td colspan="10" class="empty"> 
+        <td colspan="11" class="empty"> 
           No hay vehículos registrados. 
         </td> 
       </tr> 
@@ -2214,6 +2218,10 @@ function renderSeguimiento(){
  
         <td class="numero-seguimiento"> 
           ${indice + 1} 
+        </td> 
+ 
+        <td> 
+          ${esc(formatearFecha(r.horaInicio))} 
         </td> 
  
         <td> 
