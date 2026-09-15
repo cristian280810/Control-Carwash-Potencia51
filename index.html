@@ -1905,46 +1905,57 @@ if(!respuestaIngreso || respuestaIngreso.ok !== true || !respuestaIngreso.fotoIn
 
 fotos.fotoIngreso = respuestaIngreso.fotoIngreso;
 
+/* OT y VIN son peticiones independientes; se guardan en paralelo
+   para reducir considerablemente el tiempo total de registro. */
+const tareasFotos = [];
+
 if(fotoOT){
+  tareasFotos.push(
+    (async function(){
+      const respuestaOT = await enviarDrive({
+        accion:"guardarFotos",
+        id:id,
+        fotoOT:fotoOT
+      });
 
-  loading.textContent = "⏳ Guardando foto de OT...";
+      if(!respuestaOT || respuestaOT.ok !== true || !respuestaOT.fotoOT){
+        throw new Error(
+          respuestaOT && respuestaOT.mensaje
+            ? respuestaOT.mensaje
+            : "No se pudo guardar la foto de OT en Drive."
+        );
+      }
 
-  const respuestaOT = await enviarDrive({
-    accion:"guardarFotos",
-    id:id,
-    fotoOT:fotoOT
-  });
-
-  if(!respuestaOT || respuestaOT.ok !== true || !respuestaOT.fotoOT){
-    throw new Error(
-      respuestaOT && respuestaOT.mensaje
-        ? respuestaOT.mensaje
-        : "No se pudo guardar la foto de OT en Drive."
-    );
-  }
-
-  fotos.fotoOT = respuestaOT.fotoOT;
+      fotos.fotoOT = respuestaOT.fotoOT;
+    })()
+  );
 }
 
 if(fotoVIN){
+  tareasFotos.push(
+    (async function(){
+      const respuestaVIN = await enviarDrive({
+        accion:"guardarFotos",
+        id:id,
+        fotoVIN:fotoVIN
+      });
 
-  loading.textContent = "⏳ Guardando foto de VIN...";
+      if(!respuestaVIN || respuestaVIN.ok !== true || !respuestaVIN.fotoVIN){
+        throw new Error(
+          respuestaVIN && respuestaVIN.mensaje
+            ? respuestaVIN.mensaje
+            : "No se pudo guardar la foto de VIN en Drive."
+        );
+      }
 
-  const respuestaVIN = await enviarDrive({
-    accion:"guardarFotos",
-    id:id,
-    fotoVIN:fotoVIN
-  });
+      fotos.fotoVIN = respuestaVIN.fotoVIN;
+    })()
+  );
+}
 
-  if(!respuestaVIN || respuestaVIN.ok !== true || !respuestaVIN.fotoVIN){
-    throw new Error(
-      respuestaVIN && respuestaVIN.mensaje
-        ? respuestaVIN.mensaje
-        : "No se pudo guardar la foto de VIN en Drive."
-    );
-  }
-
-  fotos.fotoVIN = respuestaVIN.fotoVIN;
+if(tareasFotos.length){
+  loading.textContent = "⏳ Guardando fotografías adicionales...";
+  await Promise.all(tareasFotos);
 }
 
 loading.textContent = "⏳ Guardando vehículo en Supabase...";
@@ -1996,13 +2007,24 @@ if(!respuestaSupabase.ok){
 limpiarFormulario();
 loading.style.display = "none";
 
-mostrarPopup(
-  "Lavado iniciado",
-  "El vehículo y sus fotografías fueron guardados correctamente.",
-  "success"
-);
+/* Mostrar confirmación sin depender de una función inexistente */
+if(typeof mostrarPopup === "function"){
+  mostrarPopup(
+    "Lavado iniciado",
+    "El vehículo y sus fotografías fueron guardados correctamente.",
+    "success"
+  );
+}else{
+  mostrarAlerta(
+    "Lavado iniciado. El vehículo y sus fotografías fueron guardados correctamente.",
+    "success"
+  );
+}
 
-await cargarDatos();
+/* Actualizar la pantalla en segundo plano para no hacer esperar al usuario */
+cargarDatos().catch(function(error){
+  console.warn("No se pudo actualizar la pantalla después del registro:", error);
+});
 
 }catch(error){
 
