@@ -2982,3 +2982,45 @@ const registrosOrdenados = historialActual.slice().sort(function(a,b){
 
 renderHistorial(registrosOrdenados);
 }
+
+
+/* =====================================================
+   ALERTAS Y UTILIDADES
+===================================================== */
+function mostrarAlerta(mensaje,tipo){
+  const alerta = document.getElementById("alerta");
+  if(!alerta){ console.log(mensaje); return; }
+  alerta.textContent = mensaje;
+  alerta.className = "alert " + (tipo || "");
+  window.scrollTo({top:0, behavior:"smooth"});
+  setTimeout(function(){ alerta.className = "alert"; },6000);
+}
+
+function esc(valor){
+  if(valor === null || valor === undefined) return "";
+  return String(valor)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+function claseEstado(estado){
+  if(estado === "Pendiente") return "pendiente";
+  if(estado === "Lavando") return "iniciar";
+  if(estado === "Finalizado") return "finalizado";
+  return "pendiente";
+}
+
+/* =====================================================
+   INICIO
+===================================================== */
+document.addEventListener("DOMContentLoaded", function(){
+  try { cambiarTipo("Servicio"); } catch(e) { console.warn(e); }
+  try { cargarDatos(); } catch(e) { console.warn(e); }
+});
+
+</script>
+</body>
+</html>
