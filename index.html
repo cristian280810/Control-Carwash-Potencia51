@@ -2846,24 +2846,20 @@ function obtenerFechaHistorial(fecha){
   }
 
   const texto = String(fecha).trim();
-
-  // Fechas tipo yyyy-MM-dd HH:mm:ss se interpretan como fecha local.
-  const matchLocal = texto.match(
-    /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/
-  );
-
-  if(matchLocal){
-    return matchLocal[1] + "-" + matchLocal[2] + "-" + matchLocal[3];
-  }
-
-  // Para timestamps ISO con zona horaria, usa la fecha local del navegador.
-  const fechaObj = new Date(fecha);
+  const fechaObj = new Date(texto);
 
   if(!isNaN(fechaObj.getTime())){
-    const anio = fechaObj.getFullYear();
-    const mes = String(fechaObj.getMonth() + 1).padStart(2,"0");
-    const dia = String(fechaObj.getDate()).padStart(2,"0");
-    return anio + "-" + mes + "-" + dia;
+    const partes = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Lima",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).formatToParts(fechaObj);
+
+    const valores = {};
+    partes.forEach(function(p){ valores[p.type] = p.value; });
+
+    return valores.year + "-" + valores.month + "-" + valores.day;
   }
 
   return "";
@@ -2876,64 +2872,30 @@ function formatearFecha(fecha){
     return "";
   }
 
-  /*
-    Apps Script devuelve normalmente:
-    yyyy-MM-dd HH:mm:ss
-
-    Se muestra en pantalla como:
-    dd/MM/yyyy HH:mm
-  */
-
   const texto = String(fecha).trim();
-
-  const match = texto.match(
-    /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/
-  );
-
-  if(match){
-
-    return (
-      match[3] + "/" +
-      match[2] + "/" +
-      match[1] + " " +
-      match[4] + ":" +
-      match[5]
-    );
-
-  }
-
-  /*
-    Compatibilidad por si alguna fecha llega
-    en otro formato.
-  */
-
-  const fechaObj = new Date(fecha);
+  const fechaObj = new Date(texto);
 
   if(!isNaN(fechaObj.getTime())){
+    const partes = new Intl.DateTimeFormat("es-PE", {
+      timeZone: "America/Lima",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false
+    }).formatToParts(fechaObj);
 
-    const dia =
-      String(fechaObj.getDate()).padStart(2,"0");
-
-    const mes =
-      String(fechaObj.getMonth() + 1).padStart(2,"0");
-
-    const anio =
-      fechaObj.getFullYear();
-
-    const hora =
-      String(fechaObj.getHours()).padStart(2,"0");
-
-    const minutos =
-      String(fechaObj.getMinutes()).padStart(2,"0");
+    const valores = {};
+    partes.forEach(function(p){ valores[p.type] = p.value; });
 
     return (
-      dia + "/" +
-      mes + "/" +
-      anio + " " +
-      hora + ":" +
-      minutos
+      valores.day + "/" +
+      valores.month + "/" +
+      valores.year + " " +
+      valores.hour + ":" +
+      valores.minute
     );
-
   }
 
   return texto;
