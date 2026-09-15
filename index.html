@@ -1935,7 +1935,7 @@ const filaSupabase = {
 };
 
 const respuestaSupabase = await fetch(
-  SUPABASE_URL + "/rest/v1/vehiculos",
+  SUPABASE_URL + "/rest/v1/vehiculos_wankamotors",
   {
     method:"POST",
     headers:{
@@ -1980,7 +1980,7 @@ async function cargarSeguimientoSupabase(){
 
   const respuesta = await fetch(
     SUPABASE_URL +
-    "/rest/v1/vehiculos?select=*&estado=eq.Lavando&order=created_at.asc",
+    "/rest/v1/vehiculos_wankamotors?select=*&estado=eq.Lavando&order=created_at.asc",
     {
       method:"GET",
       headers:{
@@ -2042,7 +2042,7 @@ function iniciarRealtimeSupabase(){
         {
           event:"*",
           schema:"public",
-          table:"vehiculos"
+          table:"vehiculos_wankamotors"
         },
         function(){
           cargarDatos();
@@ -2444,7 +2444,7 @@ async function guardarEdicion(){
       cambios.foto_vin = fotosActualizadas.fotoVIN;
     }
 
-    const urlSupabase = SUPABASE_URL + "/rest/v1/vehiculos?id=eq." + encodeURIComponent(id);
+    const urlSupabase = SUPABASE_URL + "/rest/v1/vehiculos_wankamotors?id=eq." + encodeURIComponent(id);
 
     const respuesta = await fetch(urlSupabase, {
       method:"PATCH",
@@ -2514,7 +2514,7 @@ async function iniciar(id){
 try{
 
 const respuesta = await fetch(
-  SUPABASE_URL + "/rest/v1/vehiculos?id=eq." + encodeURIComponent(id),
+  SUPABASE_URL + "/rest/v1/vehiculos_wankamotors?id=eq." + encodeURIComponent(id),
   {
     method:"PATCH",
     headers:{
@@ -2639,7 +2639,7 @@ if(!respuestaDrive || respuestaDrive.ok !== true || !respuestaDrive.fotoFinal){
 
 /* 2. Supabase es la única base de datos. */
 const respuestaSupabase = await fetch(
-  SUPABASE_URL + "/rest/v1/vehiculos?id=eq." + encodeURIComponent(id),
+  SUPABASE_URL + "/rest/v1/vehiculos_wankamotors?id=eq." + encodeURIComponent(id),
   {
     method:"PATCH",
     headers:{
@@ -2761,7 +2761,7 @@ tbody.innerHTML = `
 try{
 
 const respuesta = await fetch(
-  SUPABASE_URL + "/rest/v1/vehiculos?select=*&estado=eq.Finalizado&order=hora_inicio_lavado.desc",
+  SUPABASE_URL + "/rest/v1/vehiculos_wankamotors?select=*&estado=eq.Finalizado&order=hora_inicio_lavado.desc",
   {
     method:"GET",
     headers:{
