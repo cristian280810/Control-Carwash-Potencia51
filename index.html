@@ -1308,7 +1308,7 @@ Shampoo x 2 (no es el proveedor, es stock)
 </div>
 
 <div class="form-group">
-<label>Fecha del lavado *</label>
+<label>Fecha de ingreso / lavado *</label>
 <input id="pasadoFecha" type="date">
 </div>
 
@@ -1561,7 +1561,11 @@ N°
 </th>
 
 <th>
-Fecha
+Fecha ingreso
+</th>
+
+<th>
+Fecha lavado
 </th>
 
 <th>
@@ -2534,6 +2538,7 @@ async function buscarRegistroPasado(){
               <div><strong>Placa:</strong> ${esc(r.placa || "—")}</div>
               <div><strong>VIN:</strong> ${esc(r.vin || "—")}</div>
               <div><strong>Estado:</strong> ${esc(r.estado || "—")}</div>
+              <div><strong>Fecha ingreso / lavado:</strong> ${esc(obtenerFechaHistorial(r.hora_inicio_lavado) || "—")}</div>
               <div><strong>Servicio:</strong> ${esc(r.servicio || "—")}</div>
               <div><strong>Marca:</strong> ${esc(r.marca || "—")}</div>
             </div>`;
@@ -2592,7 +2597,7 @@ async function guardarRegistroPasado(){
     }
 
     if(!marca || !servicio || !fecha){
-      mostrarAlerta("Complete marca, servicio y fecha del lavado.","error");
+      mostrarAlerta("Complete marca, servicio y fecha de ingreso / lavado.","error");
       return;
     }
 
@@ -2732,6 +2737,8 @@ function limpiarRegistroPasado(){
 
   document.querySelector('input[name="tipoPasado"][value="Servicio"]').checked = true;
   cambiarTipoPasado("Servicio");
+  const hoyLima = obtenerFechaHistorial(new Date().toISOString());
+  if(document.getElementById("pasadoFecha")) document.getElementById("pasadoFecha").value = hoyLima;
 }
 
 
@@ -2909,7 +2916,7 @@ function renderSeguimiento(){
     tbody.innerHTML = 
     ` 
       <tr> 
-        <td colspan="11" class="empty"> 
+        <td colspan="12" class="empty"> 
           No hay vehículos registrados. 
         </td> 
       </tr> 
@@ -3459,7 +3466,7 @@ document.getElementById(
 tbody.innerHTML =
 `
 <tr>
-<td colspan="11" class="empty">
+<td colspan="12" class="empty">
 ${esc(mensaje)}
 </td>
 </tr>
@@ -3515,7 +3522,7 @@ if(desde && hasta && desde > hasta){
 
 tbody.innerHTML = `
 <tr>
-<td colspan="11" class="empty">
+<td colspan="12" class="empty">
 🔎 Buscando información...
 </td>
 </tr>
@@ -3741,7 +3748,11 @@ ${indice + 1}
 </td>
 
 <td>
-${esc(formatearFecha(r.horaInicio))}
+${esc(r.fechaIngreso || "—")}
+</td>
+
+<td>
+${esc(obtenerFechaHistorial(r.horaInicio) || "—")}
 </td>
 
 <td>
@@ -3801,7 +3812,7 @@ document.querySelectorAll(
 );
 
 let csv =
-"N°,Fecha,Tipo,OT,Placa,VIN,Marca,Modelo,Servicio,Salida,Fotos\n";
+"N°,Fecha ingreso,Fecha lavado,Tipo,OT,Placa,VIN,Marca,Modelo,Servicio,Salida,Fotos\n";
 
 let cantidad = 0;
 
