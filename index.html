@@ -1,2081 +1,3420 @@
-const NOMBRE_HOJA_HISTORICO = "Registros";
-const NOMBRE_HOJA_SEGUIMIENTO = "Seguimiento";
-const NOMBRE_CARPETA = "CARWASH P51 - FOTOS";
+<!DOCTYPE html>
+<html lang="es">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Control de Vehículos - Wankamotors</title>
+
+<style>
+.numero-seguimiento { text-align:center; font-weight:700; }
+
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:#f3f4f6;
+    color:#1f2937;
+}
+
+header{
+    background:#020613;
+    color:white;
+    padding:18px 28px;
+}
+
+.header-contenido{
+    max-width:1200px;
+    margin:0 auto;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:28px;
+}
+
+.header-texto{
+    text-align:left;
+}
+
+header h1{
+    margin:0;
+}
+
+header p{
+    margin:8px 0 0;
+    color:#d1d5db;
+}
+
+header h1{
+    margin:0;
+}
+
+header p{
+    margin:8px 0 0;
+    color:#d1d5db;
+}
+
+.container{
+    max-width:1200px;
+    margin:30px auto;
+    padding:0 20px;
+}
+
+.menu{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:15px;
+    margin-bottom:25px;
+}
+
+.menu button{
+    padding:18px;
+    border:none;
+    border-radius:10px;
+    background:white;
+    cursor:pointer;
+    font-size:16px;
+    font-weight:bold;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+
+.menu button:hover{
+    background:#e5e7eb;
+}
+
+.menu button.active{
+    background:#111827;
+    color:white;
+}
+
+.section{
+    display:none;
+}
+
+.section.active{
+    display:block;
+}
+
+.card{
+    background:white;
+    border-radius:12px;
+    padding:25px;
+    margin-bottom:20px;
+    box-shadow:0 2px 10px rgba(0,0,0,.08);
+}
+
+.form-grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:16px;
+}
+
+.full{
+    grid-column:1/-1;
+}
+
+.form-group{
+    display:flex;
+    flex-direction:column;
+}
+
+label{
+    font-weight:bold;
+    margin-bottom:6px;
+}
+
+input,
+select,
+textarea{
+    width:100%;
+    padding:11px;
+    border:1px solid #d1d5db;
+    border-radius:7px;
+    font-size:15px;
+}
+
+input:focus,
+select:focus,
+textarea:focus{
+    outline:none;
+    border-color:#111827;
+}
+
+textarea{
+    min-height:90px;
+    resize:vertical;
+}
+
+.tipo-container{
+    display:flex;
+    gap:15px;
+}
+
+.tipo-option{
+    flex:1;
+    padding:15px;
+    text-align:center;
+    border:2px solid #d1d5db;
+    border-radius:10px;
+    cursor:pointer;
+}
+
+.tipo-option.active{
+    border-color:#111827;
+    background:#f3f4f6;
+}
+
+.tipo-option input{
+    display:none;
+}
+
+.btn{
+    border:none;
+    padding:12px 18px;
+    border-radius:7px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.btn:hover{
+    opacity:.9;
+}
+
+.btn:disabled{
+    opacity:.6;
+    cursor:not-allowed;
+}
+
+.btn-primary{
+    background:#1d4ed8;
+    color:white;
+}
+
+.btn-success{
+    background:#16a34a;
+    color:white;
+}
+
+.btn-secondary{
+    background:#6b7280;
+    color:white;
+}
+
+.actions{
+    margin-top:20px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.loading{
+    display:none;
+    padding:15px;
+    text-align:center;
+    font-weight:bold;
+}
+
+.alert{
+    padding:14px;
+    border-radius:8px;
+    margin-bottom:20px;
+    display:none;
+}
+
+.alert.success{
+    display:block;
+    background:#dcfce7;
+    color:#166534;
+}
+
+.alert.error{
+    display:block;
+    background:#fee2e2;
+    color:#991b1b;
+}
+
+.table-container{
+    overflow-x:auto;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:1000px;
+}
+
+th,
+td{
+    padding:10px;
+    border-bottom:1px solid #e5e7eb;
+    text-align:left;
+}
+
+th{
+    background:#f3f4f6;
+}
+
+.fotos-historial{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+    min-width:190px;
+}
+
+.foto-link{
+    display:inline-block;
+    padding:5px 8px;
+    border-radius:6px;
+    background:#111827;
+    color:white;
+    text-decoration:none;
+    font-size:12px;
+    font-weight:bold;
+}
+
+.foto-link:hover{
+    opacity:.85;
+}
+
+.numero-historial{
+    text-align:center;
+    font-weight:bold;
+}
+
+.badge{
+    display:inline-block;
+    padding:5px 9px;
+    border-radius:15px;
+    font-size:12px;
+    font-weight:bold;
+}
+
+.pendiente{
+    background:#fef3c7;
+    color:#92400e;
+}
+
+.iniciar{
+    background:#dbeafe;
+    color:#1e40af;
+}
+
+.finalizado{
+    background:#dcfce7;
+    color:#166534;
+}
+
+.search{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+    margin-bottom:20px;
+}
+
+.empty{
+    text-align:center;
+    padding:30px;
+    color:#6b7280;
+}
+
+.modal{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.55);
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:100;
+}
+
+.modal.active{
+    display:flex;
+}
+
+.modal-content{
+    background:white;
+    width:100%;
+    max-width:600px;
+    max-height:90vh;
+    overflow-y:auto;
+    padding:25px;
+    border-radius:12px;
+}
+
+.modal-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.close{
+    border:none;
+    background:none;
+    font-size:25px;
+    cursor:pointer;
+}
+
+.btn-editar{
+    min-width:42px;
+    padding:8px 10px;
+    margin-right:6px;
+}
+
+/* =====================================================
+   OCULTAR MODELO
+===================================================== */
+
+.col-modelo{
+    display:none !important;
+}
+@media(max-width:800px){
+
+    .menu{
+        grid-template-columns:1fr;
+    }
+
+    .form-grid{
+        grid-template-columns:1fr;
+    }
+
+    .search{
+        grid-template-columns:1fr;
+    }
+
+    .tipo-container{
+        flex-direction:column;
+    }
+
+}
+
+
+/* =====================================================
+   POPUP DE MENSAJES
+===================================================== */
+
+.popup-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.55);
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:1000;
+}
+
+.popup-overlay.active{
+    display:flex;
+}
+
+.popup-box{
+    background:white;
+    width:100%;
+    max-width:420px;
+    border-radius:14px;
+    padding:28px;
+    text-align:center;
+    box-shadow:0 10px 35px rgba(0,0,0,.25);
+    animation:popupEntrada .2s ease-out;
+}
+
+.popup-icon{
+    font-size:48px;
+    margin-bottom:10px;
+}
+
+.popup-title{
+    margin:0 0 10px;
+    font-size:22px;
+    color:#111827;
+}
+
+.popup-message{
+    margin:0 0 22px;
+    color:#4b5563;
+    line-height:1.5;
+}
+
+.popup-box .btn{
+    min-width:130px;
+}
+
+@keyframes popupEntrada{
+    from{
+        opacity:0;
+        transform:scale(.92);
+    }
+    to{
+        opacity:1;
+        transform:scale(1);
+    }
+}
+
+
+/* =====================================================
+   LOGO EMPRESA
+===================================================== */
+
+.logo-empresa{
+    display:block;
+    width:190px;
+    max-width:190px;
+    height:auto;
+    margin:0;
+    object-fit:contain;
+    flex-shrink:0;
+}
+
+
+@media (max-width:700px){
+
+    .header-contenido{
+        flex-direction:column;
+        gap:12px;
+        text-align:center;
+    }
+
+    .header-texto{
+        text-align:center;
+    }
+
+    .logo-empresa{
+        width:150px;
+        max-width:150px;
+    }
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+    <div class="header-contenido">
+
+        <img
+            src="https://drive.google.com/thumbnail?id=10o62RZyF0G4acGqWcJyfSAwCHBL44U-1&sz=w500"
+            class="logo-empresa"
+            alt="Potencia 51 Motors">
+
+        <div class="header-texto">
+
+            <h1>🚗 CONTROL DE VEHÍCULOS - WANKAMOTORS</h1>
+
+            <p>
+            Control de ingreso, lavado y salida
+            </p>
+
+        </div>
+
+    </div>
+
+</header>
+
+
+<div class="container">
+
+
+<!-- =====================================================
+     MENÚ
+===================================================== -->
+
+<div class="menu">
+
+<button
+class="active"
+onclick="mostrarSeccion('registrar',this)">
+
+📝 Registrar
+
+</button>
+
+
+<button
+onclick="mostrarSeccion('seguimiento',this)">
+
+🔄 Seguimiento
+
+</button>
+
+
+<button
+onclick="mostrarSeccion('historial',this)">
+
+📊 Historial
+
+</button>
+
+</div>
+
+
+<div id="alerta" class="alert"></div>
+
+
+<!-- =====================================================
+     REGISTRAR
+===================================================== -->
+
+<section
+id="registrar"
+class="section active">
+
+
+<div class="card">
+
+<h2>Registrar vehículo</h2>
+
+<p>
+Seleccione el tipo de vehículo.
+</p>
+
+
+<div class="tipo-container">
+
+
+<label
+id="opcionServicio"
+class="tipo-option active">
+
+<input
+type="radio"
+name="tipo"
+value="Servicio"
+checked
+onchange="cambiarTipo('Servicio')">
+
+🔧 Servicio
+
+</label>
+
+
+<label
+id="opcionNuevo"
+class="tipo-option">
+
+<input
+type="radio"
+name="tipo"
+value="Nuevo"
+onchange="cambiarTipo('Nuevo')">
+
+🚘 Nuevo
+
+</label>
+
+
+</div>
+
+</div>
+
+
+<div class="card">
+
+<div class="form-grid">
+
+
+<!-- =====================================================
+     NÚMERO DE OT
+===================================================== -->
+
+<div
+id="campoOT"
+class="form-group">
+
+<label>
+Número de OT
+</label>
+
+<input
+id="ot"
+type="text"
+placeholder="Número de OT">
+
+</div>
+
+
+<!-- =====================================================
+     FOTO OT
+===================================================== -->
+
+<div
+id="campoFotoOT"
+class="form-group">
+
+<label>
+Foto de la OT
+</label>
+
+<input
+id="fotoOT"
+type="file"
+accept="image/*"
+capture="environment">
+
+</div>
+
+
+<!-- =====================================================
+     PLACA
+===================================================== -->
+
+<div
+id="campoPlaca"
+class="form-group">
+
+<label>
+Placa *
+</label>
+
+<input
+id="placa"
+type="text"
+placeholder="Placa">
+
+</div>
+
+
+<!-- =====================================================
+     VIN
+===================================================== -->
+
+<div
+id="campoVIN"
+class="form-group"
+style="display:none">
+
+<label>
+VIN
+</label>
+
+<input
+id="vin"
+type="text"
+placeholder="VIN">
+
+</div>
+
+
+<!-- =====================================================
+     FOTO VIN
+===================================================== -->
+
+<div
+id="campoFotoVIN"
+class="form-group"
+style="display:none">
+
+<label>
+Foto del VIN
+</label>
+
+<input
+id="fotoVIN"
+type="file"
+accept="image/*"
+capture="environment">
+
+</div>
+
+
+<!-- =====================================================
+     MARCA
+===================================================== -->
+
+<div
+class="form-group">
+
+<label>
+Marca *
+</label>
+
+<select id="marca">
+
+<option value="">
+Seleccione la marca
+</option>
+
+<option value="Chery">
+Chery
+</option>
+
+<option value="Chevrolet">
+Chevrolet
+</option>
+
+<option value="Ford">
+Ford
+</option>
+
+<option value="KIA">
+KIA
+</option>
+
+<option value="MG">
+MG
+</option>
+
+<option value="Peugeot">
+Peugeot
+</option>
+
+<option value="Volkswagen">
+Volkswagen
+</option>
+
+</select>
+
+</div>
+
+
+<!-- =====================================================
+     MODELO OCULTO
+===================================================== -->
+
+<div
+class="form-group"
+style="display:none">
+
+<label>
+Modelo
+</label>
+
+<input
+id="modelo"
+type="text"
+value="">
+
+</div>
+
+
+<!-- =====================================================
+     SERVICIO
+===================================================== -->
+
+<div
+class="form-group">
+
+<label>
+Servicio *
+</label>
+
+<select id="servicio">
+
+<option
+value="Lavado básico"
+selected>
+
+Lavado básico
+
+</option>
+
+<option
+value="Adicional por encerado">
+
+Adicional por encerado
+
+</option>
+
+<option
+value="Pulido de cromos">
+
+Pulido de cromos
+
+</option>
+
+<option
+value="Tratamiento de pintura Premium (Auto)">
+
+Tratamiento de pintura Premium (Auto)
+
+</option>
+
+<option
+value="Tratamiento de pintura Premium (Camioneta)">
+
+Tratamiento de pintura Premium (Camioneta)
+
+</option>
+
+<option
+value="Tratamiento de pintura Premium (Pick Up)">
+
+Tratamiento de pintura Premium (Pick Up)
+
+</option>
+
+<option
+value="Lavado de salón (Auto)">
+
+Lavado de salón (Auto)
+
+</option>
+
+<option
+value="Lavado de salón (Camioneta)">
+
+Lavado de salón (Camioneta)
+
+</option>
+
+<option
+value="Lavado de salón (Pick Up / 3 filas)">
+
+Lavado de salón (Pick Up / 3 filas)
+
+</option>
+
+<option
+value="Sellador cerámico">
+
+Sellador cerámico
+
+</option>
+
+<option
+value="Tratamiento de cueros">
+
+Tratamiento de cueros
+
+</option>
+
+<option
+value="Undercoating nacional">
+
+Undercoating nacional
+
+</option>
+
+<option
+value="Undercoating importado">
+
+Undercoating importado
+
+</option>
+
+<option
+value="Zincado de tubo de escape">
+
+Zincado de tubo de escape
+
+</option>
+
+<option
+value="Zincado de tubo de escape (Pick Up)">
+
+Zincado de tubo de escape (Pick Up)
+
+</option>
+
+<option
+value="Tratamiento cerámico 3 años (Auto)">
+
+Tratamiento cerámico 3 años (Auto)
+
+</option>
+
+<option
+value="Tratamiento cerámico 3 años (Camioneta)">
+
+Tratamiento cerámico 3 años (Camioneta)
+
+</option>
+
+<option
+value="Tratamiento cerámico 1 año">
+
+Tratamiento cerámico 1 año
+
+</option>
+
+<option
+value="Pintado de calipers x4">
+
+Pintado de calipers x4
+
+</option>
+
+<option
+value="Pintado de calipers (Personalizado)">
+
+Pintado de calipers (Personalizado)
+
+</option>
+
+<option
+value="Shampoo x 2 (no es el proveedor, es stock)">
+
+Shampoo x 2 (no es el proveedor, es stock)
+
+</option>
+
+</select>
+
+</div>
+
+
+
+<!-- =====================================================
+     FOTO INGRESO
+===================================================== -->
+
+<div
+class="form-group">
+
+<label>
+Foto de ingreso *
+</label>
+
+<input
+id="fotoIngreso"
+type="file"
+accept="image/*"
+capture="environment">
+
+</div>
+
+
+<!-- =====================================================
+     OBSERVACIONES
+===================================================== -->
+
+<div
+class="form-group full">
+
+<label>
+Observaciones
+</label>
+
+<textarea
+id="observaciones"
+placeholder="Observaciones de ingreso"></textarea>
+
+</div>
+
+
+</div>
+
+
+<div
+id="loadingRegistro"
+class="loading">
+
+⏳ Registrando vehículo...
+
+</div>
+
+
+<div class="actions">
+
+<button
+id="btnRegistrar"
+class="btn btn-primary"
+onclick="registrar()">
+
+▶ Iniciar lavado
+
+</button>
+
+
+<button
+class="btn btn-secondary"
+onclick="limpiarFormulario()">
+
+🧹 Limpiar
+
+</button>
+
+</div>
+
+
+</div>
+
+</section>
+
+
+<!-- =====================================================
+     SEGUIMIENTO
+===================================================== -->
+
+<section
+id="seguimiento"
+class="section">
+
+
+<div class="card">
+
+<h2>
+Seguimiento
+</h2>
+<p>Vehículos actualmente activos</p>
+
+
+<div class="search">
+
+<input
+id="buscarSeguimiento"
+placeholder="OT, placa, VIN o marca"
+oninput="renderSeguimiento()">
+
+
+<div></div>
+
+</div>
+
+
+<div class="table-container">
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>
+N°
+</th>
+
+<th>
+Fecha y hora de ingreso
+</th>
+
+<th>
+Tipo
+</th>
+
+<th>
+OT
+</th>
+
+<th>
+Placa
+</th>
+
+<th>
+VIN
+</th>
+
+<th>
+Marca
+</th>
+
+<th class="col-modelo">
+Modelo
+</th>
+
+<th>
+Estado
+</th>
+
+<th>
+Fotos
+</th>
+
+<th>
+Acciones
+</th>
+
+</tr>
+
+</thead>
+
+
+<tbody
+id="tablaSeguimiento">
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</section>
+
+
+<!-- =====================================================
+     HISTORIAL
+===================================================== -->
+
+<section
+id="historial"
+class="section">
+
+
+<div class="card">
+
+<h2>
+Historial
+</h2>
+
+
+<div class="search">
+
+
+<div>
+
+<label>
+Desde
+</label>
+
+<input
+type="date"
+id="fechaDesde">
+
+</div>
+
+
+<div>
+
+<label>
+Hasta
+</label>
+
+<input
+type="date"
+id="fechaHasta">
+
+</div>
+
+
+<div>
+
+<label>
+Buscar
+</label>
+
+<input
+id="buscarHistorial"
+placeholder="OT, placa, VIN o marca">
+
+</div>
+
+
+</div>
+
+
+<div class="actions">
+
+<button
+class="btn btn-primary"
+onclick="buscarHistorial()">
+
+🔎 Buscar
+
+</button>
+
+
+<button
+class="btn btn-secondary"
+onclick="limpiarHistorial()">
+
+🧹 Limpiar
+
+</button>
+
+
+<button
+class="btn btn-success"
+onclick="exportarCSV()">
+
+📥 Exportar
+
+</button>
+
+</div>
+
+</div>
+
+
+<div class="card">
+
+<div class="table-container">
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>
+N°
+</th>
+
+<th>
+Fecha
+</th>
+
+<th>
+Tipo
+</th>
+
+<th>
+OT
+</th>
+
+<th>
+Placa
+</th>
+
+<th>
+VIN
+</th>
+
+<th>
+Marca
+</th>
+
+<th class="col-modelo">
+Modelo
+</th>
+
+<th>
+Servicio
+</th>
+
+<th>
+Salida
+</th>
+
+<th>
+Fotos
+</th>
+
+</tr>
+
+</thead>
+
+
+<tbody
+id="tablaHistorial">
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</section>
+
+</div>
+
+
+
+<!-- =====================================================
+     POPUP DE MENSAJE
+===================================================== -->
+
+<div id="popupMensaje" class="popup-overlay">
+
+    <div class="popup-box">
+
+        <div id="popupIcono" class="popup-icon">✅</div>
+
+        <h2 id="popupTitulo" class="popup-title">
+            Lavado iniciado
+        </h2>
+
+        <p id="popupTexto" class="popup-message">
+            El vehículo fue registrado correctamente.
+        </p>
+
+        <button
+        class="btn btn-success"
+        onclick="cerrarPopup()">
+            Aceptar
+        </button>
+
+    </div>
+
+</div>
+
+<!-- =====================================================
+     MODAL EDITAR DATOS
+===================================================== -->
+
+<div id="modalEditar" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Editar datos del vehículo</h2>
+      <button class="close" onclick="cerrarEditar()">×</button>
+    </div>
+
+    <input type="hidden" id="idEditar">
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label>OT</label>
+        <input id="editarOT" type="text">
+      </div>
+      <div class="form-group">
+        <label>Placa</label>
+        <input id="editarPlaca" type="text">
+      </div>
+      <div class="form-group">
+        <label>Número de VIN</label>
+        <input id="editarVIN" type="text">
+      </div>
+      <div class="form-group">
+        <label>Marca</label>
+        <select id="editarMarca">
+          <option value="">Seleccione la marca</option>
+          <option value="Chery">Chery</option>
+          <option value="Chevrolet">Chevrolet</option>
+          <option value="Ford">Ford</option>
+          <option value="KIA">KIA</option>
+          <option value="MG">MG</option>
+          <option value="Peugeot">Peugeot</option>
+          <option value="Volkswagen">Volkswagen</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-grid" style="margin-top:12px;">
+      <div class="form-group">
+        <label>Foto de ingreso</label>
+        <input id="editarFotoIngreso" type="file" accept="image/*">
+        <small id="estadoFotoIngreso" style="display:block;margin-top:5px;"></small>
+      </div>
+      <div class="form-group">
+        <label>Foto de OT</label>
+        <input id="editarFotoOT" type="file" accept="image/*">
+        <small id="estadoFotoOT" style="display:block;margin-top:5px;"></small>
+      </div>
+      <div class="form-group">
+        <label>Foto de VIN</label>
+        <input id="editarFotoVIN" type="file" accept="image/*">
+        <small id="estadoFotoVIN" style="display:block;margin-top:5px;"></small>
+      </div>
+    </div>
+
+    <div style="margin-top:8px;font-size:13px;color:#666;">
+      Las fotografías que ya existen se conservan. Solo se subirán las fotografías que estén faltantes y que selecciones.
+    </div>
+
+    <div id="loadingEditar" class="loading">⏳ Guardando cambios...</div>
+
+    <div class="actions">
+      <button id="btnGuardarEdicion" class="btn btn-primary" onclick="guardarEdicion()">💾 Guardar cambios</button>
+      <button class="btn btn-secondary" onclick="cerrarEditar()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- =====================================================
+     MODAL FINALIZAR
+===================================================== -->
+
+<div
+id="modal"
+class="modal">
+
+
+<div class="modal-content">
+
+
+<div class="modal-header">
+
+<h2>
+Finalizar lavado
+</h2>
+
+<button
+class="close"
+onclick="cerrarModal()">
+
+×
+
+</button>
+
+</div>
+
+
+<input
+type="hidden"
+id="idFinalizar">
+
+
+<div class="form-group">
+
+<label>
+Foto final *
+</label>
+
+<input
+id="fotoFinal"
+type="file"
+accept="image/*"
+capture="environment">
+
+</div>
+
+
+<br>
+
+
+<div class="form-group">
+
+<label>
+Observaciones finales
+</label>
+
+<textarea
+id="observacionesFinales"
+placeholder="Observaciones finales del lavado"></textarea>
+
+</div>
+
+
+<div
+id="loadingFinalizar"
+class="loading">
+
+⏳ Finalizando lavado...
+
+</div>
+
+
+<div class="actions">
+
+<button
+id="btnFinalizar"
+class="btn btn-success"
+onclick="finalizar()">
+
+✅ Finalizar lavado
+
+</button>
+
+
+<button
+class="btn btn-secondary"
+onclick="cerrarModal()">
+
+Cancelar
+
+</button>
+
+</div>
+
+
+</div>
+
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+
+/* =====================================================
+   CONFIGURACIÓN API
+===================================================== */
+
+const API_URL =
+"https://script.google.com/macros/s/AKfycbw2tB5SLYuvjemJBvHet9XABMqU9YrUXTg7e6kHHbocvypJflj8FHg3THtLDc8Ru9sEsQ/exec";
+
+/* =====================================================
+   SUPABASE + GOOGLE DRIVE
+   Supabase será la fuente de datos para Seguimiento.
+   Google Apps Script sigue manejando el registro, fotos y finalización por ahora.
+===================================================== */
+const SUPABASE_URL =
+"https://ambvcrdmuskqdyjdjhrj.supabase.co";
+
+const SUPABASE_KEY =
+"sb_publishable_pOgfwPb0Cy1b84AS-OjAyA_iWAHcpQh";
+
+let supabaseClient = null;
+
+
+/* =====================================================
+   VARIABLES
+===================================================== */
+
+let registros = [];
+
+
+/* =====================================================
+   NAVEGACIÓN
+===================================================== */
+
+function mostrarSeccion(nombre, boton){
+
+document
+.querySelectorAll(".section")
+.forEach(function(x){
+
+x.classList.remove("active");
+
+});
+
+
+document
+.getElementById(nombre)
+.classList.add("active");
+
+
+document
+.querySelectorAll(".menu button")
+.forEach(function(x){
+
+x.classList.remove("active");
+
+});
+
+
+boton.classList.add("active");
+
+
+if(nombre === "seguimiento"){
+
+    cargarDatos();
+
+}
+
+if(nombre === "historial"){
+
+    limpiarHistorial();
+
+}
+
+}
+
+
+/* =====================================================
+   CAMBIAR TIPO
+===================================================== */
+
+function cambiarTipo(tipo){
+
+const campoOT =
+document.getElementById("campoOT");
+
+const campoFotoOT =
+document.getElementById("campoFotoOT");
+
+const campoPlaca =
+document.getElementById("campoPlaca");
+
+const campoVIN =
+document.getElementById("campoVIN");
+
+const campoFotoVIN =
+document.getElementById("campoFotoVIN");
+
+const opcionServicio =
+document.getElementById("opcionServicio");
+
+const opcionNuevo =
+document.getElementById("opcionNuevo");
+
+
+if(tipo === "Nuevo"){
+
+campoOT.style.display = "none";
+
+campoFotoOT.style.display = "none";
+
+campoPlaca.style.display = "none";
+
+campoVIN.style.display = "flex";
+
+campoFotoVIN.style.display = "flex";
+
+
+opcionServicio
+.classList
+.remove("active");
+
+
+opcionNuevo
+.classList
+.add("active");
+
+}
+else{
+
+campoOT.style.display = "flex";
+
+campoFotoOT.style.display = "flex";
+
+campoPlaca.style.display = "flex";
+
+campoVIN.style.display = "none";
+
+campoFotoVIN.style.display = "none";
+
+
+opcionServicio
+.classList
+.add("active");
+
+
+opcionNuevo
+.classList
+.remove("active");
+
+}
+
+}
+
+
+/* =====================================================
+   COMPRIMIR FOTO
+===================================================== */
+
+function comprimirFoto(file){
+
+return new Promise(function(resolve,reject){
+
+const reader =
+new FileReader();
+
+
+reader.onload =
+function(e){
+
+const img =
+new Image();
+
+
+img.onload =
+function(){
+
+let width =
+img.width;
+
+let height =
+img.height;
+
+const max =
+1000;
+
+
+if(width > max){
+
+height =
+Math.round(
+height * max / width
+);
+
+width =
+max;
+
+}
+
+
+const canvas =
+document.createElement("canvas");
+
+
+canvas.width =
+width;
+
+canvas.height =
+height;
+
+
+const ctx =
+canvas.getContext("2d");
+
+
+ctx.drawImage(
+img,
+0,
+0,
+width,
+height
+);
+
+
+resolve(
+canvas.toDataURL(
+"image/jpeg",
+0.60
+)
+);
+
+};
+
+
+img.onerror =
+reject;
+
+
+img.src =
+e.target.result;
+
+};
+
+
+reader.onerror =
+reject;
+
+
+reader.readAsDataURL(file);
+
+});
+
+}
+
+
+/* =====================================================
+   ENVIAR DATOS
+===================================================== */
+
+async function enviarDrive(datos){
+
+  if(!API_URL || API_URL === "PEGA_AQUI_TU_URL_DE_APPS_SCRIPT"){
+    throw new Error("No has configurado la URL de Google Apps Script para Drive.");
+  }
+
+  /*
+     IMPORTANTE:
+     Google Apps Script puede tardar en guardar la imagen en Drive y
+     devolver la respuesta. No hacemos reintentos porque un reintento
+     puede volver a guardar la misma fotografía y, sobre todo, impedir
+     que el flujo llegue a Supabase si el primer guardado sí terminó.
+  */
+  const controller = new AbortController();
+  const timeout = setTimeout(function(){
+    controller.abort();
+  }, 180000);
+
+  try{
+
+    const separador = API_URL.includes("?") ? "&" : "?";
+
+    const respuesta = await fetch(
+      API_URL + separador + "t=" + Date.now(),
+      {
+        method:"POST",
+        headers:{
+          "Content-Type":"text/plain;charset=utf-8"
+        },
+        body:JSON.stringify(datos),
+        redirect:"follow",
+        cache:"no-store",
+        signal:controller.signal
+      }
+    );
+
+    const texto = await respuesta.text();
+
+    if(!respuesta.ok){
+      throw new Error("Google Apps Script HTTP " + respuesta.status + (texto ? ": " + texto : ""));
+    }
+
+    if(!texto){
+      throw new Error("Google Apps Script no devolvió ninguna respuesta.");
+    }
+
+    try{
+      return JSON.parse(texto);
+    }catch(error){
+      throw new Error("La respuesta de Google Apps Script no es un JSON válido.");
+    }
+
+  }catch(error){
+
+    if(error.name === "AbortError"){
+      throw new Error("Google Drive tardó más de 3 minutos en responder. La fotografía puede haberse guardado, pero no se recibió el enlace para completar el registro en Supabase.");
+    }
+
+    throw error;
+
+  }finally{
+    clearTimeout(timeout);
+  }
+}
+
+/* =====================================================
+   REGISTRAR VEHÍCULO
+===================================================== */
+
+async function registrar(){
+
+const boton = document.getElementById("btnRegistrar");
+const loading = document.getElementById("loadingRegistro");
+
+try{
+
+const tipo = document.querySelector('input[name="tipo"]:checked').value;
+const ot = document.getElementById("ot").value.trim();
+const placa = document.getElementById("placa").value.trim();
+const vin = document.getElementById("vin").value.trim();
+const marca = document.getElementById("marca").value;
+const modelo = "";
+const servicio = document.getElementById("servicio").value.trim();
+const observaciones = document.getElementById("observaciones").value.trim();
+
+const archivoIngreso = document.getElementById("fotoIngreso").files[0];
+const archivoOT = document.getElementById("fotoOT").files[0];
+const archivoVIN = document.getElementById("fotoVIN").files[0];
+
+if(tipo === "Servicio" && !placa){
+  mostrarAlerta("Debe ingresar la placa.","error");
+  return;
+}
+
+if(!marca || !servicio){
+  mostrarAlerta("Complete todos los campos obligatorios.","error");
+  return;
+}
+
+if(!archivoIngreso){
+  mostrarAlerta("Debe adjuntar la foto de ingreso.","error");
+  return;
+}
+
+boton.disabled = true;
+loading.style.display = "block";
+
+const fotoIngreso = await comprimirFoto(archivoIngreso);
+let fotoOT = "";
+let fotoVIN = "";
+
+if(archivoOT){ fotoOT = await comprimirFoto(archivoOT); }
+if(archivoVIN){ fotoVIN = await comprimirFoto(archivoVIN); }
+
+const id = (window.crypto && crypto.randomUUID)
+  ? crypto.randomUUID()
+  : (Date.now().toString(36) + "-" + Math.random().toString(36).slice(2));
 
 /*
-  ============================================================
-  API CONTROL DE CARWASH
-  ============================================================
-
-  HOJA "Registros" = HISTÓRICO
-
-  A ID
-  B Tipo
-  C OT
-  D Placa
-  E VIN
-  F Marca
-  G Modelo
-  H Servicio
-  I Responsable
-  J Estado
-  K HoraInicioLavado
-  L HoraSalida
-  M Observaciones
-  N ObservacionesFinales
-  O FotoIngreso
-  P FotoFinal
-  Q FotoOT
-  R FotoVIN
-
-
-  HOJA "Seguimiento" = SOLO ACTIVOS
-
-  A ID
-  B Tipo
-  C OT
-  D Placa
-  E VIN
-  F Marca
-  G Modelo
-  H Servicio
-  I Estado
-  J HoraInicioLavado
-  K HoraSalida
-  L Observaciones
-  M ObservacionesFinales
-  N FotoIngreso
-  O FotoFinal
-  P FotoOT
-  Q FotoVIN
+  1. Drive guarda únicamente las fotografías.
+  2. Drive devuelve los enlaces.
+  3. Supabase guarda TODOS los datos + enlaces.
 */
+const fotos = await enviarDrive({
+  accion:"guardarFotos",
+  id:id,
+  fotoIngreso:fotoIngreso,
+  fotoOT:fotoOT,
+  fotoVIN:fotoVIN
+});
+
+if(!fotos || fotos.ok !== true){
+  throw new Error(
+    fotos && fotos.mensaje ? fotos.mensaje : "No se pudieron guardar las fotografías en Drive."
+  );
+}
+
+const ahora = new Date().toISOString();
+
+const filaSupabase = {
+  id:id,
+  tipo:tipo,
+  ot:tipo === "Servicio" ? ot : "",
+  placa:tipo === "Servicio" ? placa : "",
+  vin:tipo === "Nuevo" ? vin : "",
+  marca:marca,
+  modelo:modelo,
+  servicio:servicio,
+  estado:"Lavando",
+  hora_inicio_lavado:ahora,
+  hora_salida:null,
+  observaciones:observaciones,
+  observaciones_finales:"",
+  foto_ingreso:fotos.fotoIngreso || "",
+  foto_final:"",
+  foto_ot:fotos.fotoOT || "",
+  foto_vin:fotos.fotoVIN || ""
+};
+
+const respuestaSupabase = await fetch(
+  SUPABASE_URL + "/rest/v1/vehiculos",
+  {
+    method:"POST",
+    headers:{
+      "apikey":SUPABASE_KEY,
+      "Authorization":"Bearer " + SUPABASE_KEY,
+      "Content-Type":"application/json",
+      "Prefer":"return=minimal"
+    },
+    body:JSON.stringify(filaSupabase)
+  }
+);
+
+if(!respuestaSupabase.ok){
+  const textoError = await respuestaSupabase.text();
+  throw new Error(
+    "Supabase HTTP " + respuestaSupabase.status +
+    (textoError ? ": " + textoError : "")
+  );
+}
+
+limpiarFormulario();
+mostrarPopup("Lavado iniciado","El vehículo y sus fotografías fueron guardados correctamente.","success");
+await cargarDatos();
+
+}catch(error){
+
+console.error("Error registrando:",error);
+mostrarAlerta("No se pudo registrar el vehículo: " + error.message,"error");
+
+}finally{
+  boton.disabled = false;
+  loading.style.display = "none";
+}
+
+}
+
+/* =====================================================
+   CARGAR DATOS
+===================================================== */
+
+async function cargarSeguimientoSupabase(){
+
+  const respuesta = await fetch(
+    SUPABASE_URL +
+    "/rest/v1/vehiculos?select=*&estado=eq.Lavando&order=created_at.asc",
+    {
+      method:"GET",
+      headers:{
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY
+      },
+      cache:"no-store"
+    }
+  );
+
+  if(!respuesta.ok){
+    throw new Error("Supabase HTTP " + respuesta.status);
+  }
+
+  const filas = await respuesta.json();
+
+  return (filas || []).map(function(r){
+    return {
+      id: r.id || "",
+      tipo: r.tipo || "",
+      ot: r.ot || "",
+      placa: r.placa || "",
+      vin: r.vin || "",
+      marca: r.marca || "",
+      modelo: r.modelo || "",
+      servicio: r.servicio || "",
+      estado: r.estado || "",
+      horaInicio: r.hora_inicio_lavado || r.created_at || "",
+      horaSalida: r.hora_salida || "",
+      observaciones: r.observaciones || "",
+      observacionesFinales: r.observaciones_finales || "",
+      fotoIngreso: r.foto_ingreso || "",
+      fotoFinal: r.foto_final || "",
+      fotoOT: r.foto_ot || "",
+      fotoVIN: r.foto_vin || ""
+    };
+  });
+}
 
 
-/* ============================================================
-   GET
-============================================================ */
+function iniciarRealtimeSupabase(){
 
-function doGet() {
+  try{
 
-  return respuestaJSON({
+    if(!window.supabase || !window.supabase.createClient){
+      console.warn("Supabase JS no está disponible.");
+      return;
+    }
 
-    ok: true,
+    supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
 
-    mensaje:
-      "API CARWASH funcionando correctamente.",
+    supabaseClient
+      .channel("carwash-vehiculos")
+      .on(
+        "postgres_changes",
+        {
+          event:"*",
+          schema:"public",
+          table:"vehiculos"
+        },
+        function(){
+          cargarDatos();
+        }
+      )
+      .subscribe(function(status){
+        console.log("Realtime Supabase:", status);
+      });
 
-    fecha:
-      convertirFecha(new Date())
+  }catch(error){
+    console.warn("No se pudo iniciar Realtime:", error);
+  }
+}
 
+
+async function cargarDatos(){
+
+try{
+
+if(!registros.length){
+  document.getElementById("tablaSeguimiento").innerHTML = `
+    <tr>
+      <td colspan="8" class="empty">
+        Cargando información...
+      </td>
+    </tr>
+  `;
+}
+
+registros = await cargarSeguimientoSupabase();
+renderSeguimiento();
+
+}catch(error){
+
+console.error("Error cargando datos:",error);
+
+document.getElementById("tablaSeguimiento").innerHTML = `
+<tr>
+<td colspan="8" class="empty">
+No se pudo cargar la información.
+</td>
+</tr>
+`;
+
+mostrarAlerta("No se pudieron cargar los datos: " + error.message,"error");
+
+}
+
+}
+
+/* =====================================================
+   SEGUIMIENTO
+===================================================== */
+
+function renderSeguimiento(){ 
+ 
+  const tbody = 
+    document.getElementById("tablaSeguimiento"); 
+ 
+  const buscar = 
+    document.getElementById("buscarSeguimiento")
+      .value
+      .toLowerCase()
+      .trim(); 
+ 
+  tbody.innerHTML = ""; 
+ 
+ 
+  const filtrados = 
+    registros.filter(function(r){ 
+ 
+      const texto = 
+        (
+          (r.ot || "") + 
+          " " + 
+          (r.placa || "") + 
+          " " + 
+          (r.vin || "") + 
+          " " + 
+          (r.marca || "") + 
+          " " + 
+          (r.modelo || "") + 
+          " " + 
+          (r.servicio || "") 
+        )
+        .toLowerCase(); 
+ 
+ 
+      return (
+        (
+          !buscar || 
+          texto.includes(buscar)
+        )
+      ); 
+ 
+    }); 
+ 
+ 
+  if(!filtrados.length){ 
+ 
+    tbody.innerHTML = 
+    ` 
+      <tr> 
+        <td colspan="11" class="empty"> 
+          No hay vehículos registrados. 
+        </td> 
+      </tr> 
+    `; 
+ 
+    return; 
+ 
+  } 
+ 
+ 
+  filtrados.forEach(function(r, indice){ 
+ 
+    let acciones = "";
+    let fotos = "";
+
+    if(r.fotoIngreso){
+      fotos +=
+      `<a class="foto-link"
+          href="${esc(r.fotoIngreso)}"
+          target="_blank"
+          rel="noopener">
+          Ingreso
+       </a>`;
+    }
+
+    if(r.fotoOT){
+      fotos +=
+      `<a class="foto-link"
+          href="${esc(r.fotoOT)}"
+          target="_blank"
+          rel="noopener">
+          OT
+       </a>`;
+    }
+
+    if(r.fotoVIN){
+      fotos +=
+      `<a class="foto-link"
+          href="${esc(r.fotoVIN)}"
+          target="_blank"
+          rel="noopener">
+          VIN
+       </a>`;
+    }
+
+    if(r.fotoFinal){
+      fotos +=
+      `<a class="foto-link"
+          href="${esc(r.fotoFinal)}"
+          target="_blank"
+          rel="noopener">
+          Final
+       </a>`;
+    }
+
+    if(!fotos){
+      fotos = "—";
+    } 
+ 
+ 
+    /* ---------------------------------------------
+       VEHÍCULO LAVANDO
+    --------------------------------------------- */
+
+    if(r.estado === "Lavando"){ 
+ 
+      acciones = 
+      `
+        <button class="btn btn-secondary btn-editar" onclick="abrirEditar('${esc(r.id)}')" title="Editar datos">✏️</button>
+        <button 
+          class="btn btn-success" 
+          onclick="abrirFinalizar('${esc(r.id)}')">
+          ✅ Finalizar lavado
+        </button>
+      `; 
+ 
+    } 
+ 
+ 
+    tbody.innerHTML += 
+    ` 
+ 
+      <tr> 
+ 
+        <td class="numero-seguimiento"> 
+          ${indice + 1} 
+        </td> 
+ 
+        <td> 
+          ${esc(formatearFecha(r.horaInicio))} 
+        </td> 
+ 
+        <td> 
+          ${esc(r.tipo)} 
+        </td> 
+ 
+        <td> 
+          ${esc(r.ot)} 
+        </td> 
+ 
+        <td> 
+          ${esc(r.placa)} 
+        </td> 
+ 
+        <td> 
+          ${esc(r.vin)} 
+        </td> 
+ 
+        <td> 
+          ${esc(r.marca)} 
+        </td> 
+ 
+        <td class="col-modelo"> 
+          ${esc(r.modelo)} 
+        </td> 
+ 
+        <td> 
+ 
+          <span 
+            class="badge ${claseEstado(r.estado)}"> 
+ 
+            ${esc(r.estado)} 
+ 
+          </span> 
+ 
+        </td> 
+ 
+        <td> 
+          ${fotos} 
+        </td> 
+ 
+        <td> 
+          ${acciones} 
+        </td> 
+ 
+      </tr> 
+ 
+    `; 
+ 
+  }); 
+ 
+}
+
+/* =====================================================
+   EDITAR DATOS DEL VEHÍCULO
+===================================================== */
+
+function abrirEditar(id){
+
+  const registro = registros.find(function(r){
+    return String(r.id) === String(id);
   });
 
+  if(!registro){
+    mostrarAlerta("No se encontró el vehículo.","error");
+    return;
+  }
+
+  document.getElementById("idEditar").value = registro.id || "";
+  document.getElementById("editarOT").value = registro.ot || "";
+  document.getElementById("editarPlaca").value = registro.placa || "";
+  document.getElementById("editarVIN").value = registro.vin || "";
+  document.getElementById("editarMarca").value = registro.marca || "";
+
+  const inputIngreso = document.getElementById("editarFotoIngreso");
+  const inputOT = document.getElementById("editarFotoOT");
+  const inputVIN = document.getElementById("editarFotoVIN");
+
+  inputIngreso.value = "";
+  inputOT.value = "";
+  inputVIN.value = "";
+
+  inputIngreso.disabled = !!registro.fotoIngreso;
+  inputOT.disabled = !!registro.fotoOT;
+  inputVIN.disabled = !!registro.fotoVIN;
+
+  document.getElementById("estadoFotoIngreso").textContent = registro.fotoIngreso
+    ? "✅ Ya existe una foto de ingreso"
+    : "⚠️ Foto faltante: puedes subirla";
+
+  document.getElementById("estadoFotoOT").textContent = registro.fotoOT
+    ? "✅ Ya existe una foto de OT"
+    : "⚠️ Foto faltante: puedes subirla";
+
+  document.getElementById("estadoFotoVIN").textContent = registro.fotoVIN
+    ? "✅ Ya existe una foto de VIN"
+    : "⚠️ Foto faltante: puedes subirla";
+
+  document.getElementById("loadingEditar").style.display = "none";
+  document.getElementById("btnGuardarEdicion").disabled = false;
+
+  document.getElementById("modalEditar").classList.add("active");
 }
 
+function cerrarEditar(){
+  document.getElementById("modalEditar").classList.remove("active");
+}
 
-/* ============================================================
-   POST
-============================================================ */
+async function guardarEdicion(){
 
-function doPost(e) {
+  const boton = document.getElementById("btnGuardarEdicion");
+  const loading = document.getElementById("loadingEditar");
 
-  try {
+  try{
+    const id = document.getElementById("idEditar").value.trim();
+    const ot = document.getElementById("editarOT").value.trim();
+    const placa = document.getElementById("editarPlaca").value.trim();
+    const vin = document.getElementById("editarVIN").value.trim();
+    const marca = document.getElementById("editarMarca").value;
 
-    if (
-      !e ||
-      !e.postData ||
-      !e.postData.contents
-    ) {
-
-      throw new Error(
-        "No se recibieron datos POST."
-      );
-
+    if(!id){
+      throw new Error("No se encontró el ID del vehículo.");
+    }
+    if(!marca){
+      throw new Error("Debe seleccionar una marca.");
     }
 
-
-    const datos =
-      JSON.parse(
-        e.postData.contents
-      );
-
-
-    if (!datos.accion) {
-
-      throw new Error(
-        "No se especificó la acción."
-      );
-
-    }
-
-
-    let resultado;
-
-
-    switch (datos.accion) {
-
-
-      case "registrar":
-
-        resultado =
-          registrarVehiculo(datos);
-
-        break;
-
-
-      case "iniciar":
-
-        if (!datos.id) {
-
-          throw new Error(
-            "No se recibió el ID del vehículo."
-          );
-
-        }
-
-        resultado =
-          iniciarLavado(datos.id);
-
-        break;
-
-
-      case "finalizar":
-
-        if (!datos.id) {
-
-          throw new Error(
-            "No se recibió el ID del vehículo."
-          );
-
-        }
-
-        resultado =
-          finalizarLavado(datos);
-
-        break;
-
-
-      case "obtenerSeguimiento":
-
-        resultado = {
-
-          ok: true,
-
-          registros:
-            obtenerSeguimiento()
-
-        };
-
-        break;
-
-
-      case "buscarHistorial":
-
-        resultado = {
-
-          ok: true,
-
-          registros:
-            buscarHistorial(datos)
-
-        };
-
-        break;
-
-
-      case "obtener":
-
-        resultado = {
-
-          ok: true,
-
-          registros:
-            obtenerRegistros()
-
-        };
-
-        break;
-
-
-      default:
-
-        throw new Error(
-          "Acción no válida: " +
-          datos.accion
-        );
-
-    }
-
-
-    return respuestaJSON(
-      resultado
-    );
-
-
-  } catch (error) {
-
-    console.error(
-      "ERROR DOPOST:",
-      error
-    );
-
-
-    return respuestaJSON({
-
-      ok: false,
-
-      mensaje:
-        error.message ||
-        "Error desconocido."
-
+    const registro = registros.find(function(r){
+      return String(r.id) === String(id);
     });
 
-  }
-
-}
-
-
-/* ============================================================
-   RESPUESTA JSON
-============================================================ */
-
-function respuestaJSON(datos) {
-
-  return ContentService
-
-    .createTextOutput(
-      JSON.stringify(datos)
-    )
-
-    .setMimeType(
-      ContentService.MimeType.JSON
-    );
-
-}
-
-
-/* ============================================================
-   HOJA HISTÓRICO
-============================================================ */
-
-function obtenerHojaHistorico() {
-
-  const ss =
-    SpreadsheetApp
-      .getActiveSpreadsheet();
-
-
-  let hoja =
-    ss.getSheetByName(
-      NOMBRE_HOJA_HISTORICO
-    );
-
-
-  if (!hoja) {
-
-    hoja =
-      ss.insertSheet(
-        NOMBRE_HOJA_HISTORICO
-      );
-
-  }
-
-
-  return hoja;
-
-}
-
-
-/* ============================================================
-   HOJA SEGUIMIENTO
-============================================================ */
-
-function obtenerHojaSeguimiento() {
-
-  const ss =
-    SpreadsheetApp
-      .getActiveSpreadsheet();
-
-
-  let hoja =
-    ss.getSheetByName(
-      NOMBRE_HOJA_SEGUIMIENTO
-    );
-
-
-  if (!hoja) {
-
-    hoja =
-      ss.insertSheet(
-        NOMBRE_HOJA_SEGUIMIENTO
-      );
-
-
-    crearEncabezadosSeguimiento(
-      hoja
-    );
-
-  }
-
-
-  return hoja;
-
-}
-
-
-/* ============================================================
-   ENCABEZADOS SEGUIMIENTO
-============================================================ */
-
-function crearEncabezadosSeguimiento(
-  hoja
-) {
-
-  if (
-    hoja.getLastRow() > 0
-  ) {
-
-    return;
-
-  }
-
-
-  hoja
-    .getRange(
-      1,
-      1,
-      1,
-      17
-    )
-    .setValues([[
-      "ID",
-      "Tipo",
-      "OT",
-      "Placa",
-      "VIN",
-      "Marca",
-      "Modelo",
-      "Servicio",
-      "Estado",
-      "HoraInicioLavado",
-      "HoraSalida",
-      "Observaciones",
-      "ObservacionesFinales",
-      "FotoIngreso",
-      "FotoFinal",
-      "FotoOT",
-      "FotoVIN"
-    ]]);
-
-}
-
-
-/* ============================================================
-   MIGRAR ACTIVOS
-============================================================ */
-
-function migrarActivosASeguimiento() {
-
-  const historico =
-    obtenerHojaHistorico();
-
-
-  const seguimiento =
-    obtenerHojaSeguimiento();
-
-
-  const ultimaFila =
-    historico.getLastRow();
-
-
-  if (
-    ultimaFila <= 1
-  ) {
-
-    return;
-
-  }
-
-
-  const valores =
-    historico
-      .getRange(
-        2,
-        1,
-        ultimaFila - 1,
-        18
-      )
-      .getValues();
-
-
-  const existentes =
-    obtenerIdsSeguimiento();
-
-
-  const nuevos = [];
-
-
-  valores.forEach(
-    function(fila) {
-
-
-      const id =
-        String(
-          fila[0] || ""
-        ).trim();
-
-
-      const estado =
-        String(
-          fila[9] || ""
-        ).trim();
-
-
-      if (!id) {
-
-        return;
-
-      }
-
-
-      if (
-        (
-          estado === "Pendiente" ||
-          estado === "Lavando"
-        ) &&
-        !existentes[id]
-      ) {
-
-
-        nuevos.push([
-
-          fila[0],
-          fila[1],
-          fila[2],
-          fila[3],
-          fila[4],
-          fila[5],
-          fila[6],
-          fila[7],
-
-          fila[9],
-
-          fila[10],
-          fila[11],
-
-          fila[12],
-          fila[13],
-
-          fila[14],
-          fila[15],
-          fila[16],
-          fila[17]
-
-        ]);
-
-
-        existentes[id] =
-          true;
-
-      }
-
-    }
-  );
-
-
-  if (
-    nuevos.length > 0
-  ) {
-
-    seguimiento
-      .getRange(
-        seguimiento.getLastRow() + 1,
-        1,
-        nuevos.length,
-        17
-      )
-      .setValues(
-        nuevos
-      );
-
-  }
-
-}
-
-
-/* ============================================================
-   CARPETA DE FOTOS
-============================================================ */
-
-function obtenerCarpeta() {
-
-  const props =
-    PropertiesService
-      .getScriptProperties();
-
-
-  const idGuardado =
-    props.getProperty(
-      "CARWASH_FOLDER_ID"
-    );
-
-
-  if (idGuardado) {
-
-    try {
-
-      return DriveApp
-        .getFolderById(
-          idGuardado
-        );
-
-    } catch (e) {
-
-      props.deleteProperty(
-        "CARWASH_FOLDER_ID"
-      );
-
+    if(!registro){
+      throw new Error("No se encontró el vehículo en Seguimiento.");
     }
 
-  }
+    const archivoIngreso = document.getElementById("editarFotoIngreso").files[0];
+    const archivoOT = document.getElementById("editarFotoOT").files[0];
+    const archivoVIN = document.getElementById("editarFotoVIN").files[0];
 
+    boton.disabled = true;
+    loading.style.display = "block";
 
-  const carpetas =
-    DriveApp
-      .getFoldersByName(
-        NOMBRE_CARPETA
-      );
+    /* ---------------------------------------------
+       1. Guardar SOLO fotografías que estén faltantes.
+       Las fotografías existentes jamás se reemplazan.
+    --------------------------------------------- */
+    const datosFotos = { accion:"guardarFotos", id:id };
+    let subioFotos = false;
 
-
-  if (
-    carpetas.hasNext()
-  ) {
-
-    const carpeta =
-      carpetas.next();
-
-
-    props.setProperty(
-      "CARWASH_FOLDER_ID",
-      carpeta.getId()
-    );
-
-
-    return carpeta;
-
-  }
-
-
-  const carpetaNueva =
-    DriveApp.createFolder(
-      NOMBRE_CARPETA
-    );
-
-
-  props.setProperty(
-    "CARWASH_FOLDER_ID",
-    carpetaNueva.getId()
-  );
-
-
-  return carpetaNueva;
-
-}
-
-
-/* ============================================================
-   REGISTRAR VEHÍCULO
-============================================================ */
-
-function registrarVehiculo(
-  datos
-) {
-
-  const requestId =
-    String(
-      datos.requestId || ""
-    ).trim();
-
-
-  const cache =
-    CacheService
-      .getScriptCache();
-
-
-  const lock =
-    LockService
-      .getScriptLock();
-
-
-  /*
-    Evita que una misma solicitud
-    genere dos vehículos.
-  */
-
-  if (requestId) {
-
-    const anterior =
-      cache.get(
-        "REGISTRO_" +
-        requestId
-      );
-
-
-    if (anterior) {
-
-      return JSON.parse(
-        anterior
-      );
-
+    if(!registro.fotoIngreso && archivoIngreso){
+      datosFotos.fotoIngreso = await comprimirFoto(archivoIngreso);
+      subioFotos = true;
+    }
+    if(!registro.fotoOT && archivoOT){
+      datosFotos.fotoOT = await comprimirFoto(archivoOT);
+      subioFotos = true;
+    }
+    if(!registro.fotoVIN && archivoVIN){
+      datosFotos.fotoVIN = await comprimirFoto(archivoVIN);
+      subioFotos = true;
     }
 
-  }
-
-
-  lock.waitLock(
-    30000
-  );
-
-
-  try {
-
-
-    if (requestId) {
-
-      const anterior =
-        cache.get(
-          "REGISTRO_" +
-          requestId
-        );
-
-
-      if (anterior) {
-
-        return JSON.parse(
-          anterior
-        );
-
-      }
-
-    }
-
-
-    const hoja =
-      obtenerHojaSeguimiento();
-
-
-    const carpeta =
-      obtenerCarpeta();
-
-
-    const id =
-      Utilities.getUuid();
-
-
-    const fecha =
-      new Date();
-
-
-    let fotoIngreso =
-      "";
-
-
-    let fotoOT =
-      "";
-
-
-    let fotoVIN =
-      "";
-
-
-    /*
-      FOTO INGRESO
-    */
-
-    if (
-      datos.fotoIngreso
-    ) {
-
-      fotoIngreso =
-        guardarFoto(
-
-          datos.fotoIngreso,
-
-          "INGRESO_" +
-          id,
-
-          carpeta
-
-        );
-
-    }
-
-
-    /*
-      FOTO OT
-    */
-
-    if (
-      datos.fotoOT
-    ) {
-
-      fotoOT =
-        guardarFoto(
-
-          datos.fotoOT,
-
-          "OT_" +
-          id,
-
-          carpeta
-
-        );
-
-    }
-
-
-    /*
-      FOTO VIN
-    */
-
-    if (
-      datos.fotoVIN
-    ) {
-
-      fotoVIN =
-        guardarFoto(
-
-          datos.fotoVIN,
-
-          "VIN_" +
-          id,
-
-          carpeta
-
-        );
-
-    }
-
-
-    /*
-      NUEVO REGISTRO
-      DIRECTAMENTE EN SEGUIMIENTO
-    */
-
-    hoja.appendRow([
-
-      id,
-
-      datos.tipo || "",
-
-      datos.ot || "",
-
-      datos.placa || "",
-
-      datos.vin || "",
-
-      datos.marca || "",
-
-      datos.modelo || "",
-
-      datos.servicio || "",
-
-      "Lavando",
-
-      fecha,
-
-      "",
-
-      datos.observaciones || "",
-
-      "",
-
-      fotoIngreso,
-
-      "",
-
-      fotoOT,
-
-      fotoVIN
-
-    ]);
-
-
-    const resultado = {
-
-      ok: true,
-
-      id: id,
-
-      mensaje:
-        "Lavado iniciado correctamente."
-
+    const fotosActualizadas = {
+      fotoIngreso: registro.fotoIngreso || "",
+      fotoOT: registro.fotoOT || "",
+      fotoVIN: registro.fotoVIN || ""
     };
 
+    if(subioFotos){
+      const respuestaFotos = await enviarDrive(datosFotos);
 
-    /*
-      Guardar respuesta para
-      evitar duplicados.
-    */
+      if(!respuestaFotos || respuestaFotos.ok !== true){
+        throw new Error(
+          respuestaFotos && respuestaFotos.mensaje
+            ? respuestaFotos.mensaje
+            : "No se pudieron guardar las fotografías en Drive."
+        );
+      }
 
-    if (requestId) {
-
-      cache.put(
-
-        "REGISTRO_" +
-        requestId,
-
-        JSON.stringify(
-          resultado
-        ),
-
-        21600
-
-      );
-
+      if(respuestaFotos.fotoIngreso) fotosActualizadas.fotoIngreso = respuestaFotos.fotoIngreso;
+      if(respuestaFotos.fotoOT) fotosActualizadas.fotoOT = respuestaFotos.fotoOT;
+      if(respuestaFotos.fotoVIN) fotosActualizadas.fotoVIN = respuestaFotos.fotoVIN;
     }
 
+    /* ---------------------------------------------
+       2. Actualizar Supabase.
+       No usamos return=representation: basta con HTTP 2xx.
+       Esto evita que una respuesta innecesaria del REST API
+       provoque un falso error después de guardar correctamente.
+    --------------------------------------------- */
+    const cambios = {
+      ot: ot,
+      placa: placa,
+      vin: vin,
+      marca: marca
+    };
 
-    return resultado;
+    if(!registro.fotoIngreso && fotosActualizadas.fotoIngreso){
+      cambios.foto_ingreso = fotosActualizadas.fotoIngreso;
+    }
+    if(!registro.fotoOT && fotosActualizadas.fotoOT){
+      cambios.foto_ot = fotosActualizadas.fotoOT;
+    }
+    if(!registro.fotoVIN && fotosActualizadas.fotoVIN){
+      cambios.foto_vin = fotosActualizadas.fotoVIN;
+    }
 
+    const urlSupabase = SUPABASE_URL + "/rest/v1/vehiculos?id=eq." + encodeURIComponent(id);
 
-  } finally {
+    const respuesta = await fetch(urlSupabase, {
+      method:"PATCH",
+      headers:{
+        "apikey":SUPABASE_KEY,
+        "Authorization":"Bearer " + SUPABASE_KEY,
+        "Content-Type":"application/json",
+        "Prefer":"return=minimal"
+      },
+      body:JSON.stringify(cambios),
+      cache:"no-store"
+    });
 
-    lock.releaseLock();
+    if(!respuesta.ok){
+      const textoError = await respuesta.text();
+      let detalle = "";
 
+      try{
+        const errorJson = JSON.parse(textoError);
+        detalle = errorJson.message || errorJson.hint || errorJson.details || errorJson.code || "";
+      }catch(e){
+        detalle = String(textoError || "").replace(/\s+/g," ").slice(0,250);
+      }
+
+      throw new Error(
+        "Supabase HTTP " + respuesta.status +
+        (detalle ? ": " + detalle : "")
+      );
+    }
+
+    cerrarEditar();
+    mostrarAlerta(
+      subioFotos
+        ? "Los datos y las fotografías faltantes fueron actualizados correctamente."
+        : "Los datos del vehículo fueron actualizados correctamente.",
+      "success"
+    );
+
+    await cargarDatos();
+
+  }catch(error){
+    console.error("Error editando vehículo:",error);
+
+    let mensaje = error && error.message
+      ? String(error.message)
+      : "Error desconocido.";
+
+    if(mensaje.length > 500){
+      mensaje = mensaje.slice(0,500) + "…";
+    }
+
+    mostrarAlerta("No se pudieron actualizar los datos: " + mensaje,"error");
+
+  }finally{
+    boton.disabled = false;
+    loading.style.display = "none";
   }
-
 }
 
 
-/* ============================================================
+/* =====================================================
    INICIAR LAVADO
-============================================================ */
+===================================================== */
 
-function iniciarLavado(
-  id
-) {
+async function iniciar(id){
 
-  const hoja =
-    obtenerHojaSeguimiento();
+try{
 
-
-  const fila =
-    buscarFilaSeguimiento(
-      id
-    );
-
-
-  if (
-    fila === -1
-  ) {
-
-    throw new Error(
-      "Vehículo no encontrado en Seguimiento."
-    );
-
+const respuesta = await fetch(
+  SUPABASE_URL + "/rest/v1/vehiculos?id=eq." + encodeURIComponent(id),
+  {
+    method:"PATCH",
+    headers:{
+      "apikey":SUPABASE_KEY,
+      "Authorization":"Bearer " + SUPABASE_KEY,
+      "Content-Type":"application/json",
+      "Prefer":"return=minimal"
+    },
+    body:JSON.stringify({
+      estado:"Lavando",
+      hora_inicio_lavado:new Date().toISOString()
+    })
   }
+);
+
+if(!respuesta.ok){
+  const textoError = await respuesta.text();
+  throw new Error("Supabase HTTP " + respuesta.status + (textoError ? ": " + textoError : ""));
+}
+
+mostrarAlerta("El lavado ha iniciado.","success");
+await cargarDatos();
+
+}catch(error){
+
+console.error("Error iniciando lavado:",error);
+mostrarAlerta("No se pudo iniciar: " + error.message,"error");
+
+}
+
+}
+
+/* =====================================================
+   ABRIR MODAL FINALIZAR
+===================================================== */
+
+function abrirFinalizar(id){
+
+document.getElementById(
+"idFinalizar"
+).value =
+id;
 
 
-  /*
-    Estado
-  */
-
-  hoja
-    .getRange(
-      fila,
-      9
-    )
-    .setValue(
-      "Lavando"
-    );
+document.getElementById(
+"fotoFinal"
+).value =
+"";
 
 
-  /*
-    Hora inicio
-  */
-
-  const horaActual =
-    hoja
-      .getRange(
-        fila,
-        10
-      )
-      .getValue();
+document.getElementById(
+"observacionesFinales"
+).value =
+"";
 
 
-  if (!horaActual) {
-
-    hoja
-      .getRange(
-        fila,
-        10
-      )
-      .setValue(
-        new Date()
-      );
-
-  }
-
-
-  return {
-
-    ok: true,
-
-    mensaje:
-      "Lavado iniciado correctamente."
-
-  };
+document.getElementById(
+"modal"
+).classList
+.add("active");
 
 }
 
 
-/* ============================================================
+/* =====================================================
+   CERRAR MODAL
+===================================================== */
+
+function cerrarModal(){
+
+document.getElementById(
+"modal"
+).classList
+.remove("active");
+
+}
+
+
+/* =====================================================
    FINALIZAR LAVADO
-============================================================ */
+===================================================== */
 
-function finalizarLavado(
-  datos
-) {
+async function finalizar(){
 
-  const lock =
-    LockService
-      .getScriptLock();
+const boton = document.getElementById("btnFinalizar");
+const loading = document.getElementById("loadingFinalizar");
+
+try{
+
+const id = document.getElementById("idFinalizar").value;
+const archivo = document.getElementById("fotoFinal").files[0];
+const observaciones = document.getElementById("observacionesFinales").value.trim();
+
+if(!id){
+  throw new Error("No se encontró el vehículo.");
+}
+
+if(!archivo){
+  mostrarAlerta("Debe adjuntar la foto final.","error");
+  return;
+}
+
+boton.disabled = true;
+loading.style.display = "block";
+
+const foto = await comprimirFoto(archivo);
+
+/* 1. Guardar la foto final exclusivamente en Drive. */
+const respuestaDrive = await enviarDrive({
+  accion:"guardarFotoFinal",
+  id:id,
+  fotoFinal:foto
+});
+
+if(!respuestaDrive || respuestaDrive.ok !== true || !respuestaDrive.fotoFinal){
+  throw new Error(
+    respuestaDrive && respuestaDrive.mensaje
+      ? respuestaDrive.mensaje
+      : "No se pudo guardar la foto final en Drive."
+  );
+}
+
+/* 2. Supabase es la única base de datos. */
+const respuestaSupabase = await fetch(
+  SUPABASE_URL + "/rest/v1/vehiculos?id=eq." + encodeURIComponent(id),
+  {
+    method:"PATCH",
+    headers:{
+      "apikey":SUPABASE_KEY,
+      "Authorization":"Bearer " + SUPABASE_KEY,
+      "Content-Type":"application/json",
+      "Prefer":"return=minimal"
+    },
+    body:JSON.stringify({
+      estado:"Finalizado",
+      hora_salida:new Date().toISOString(),
+      observaciones_finales:observaciones,
+      foto_final:respuestaDrive.fotoFinal
+    })
+  }
+);
+
+if(!respuestaSupabase.ok){
+  const textoError = await respuestaSupabase.text();
+  throw new Error(
+    "La foto se guardó en Drive, pero Supabase no pudo actualizar el vehículo. Supabase HTTP " +
+    respuestaSupabase.status + (textoError ? ": " + textoError : "")
+  );
+}
+
+/* 3. Cerrar modal antes de refrescar. */
+cerrarModal();
+mostrarAlerta("Lavado finalizado correctamente.","success");
+await cargarDatos();
+
+}catch(error){
+
+console.error("Error finalizando:",error);
+mostrarAlerta("No se pudo finalizar: " + error.message,"error");
+
+}finally{
+  boton.disabled = false;
+  loading.style.display = "none";
+}
+
+}
+
+/* =====================================================
+   HISTORIAL
+===================================================== */
+
+function mostrarMensajeHistorial(mensaje){
+
+const tbody =
+document.getElementById(
+"tablaHistorial"
+);
+
+tbody.innerHTML =
+`
+<tr>
+<td colspan="11" class="empty">
+${esc(mensaje)}
+</td>
+</tr>
+`;
+
+}
 
 
-  lock.waitLock(
-    30000
+function limpiarHistorial(){
+
+const desde =
+document.getElementById(
+"fechaDesde"
+);
+
+const hasta =
+document.getElementById(
+"fechaHasta"
+);
+
+const buscar =
+document.getElementById(
+"buscarHistorial"
+);
+
+if(desde) desde.value = "";
+if(hasta) hasta.value = "";
+if(buscar) buscar.value = "";
+
+mostrarMensajeHistorial(
+"Seleccione uno o más filtros y presione Buscar."
+);
+
+}
+
+
+async function buscarHistorial(){
+
+const tbody = document.getElementById("tablaHistorial");
+const desde = document.getElementById("fechaDesde").value;
+const hasta = document.getElementById("fechaHasta").value;
+const buscar = document.getElementById("buscarHistorial").value.trim().toLowerCase();
+
+if(!desde && !hasta && !buscar){
+  mostrarMensajeHistorial("Ingrese una fecha o un dato de búsqueda antes de consultar.");
+  return;
+}
+
+if(desde && hasta && desde > hasta){
+  mostrarMensajeHistorial("La fecha Desde no puede ser mayor que la fecha Hasta.");
+  return;
+}
+
+tbody.innerHTML = `
+<tr>
+<td colspan="11" class="empty">
+🔎 Buscando información...
+</td>
+</tr>
+`;
+
+try{
+
+const respuesta = await fetch(
+  SUPABASE_URL + "/rest/v1/vehiculos?select=*&estado=eq.Finalizado&order=hora_inicio_lavado.desc",
+  {
+    method:"GET",
+    headers:{
+      "apikey":SUPABASE_KEY,
+      "Authorization":"Bearer " + SUPABASE_KEY
+    },
+    cache:"no-store"
+  }
+);
+
+if(!respuesta.ok){
+  const textoError = await respuesta.text();
+  throw new Error("Supabase HTTP " + respuesta.status + (textoError ? ": " + textoError : ""));
+}
+
+const filas = await respuesta.json();
+
+const filtrados = (filas || []).map(function(r){
+  return {
+    id:r.id || "",
+    tipo:r.tipo || "",
+    ot:r.ot || "",
+    placa:r.placa || "",
+    vin:r.vin || "",
+    marca:r.marca || "",
+    modelo:r.modelo || "",
+    servicio:r.servicio || "",
+    estado:r.estado || "",
+    horaInicio:r.hora_inicio_lavado || r.created_at || "",
+    horaSalida:r.hora_salida || "",
+    observaciones:r.observaciones || "",
+    observacionesFinales:r.observaciones_finales || "",
+    fotoIngreso:r.foto_ingreso || "",
+    fotoFinal:r.foto_final || "",
+    fotoOT:r.foto_ot || "",
+    fotoVIN:r.foto_vin || ""
+  };
+}).filter(function(r){
+
+  const texto = [r.ot,r.placa,r.vin,r.marca,r.modelo,r.servicio]
+    .map(function(x){ return String(x || ""); })
+    .join(" ")
+    .toLowerCase();
+
+  const cumpleTexto = !buscar || texto.includes(buscar);
+
+  // El filtro de fecha usa exactamente la misma fecha que se muestra
+  // en la columna "Fecha": hora_inicio_lavado.
+  const fechaInicio = obtenerFechaHistorial(r.horaInicio);
+  let cumpleFecha = true;
+
+  if(desde){ cumpleFecha = !!fechaInicio && fechaInicio >= desde; }
+  if(cumpleFecha && hasta){ cumpleFecha = !!fechaInicio && fechaInicio <= hasta; }
+
+  return cumpleTexto && cumpleFecha;
+});
+
+// Asegura que la tabla quede ordenada por la misma fecha que se muestra
+// y que se utiliza para aplicar los filtros.
+filtrados.sort(function(a, b){
+  const fechaA = new Date(a.horaInicio || 0).getTime();
+  const fechaB = new Date(b.horaInicio || 0).getTime();
+  return fechaB - fechaA;
+});
+
+renderHistorial(filtrados);
+
+}catch(error){
+
+console.error("Error buscando historial:",error);
+mostrarMensajeHistorial("No se pudo consultar el historial: " + error.message);
+
+}
+
+}
+
+
+function obtenerFechaHistorial(fecha){
+
+  if(!fecha){
+    return "";
+  }
+
+  const texto = String(fecha).trim();
+
+  // Fechas tipo yyyy-MM-dd HH:mm:ss se interpretan como fecha local.
+  const matchLocal = texto.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/
   );
 
-
-  try {
-
-
-    const seguimiento =
-      obtenerHojaSeguimiento();
-
-
-    const historico =
-      obtenerHojaHistorico();
-
-
-    const carpeta =
-      obtenerCarpeta();
-
-
-    const fila =
-      buscarFilaSeguimiento(
-        datos.id
-      );
-
-
-    if (
-      fila === -1
-    ) {
-
-      throw new Error(
-        "Vehículo no encontrado en Seguimiento."
-      );
-
-    }
-
-
-    /*
-      Leer registro activo
-    */
-
-    const datosFila =
-      seguimiento
-
-        .getRange(
-          fila,
-          1,
-          1,
-          17
-        )
-
-        .getValues()[0];
-
-
-    /*
-      Foto final
-    */
-
-    let fotoFinal =
-      "";
-
-
-    if (
-      datos.fotoFinal
-    ) {
-
-      fotoFinal =
-        guardarFoto(
-
-          datos.fotoFinal,
-
-          "FINAL_" +
-          datos.id,
-
-          carpeta
-
-        );
-
-    }
-
-
-    const horaSalida =
-      new Date();
-
-
-    const observacionesFinales =
-      datos.observacionesFinales ||
-      "";
-
-
-    /*
-      Crear fila de histórico
-    */
-
-    const filaHistorico = [
-
-      datosFila[0],
-
-      datosFila[1],
-
-      datosFila[2],
-
-      datosFila[3],
-
-      datosFila[4],
-
-      datosFila[5],
-
-      datosFila[6],
-
-      datosFila[7],
-
-      "",
-
-      "Finalizado",
-
-      datosFila[9],
-
-      horaSalida,
-
-      datosFila[11],
-
-      observacionesFinales,
-
-      datosFila[13],
-
-      fotoFinal,
-
-      datosFila[15],
-
-      datosFila[16]
-
-    ];
-
-
-    /*
-      Buscar si ya existe
-      en histórico
-    */
-
-    const filaHistoricoExistente =
-      buscarFilaHistorico(
-        datos.id
-      );
-
-
-    if (
-      filaHistoricoExistente === -1
-    ) {
-
-
-      historico.appendRow(
-        filaHistorico
-      );
-
-
-    } else {
-
-
-      /*
-        Si ya existe,
-        actualizar en lugar
-        de duplicar.
-      */
-
-      historico
-
-        .getRange(
-          filaHistoricoExistente,
-          1,
-          1,
-          18
-        )
-
-        .setValues([
-          filaHistorico
-        ]);
-
-    }
-
-
-    /*
-      Verificar histórico
-    */
-
-    const verificacion =
-      buscarFilaHistorico(
-        datos.id
-      );
-
-
-    if (
-      verificacion === -1
-    ) {
-
-      throw new Error(
-
-        "No se pudo verificar el " +
-        "registro histórico. " +
-        "El vehículo permanece " +
-        "en Seguimiento."
-
-      );
-
-    }
-
-
-    /*
-      Ahora sí eliminar
-      de seguimiento
-    */
-
-    seguimiento.deleteRow(
-      fila
-    );
-
-
-    return {
-
-      ok: true,
-
-      mensaje:
-        "Lavado finalizado correctamente."
-
-    };
-
-
-  } finally {
-
-    lock.releaseLock();
-
+  if(matchLocal){
+    return matchLocal[1] + "-" + matchLocal[2] + "-" + matchLocal[3];
   }
 
-}
+  // Para timestamps ISO con zona horaria, usa la fecha local del navegador.
+  const fechaObj = new Date(fecha);
 
-
-/* ============================================================
-   OBTENER SEGUIMIENTO
-============================================================ */
-
-function obtenerSeguimiento() {
-
-  const hoja =
-    obtenerHojaSeguimiento();
-
-
-  const ultimaFila =
-    hoja.getLastRow();
-
-
-  if (
-    ultimaFila <= 1
-  ) {
-
-    return [];
-
+  if(!isNaN(fechaObj.getTime())){
+    const anio = fechaObj.getFullYear();
+    const mes = String(fechaObj.getMonth() + 1).padStart(2,"0");
+    const dia = String(fechaObj.getDate()).padStart(2,"0");
+    return anio + "-" + mes + "-" + dia;
   }
-
-
-  const valores =
-    hoja
-
-      .getRange(
-        2,
-        1,
-        ultimaFila - 1,
-        17
-      )
-
-      .getValues();
-
-
-  return valores
-
-    .filter(
-      function(fila) {
-
-        return (
-          fila[0] !== "" &&
-          fila[0] !== null
-        );
-
-      }
-    )
-
-    .map(
-      function(fila) {
-
-        return mapearFilaSeguimiento(
-          fila
-        );
-
-      }
-    )
-
-    .filter(
-      function(r) {
-
-        return (
-
-          r.estado ===
-          "Pendiente"
-
-          ||
-
-          r.estado ===
-          "Lavando"
-
-        );
-
-      }
-    );
-
-}
-
-
-/* ============================================================
-   BUSCAR HISTORIAL
-============================================================ */
-
-function buscarHistorial(
-  datos
-) {
-
-  const buscar =
-    String(
-      datos.buscar || ""
-    )
-      .toLowerCase()
-      .trim();
-
-
-  const desde =
-    String(
-      datos.desde || ""
-    ).trim();
-
-
-  const hasta =
-    String(
-      datos.hasta || ""
-    ).trim();
-
-
-  const hoja =
-    obtenerHojaHistorico();
-
-
-  const ultimaFila =
-    hoja.getLastRow();
-
-
-  if (
-    ultimaFila <= 1
-  ) {
-
-    return [];
-
-  }
-
-
-  const valores =
-    hoja
-
-      .getRange(
-        2,
-        1,
-        ultimaFila - 1,
-        18
-      )
-
-      .getValues();
-
-
-  return valores
-
-    .filter(
-      function(fila) {
-
-        return (
-          fila[0] !== "" &&
-          fila[0] !== null
-        );
-
-      }
-    )
-
-    .map(
-      function(fila) {
-
-        return mapearFilaHistorico(
-          fila
-        );
-
-      }
-    )
-
-    .filter(
-      function(r) {
-
-
-        const texto = [
-
-          r.ot,
-
-          r.placa,
-
-          r.vin,
-
-          r.marca,
-
-          r.modelo,
-
-          r.servicio
-
-        ]
-
-          .map(
-            function(x) {
-
-              return String(
-                x || ""
-              );
-
-            }
-          )
-
-          .join(" ")
-
-          .toLowerCase();
-
-
-        const cumpleTexto =
-          !buscar ||
-          texto.includes(
-            buscar
-          );
-
-
-        const fechaFiltro =
-          obtenerFechaFiltro(
-            r.horaInicio
-          );
-
-
-        let cumpleFecha =
-          true;
-
-
-        if (desde) {
-
-          cumpleFecha =
-            !!fechaFiltro &&
-            fechaFiltro >= desde;
-
-        }
-
-
-        if (
-          cumpleFecha &&
-          hasta
-        ) {
-
-          cumpleFecha =
-            !!fechaFiltro &&
-            fechaFiltro <= hasta;
-
-        }
-
-
-        return (
-          cumpleTexto &&
-          cumpleFecha
-        );
-
-      }
-    );
-
-}
-
-
-/* ============================================================
-   OBTENER HISTÓRICO COMPLETO
-============================================================ */
-
-function obtenerRegistros() {
-
-  const hoja =
-    obtenerHojaHistorico();
-
-
-  const ultimaFila =
-    hoja.getLastRow();
-
-
-  if (
-    ultimaFila <= 1
-  ) {
-
-    return [];
-
-  }
-
-
-  const valores =
-    hoja
-
-      .getRange(
-        2,
-        1,
-        ultimaFila - 1,
-        18
-      )
-
-      .getValues();
-
-
-  return valores
-
-    .filter(
-      function(fila) {
-
-        return (
-          fila[0] !== "" &&
-          fila[0] !== null
-        );
-
-      }
-    )
-
-    .map(
-      function(fila) {
-
-        return mapearFilaHistorico(
-          fila
-        );
-
-      }
-    );
-
-}
-
-
-/* ============================================================
-   MAPEAR SEGUIMIENTO
-============================================================ */
-
-function mapearFilaSeguimiento(
-  fila
-) {
-
-  return {
-
-    id:
-      fila[0],
-
-    tipo:
-      fila[1],
-
-    ot:
-      fila[2],
-
-    placa:
-      fila[3],
-
-    vin:
-      fila[4],
-
-    marca:
-      fila[5],
-
-    modelo:
-      fila[6],
-
-    servicio:
-      fila[7],
-
-    responsable:
-      "",
-
-    estado:
-      fila[8],
-
-    horaInicio:
-      convertirFecha(
-        fila[9]
-      ),
-
-    horaSalida:
-      convertirFecha(
-        fila[10]
-      ),
-
-    observaciones:
-      fila[11],
-
-    observacionesFinales:
-      fila[12],
-
-    fotoIngreso:
-      fila[13] || "",
-
-    fotoFinal:
-      fila[14] || "",
-
-    fotoOT:
-      fila[15] || "",
-
-    fotoVIN:
-      fila[16] || ""
-
-  };
-
-}
-
-
-/* ============================================================
-   MAPEAR HISTÓRICO
-============================================================ */
-
-function mapearFilaHistorico(
-  fila
-) {
-
-  return {
-
-    id:
-      fila[0],
-
-    tipo:
-      fila[1],
-
-    ot:
-      fila[2],
-
-    placa:
-      fila[3],
-
-    vin:
-      fila[4],
-
-    marca:
-      fila[5],
-
-    modelo:
-      fila[6],
-
-    servicio:
-      fila[7],
-
-    responsable:
-      "",
-
-    estado:
-      fila[9],
-
-    horaInicio:
-      convertirFecha(
-        fila[10]
-      ),
-
-    horaSalida:
-      convertirFecha(
-        fila[11]
-      ),
-
-    observaciones:
-      fila[12],
-
-    observacionesFinales:
-      fila[13],
-
-    fotoIngreso:
-      fila[14] || "",
-
-    fotoFinal:
-      fila[15] || "",
-
-    fotoOT:
-      fila[16] || "",
-
-    fotoVIN:
-      fila[17] || ""
-
-  };
-
-}
-
-
-/* ============================================================
-   BUSCAR FILA SEGUIMIENTO
-============================================================ */
-
-function buscarFilaSeguimiento(
-  id
-) {
-
-  const hoja =
-    obtenerHojaSeguimiento();
-
-
-  const ultimaFila =
-    hoja.getLastRow();
-
-
-  if (
-    ultimaFila <= 1
-  ) {
-
-    return -1;
-
-  }
-
-
-  const valores =
-    hoja
-
-      .getRange(
-        2,
-        1,
-        ultimaFila - 1,
-        1
-      )
-
-      .getValues();
-
-
-  for (
-    let i = 0;
-    i < valores.length;
-    i++
-  ) {
-
-    if (
-
-      String(
-        valores[i][0]
-      ) ===
-
-      String(id)
-
-    ) {
-
-      return i + 2;
-
-    }
-
-  }
-
-
-  return -1;
-
-}
-
-
-/* ============================================================
-   BUSCAR FILA HISTÓRICO
-============================================================ */
-
-function buscarFilaHistorico(
-  id
-) {
-
-  const hoja =
-    obtenerHojaHistorico();
-
-
-  const ultimaFila =
-    hoja.getLastRow();
-
-
-  if (
-    ultimaFila <= 1
-  ) {
-
-    return -1;
-
-  }
-
-
-  const valores =
-    hoja
-
-      .getRange(
-        2,
-        1,
-        ultimaFila - 1,
-        1
-      )
-
-      .getValues();
-
-
-  for (
-    let i = 0;
-    i < valores.length;
-    i++
-  ) {
-
-    if (
-
-      String(
-        valores[i][0]
-      ) ===
-
-      String(id)
-
-    ) {
-
-      return i + 2;
-
-    }
-
-  }
-
-
-  return -1;
-
-}
-
-
-/* ============================================================
-   IDS EXISTENTES
-============================================================ */
-
-function obtenerIdsSeguimiento() {
-
-  const hoja =
-    obtenerHojaSeguimiento();
-
-
-  const ultimaFila =
-    hoja.getLastRow();
-
-
-  const ids = {};
-
-
-  if (
-    ultimaFila <= 1
-  ) {
-
-    return ids;
-
-  }
-
-
-  const valores =
-    hoja
-
-      .getRange(
-        2,
-        1,
-        ultimaFila - 1,
-        1
-      )
-
-      .getValues();
-
-
-  valores.forEach(
-    function(fila) {
-
-
-      const id =
-        String(
-          fila[0] || ""
-        ).trim();
-
-
-      if (id) {
-
-        ids[id] =
-          true;
-
-      }
-
-    }
-  );
-
-
-  return ids;
-
-}
-
-
-/* ============================================================
-   GUARDAR FOTO
-============================================================ */
-
-function guardarFoto(
-  base64,
-  nombre,
-  carpeta
-) {
-
-  if (!base64) {
-
-    throw new Error(
-      "No se recibió la imagen."
-    );
-
-  }
-
-
-  const partes =
-    base64.split(",");
-
-
-  if (
-    partes.length < 2
-  ) {
-
-    throw new Error(
-      "Formato de imagen inválido."
-    );
-
-  }
-
-
-  const contenido =
-    Utilities.base64Decode(
-      partes[1]
-    );
-
-
-  const blob =
-    Utilities.newBlob(
-
-      contenido,
-
-      "image/jpeg",
-
-      nombre +
-      ".jpg"
-
-    );
-
-
-  const archivo =
-    carpeta.createFile(
-      blob
-    );
-
-
-  return archivo.getUrl();
-
-}
-
-
-/* ============================================================
-   CONVERTIR FECHA
-============================================================ */
-
-function convertirFecha(
-  fecha
-) {
-
-  if (!fecha) {
-
-    return "";
-
-  }
-
-
-  if (
-
-    fecha instanceof Date &&
-
-    !isNaN(
-      fecha.getTime()
-    )
-
-  ) {
-
-    return Utilities.formatDate(
-
-      fecha,
-
-      Session.getScriptTimeZone(),
-
-      "yyyy-MM-dd HH:mm:ss"
-
-    );
-
-  }
-
-
-  return String(fecha);
-
-}
-
-
-/* ============================================================
-   FECHA PARA FILTRO
-============================================================ */
-
-function obtenerFechaFiltro(
-  fecha
-) {
-
-  if (!fecha) {
-
-    return "";
-
-  }
-
-
-  if (
-
-    fecha instanceof Date &&
-
-    !isNaN(
-      fecha.getTime()
-    )
-
-  ) {
-
-    return Utilities.formatDate(
-
-      fecha,
-
-      Session.getScriptTimeZone(),
-
-      "yyyy-MM-dd"
-
-    );
-
-  }
-
-
-  const texto =
-    String(fecha)
-      .trim();
-
-
-  let m =
-    texto.match(
-      /^(\d{4})-(\d{2})-(\d{2})/
-    );
-
-
-  if (m) {
-
-    return m[0];
-
-  }
-
-
-  m =
-    texto.match(
-      /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/
-    );
-
-
-  if (m) {
-
-    return (
-
-      m[3] +
-      "-" +
-      String(
-        m[2]
-      ).padStart(
-        2,
-        "0"
-      ) +
-      "-" +
-      String(
-        m[1]
-      ).padStart(
-        2,
-        "0"
-      )
-
-    );
-
-  }
-
 
   return "";
-
 }
 
 
-/* ============================================================
-   PRUEBA DE CONEXIÓN
-============================================================ */
+function formatearFecha(fecha){
 
-function probarConexion() {
+  if(!fecha){
+    return "";
+  }
 
-  return {
+  /*
+    Apps Script devuelve normalmente:
+    yyyy-MM-dd HH:mm:ss
 
-    ok: true,
+    Se muestra en pantalla como:
+    dd/MM/yyyy HH:mm
+  */
 
-    mensaje:
-      "Google Apps Script está funcionando.",
+  const texto = String(fecha).trim();
 
-    fecha:
-      convertirFecha(
-        new Date()
-      )
-
-  };
-
-}
-
-
-/* ============================================================
-   INSTALACIÓN / MIGRACIÓN
-   EJECUTAR UNA SOLA VEZ
-============================================================ */
-
-function instalarSeguimiento() {
-
-  const hoja =
-    obtenerHojaSeguimiento();
-
-
-  crearEncabezadosSeguimiento(
-    hoja
+  const match = texto.match(
+    /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/
   );
 
+  if(match){
 
-  migrarActivosASeguimiento();
+    return (
+      match[3] + "/" +
+      match[2] + "/" +
+      match[1] + " " +
+      match[4] + ":" +
+      match[5]
+    );
+
+  }
+
+  /*
+    Compatibilidad por si alguna fecha llega
+    en otro formato.
+  */
+
+  const fechaObj = new Date(fecha);
+
+  if(!isNaN(fechaObj.getTime())){
+
+    const dia =
+      String(fechaObj.getDate()).padStart(2,"0");
+
+    const mes =
+      String(fechaObj.getMonth() + 1).padStart(2,"0");
+
+    const anio =
+      fechaObj.getFullYear();
+
+    const hora =
+      String(fechaObj.getHours()).padStart(2,"0");
+
+    const minutos =
+      String(fechaObj.getMinutes()).padStart(2,"0");
+
+    return (
+      dia + "/" +
+      mes + "/" +
+      anio + " " +
+      hora + ":" +
+      minutos
+    );
+
+  }
+
+  return texto;
+}
 
 
-  return {
+function renderHistorial(registrosHistorial){
 
-    ok: true,
+const tbody =
+document.getElementById(
+"tablaHistorial"
+);
 
-    mensaje:
-      'Hoja "Seguimiento" creada/preparada y registros activos migrados.'
+tbody.innerHTML = "";
 
-  };
+if(!registrosHistorial || !registrosHistorial.length){
+
+mostrarMensajeHistorial(
+"No se encontraron registros con los filtros seleccionados."
+);
+
+return;
 
 }
+
+registrosHistorial.forEach(function(r, indice){
+
+let fotos = "";
+
+if(r.fotoIngreso){
+  fotos +=
+  `<a class="foto-link"
+      href="${esc(r.fotoIngreso)}"
+      target="_blank"
+      rel="noopener">
+      Ingreso
+   </a>`;
+}
+
+if(r.fotoOT){
+  fotos +=
+  `<a class="foto-link"
+      href="${esc(r.fotoOT)}"
+      target="_blank"
+      rel="noopener">
+      OT
+   </a>`;
+}
+
+if(r.fotoVIN){
+  fotos +=
+  `<a class="foto-link"
+      href="${esc(r.fotoVIN)}"
+      target="_blank"
+      rel="noopener">
+      VIN
+   </a>`;
+}
+
+if(r.fotoFinal){
+  fotos +=
+  `<a class="foto-link"
+      href="${esc(r.fotoFinal)}"
+      target="_blank"
+      rel="noopener">
+      Final
+   </a>`;
+}
+
+if(!fotos){
+  fotos = "—";
+}
+
+tbody.innerHTML +=
+`
+<tr>
+
+<td class="numero-historial">
+${indice + 1}
+</td>
+
+<td>
+${esc(formatearFecha(r.horaInicio))}
+</td>
+
+<td>
+${esc(r.tipo)}
+</td>
+
+<td>
+${esc(r.ot)}
+</td>
+
+<td>
+${esc(r.placa)}
+</td>
+
+<td>
+${esc(r.vin)}
+</td>
+
+<td>
+${esc(r.marca)}
+</td>
+
+<td class="col-modelo">
+${esc(r.modelo)}
+</td>
+
+<td>
+${esc(r.servicio)}
+</td>
+
+<td>
+${esc(formatearFecha(r.horaSalida))}
+</td>
+
+<td>
+<div class="fotos-historial">
+${fotos}
+</div>
+</td>
+
+</tr>
+`;
+
+});
+
+}
+
+/* =====================================================
+   EXPORTAR CSV
+===================================================== */
+
+function exportarCSV(){
+
+const filas =
+document.querySelectorAll(
+"#tablaHistorial tr"
+);
+
+let csv =
+"N°,Fecha,Tipo,OT,Placa,VIN,Marca,Modelo,Servicio,Salida,Fotos\n";
+
+let cantidad = 0;
+
+filas.forEach(function(fila){
+
+const columnas =
+fila.querySelectorAll("td");
+
+if(!columnas.length){
+return;
+}
+
+const datos =
+Array
+.from(columnas)
+.map(function(td){
+
+return(
+'"' +
+td.innerText
+.replace(/"/g,'""') +
+'"'
+);
+
+});
+
+csv +=
+datos.join(",") +
+"\n";
+
+cantidad++;
+
+});
+
+if(!cantidad){
+
+mostrarAlerta(
+"No hay información para exportar.",
+"error"
+);
+
+return;
+}
+
+const blob =
+new Blob(
+[
+"\ufeff" +
+csv
+],
+{
+type:
+"text/csv;charset=utf-8;"
+}
+);
+
+const url =
+URL.createObjectURL(blob);
+
+const a =
+document.createElement("a");
+
+a.href = url;
+
+a.download =
+"Historial_Carwash.csv";
+
+document.body
+.appendChild(a);
+
+a.click();
+
+a.remove();
+
+URL.revokeObjectURL(url);
+
+}
+
+/* =====================================================
+   LIMPIAR FORMULARIO
+===================================================== */
+
+function limpiarFormulario(){
+
+document.getElementById("ot").value = "";
+
+document.getElementById("placa").value = "";
+
+document.getElementById("vin").value = "";
+
+document.getElementById("modelo").value = "";
+document.getElementById("observaciones").value = "";
+
+document.getElementById("marca").value = "";
+
+document.getElementById("servicio").value =
+"Lavado básico";
+
+
+/* LIMPIAR FOTOS */
+
+document.getElementById("fotoIngreso").value = "";
+
+document.getElementById("fotoOT").value = "";
+
+document.getElementById("fotoVIN").value = "";
+
+
+/* VOLVER A SERVICIO */
+
+document.querySelector(
+'input[name="tipo"][value="Servicio"]'
+).checked = true;
+
+
+cambiarTipo("Servicio");
+
+}
+
+
+
+/* =====================================================
+   POPUP DE MENSAJES
+===================================================== */
+
+function mostrarPopup(titulo, mensaje, tipo){
+
+  const popup =
+    document.getElementById("popupMensaje");
+
+  const icono =
+    document.getElementById("popupIcono");
+
+  const tituloElemento =
+    document.getElementById("popupTitulo");
+
+  const texto =
+    document.getElementById("popupTexto");
+
+
+  tituloElemento.textContent =
+    titulo || "Mensaje";
+
+  texto.textContent =
+    mensaje || "";
+
+
+  if(tipo === "error"){
+    icono.textContent = "❌";
+  }
+  else if(tipo === "success"){
+    icono.textContent = "✅";
+  }
+  else{
+    icono.textContent = "ℹ️";
+  }
+
+
+  popup.classList.add("active");
+
+}
+
+
+function cerrarPopup(){
+
+  document
+    .getElementById("popupMensaje")
+    .classList
+    .remove("active");
+
+}
+
+
+document.addEventListener(
+  "click",
+  function(event){
+
+    const popup =
+      document.getElementById("popupMensaje");
+
+    if(
+      popup &&
+      event.target === popup
+    ){
+      cerrarPopup();
+    }
+
+  }
+);
+
+
+/* =====================================================
+   ALERTAS
+===================================================== */
+
+function mostrarAlerta(mensaje,tipo){
+
+const alerta =
+document.getElementById("alerta");
+
+
+if(!alerta){
+
+console.log(mensaje);
+
+return;
+
+}
+
+
+alerta.textContent =
+mensaje;
+
+
+alerta.className =
+"alert " +
+tipo;
+
+
+window.scrollTo({
+
+top:0,
+
+behavior:"smooth"
+
+});
+
+
+setTimeout(function(){
+
+alerta.className =
+"alert";
+
+},6000);
+
+}
+
+
+/* =====================================================
+   ESCAPAR HTML
+===================================================== */
+
+function esc(valor){
+
+if(
+valor === null ||
+valor === undefined
+){
+
+return "";
+
+}
+
+
+return String(valor)
+
+.replace(
+/&/g,
+"&amp;"
+)
+
+.replace(
+/</g,
+"&lt;"
+)
+
+.replace(
+/>/g,
+"&gt;"
+)
+
+.replace(
+/"/g,
+"&quot;"
+)
+
+.replace(
+/'/g,
+"&#039;"
+);
+
+}
+
+
+/* =====================================================
+   CLASE ESTADO
+===================================================== */
+
+function claseEstado(estado){
+
+if(
+estado === "Pendiente"
+){
+
+return "pendiente";
+
+}
+
+
+if(
+estado === "Lavando"
+){
+
+return "iniciar";
+
+}
+
+
+if(
+estado === "Finalizado"
+){
+
+return "finalizado";
+
+}
+
+
+return "pendiente";
+
+}
+
+
+/* =====================================================
+   INICIO
+===================================================== */
+
+document.addEventListener(
+"DOMContentLoaded",
+function(){
+
+  cambiarTipo("Servicio");
+
+}
+);
+
+iniciarRealtimeSupabase();
+
+</script>
+
+</body>
+</html>
