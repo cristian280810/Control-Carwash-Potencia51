@@ -1283,10 +1283,6 @@ Servicio
 </th>
 
 <th>
-Estado
-</th>
-
-<th>
 Salida
 </th>
 
@@ -2426,7 +2422,7 @@ document.getElementById(
 tbody.innerHTML =
 `
 <tr>
-<td colspan="12" class="empty">
+<td colspan="11" class="empty">
 ${esc(mensaje)}
 </td>
 </tr>
@@ -2482,7 +2478,7 @@ if(desde && hasta && desde > hasta){
 
 tbody.innerHTML = `
 <tr>
-<td colspan="12" class="empty">
+<td colspan="11" class="empty">
 🔎 Buscando información...
 </td>
 </tr>
@@ -2491,7 +2487,7 @@ tbody.innerHTML = `
 try{
 
 const respuesta = await fetch(
-  SUPABASE_URL + "/rest/v1/vehiculos?select=*&estado=eq.Finalizado&order=hora_salida.desc",
+  SUPABASE_URL + "/rest/v1/vehiculos?select=*&estado=eq.Finalizado&order=hora_inicio_lavado.desc",
   {
     method:"GET",
     headers:{
@@ -2538,13 +2534,23 @@ const filtrados = (filas || []).map(function(r){
 
   const cumpleTexto = !buscar || texto.includes(buscar);
 
-  const fechaInicio = String(r.horaInicio || "").slice(0,10);
+  // El filtro de fecha usa exactamente la misma fecha que se muestra
+  // en la columna "Fecha": hora_inicio_lavado.
+  const fechaInicio = obtenerFechaHistorial(r.horaInicio);
   let cumpleFecha = true;
 
   if(desde){ cumpleFecha = !!fechaInicio && fechaInicio >= desde; }
   if(cumpleFecha && hasta){ cumpleFecha = !!fechaInicio && fechaInicio <= hasta; }
 
   return cumpleTexto && cumpleFecha;
+});
+
+// Asegura que la tabla quede ordenada por la misma fecha que se muestra
+// y que se utiliza para aplicar los filtros.
+filtrados.sort(function(a, b){
+  const fechaA = new Date(a.horaInicio || 0).getTime();
+  const fechaB = new Date(b.horaInicio || 0).getTime();
+  return fechaB - fechaA;
 });
 
 renderHistorial(filtrados);
@@ -2556,6 +2562,37 @@ mostrarMensajeHistorial("No se pudo consultar el historial: " + error.message);
 
 }
 
+}
+
+
+function obtenerFechaHistorial(fecha){
+
+  if(!fecha){
+    return "";
+  }
+
+  const texto = String(fecha).trim();
+
+  // Fechas tipo yyyy-MM-dd HH:mm:ss se interpretan como fecha local.
+  const matchLocal = texto.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/
+  );
+
+  if(matchLocal){
+    return matchLocal[1] + "-" + matchLocal[2] + "-" + matchLocal[3];
+  }
+
+  // Para timestamps ISO con zona horaria, usa la fecha local del navegador.
+  const fechaObj = new Date(fecha);
+
+  if(!isNaN(fechaObj.getTime())){
+    const anio = fechaObj.getFullYear();
+    const mes = String(fechaObj.getMonth() + 1).padStart(2,"0");
+    const dia = String(fechaObj.getDate()).padStart(2,"0");
+    return anio + "-" + mes + "-" + dia;
+  }
+
+  return "";
 }
 
 
@@ -2737,10 +2774,6 @@ ${esc(r.servicio)}
 </td>
 
 <td>
-${esc(r.estado)}
-</td>
-
-<td>
 ${esc(formatearFecha(r.horaSalida))}
 </td>
 
@@ -2769,7 +2802,7 @@ document.querySelectorAll(
 );
 
 let csv =
-"N°,Fecha,Tipo,OT,Placa,VIN,Marca,Modelo,Servicio,Estado,Salida,Fotos\n";
+"N°,Fecha,Tipo,OT,Placa,VIN,Marca,Modelo,Servicio,Salida,Fotos\n";
 
 let cantidad = 0;
 
