@@ -1941,9 +1941,9 @@ mostrarAlerta(
 
 /*
   PASO 2:
-  Las fotografías se guardan después del registro.
-  Cada fotografía se actualiza inmediatamente en Supabase.
-  Si una falla, las demás no se pierden.
+  Guardar las fotografías una por una.
+  No se hacen peticiones simultáneas a Apps Script.
+  Cada enlace se actualiza inmediatamente en Supabase.
 */
 (async function(){
 
@@ -1953,21 +1953,14 @@ mostrarAlerta(
     vin:false
   };
 
+  const errores = [];
+
   try{
 
-    loading.textContent = "⏳ Guardando fotografías...";
-
-    /*
-      Comprimimos las fotografías en segundo plano.
-    */
     const fotoIngreso = await comprimirFoto(archivoIngreso);
     const fotoOT = archivoOT ? await comprimirFoto(archivoOT) : "";
     const fotoVIN = archivoVIN ? await comprimirFoto(archivoVIN) : "";
 
-    /*
-      Función para guardar inmediatamente cada enlace
-      en el mismo registro de Supabase.
-    */
     async function actualizarFoto(campo, url){
 
       const respuesta = await fetch(
@@ -1989,54 +1982,46 @@ mostrarAlerta(
       if(!respuesta.ok){
         const texto = await respuesta.text();
         throw new Error(
-          "Supabase no pudo guardar " + campo +
+          "Supabase HTTP " + respuesta.status +
           (texto ? ": " + texto : "")
         );
       }
     }
 
-    /*
-      Cada fotografía tiene su propio proceso.
-      Así una falla no cancela las demás.
-    */
-    async function guardarIngreso(){
+    /* FOTO DE INGRESO */
+    try{
 
-      try{
+      loading.textContent = "⏳ Guardando foto de ingreso...";
 
-        const respuesta = await enviarDrive({
-          accion:"guardarFotos",
-          id:id,
-          fotoIngreso:fotoIngreso
-        });
+      const respuesta = await enviarDrive({
+        accion:"guardarFotos",
+        id:id,
+        fotoIngreso:fotoIngreso
+      });
 
-        if(!respuesta || respuesta.ok !== true || !respuesta.fotoIngreso){
-          throw new Error(
-            respuesta && respuesta.mensaje
-              ? respuesta.mensaje
-              : "Drive no devolvió el enlace de ingreso."
-          );
-        }
-
-        await actualizarFoto(
-          "foto_ingreso",
-          respuesta.fotoIngreso
+      if(!respuesta || respuesta.ok !== true || !respuesta.fotoIngreso){
+        throw new Error(
+          respuesta && respuesta.mensaje
+            ? respuesta.mensaje
+            : "Drive no devolvió el enlace de la foto de ingreso."
         );
-
-        resultados.ingreso = true;
-        return true;
-
-      }catch(error){
-
-        console.error("Error foto ingreso:",error);
-        return false;
       }
+
+      await actualizarFoto("foto_ingreso", respuesta.fotoIngreso);
+      resultados.ingreso = true;
+
+    }catch(error){
+
+      console.error("Foto ingreso:", error);
+      errores.push("ingreso");
     }
 
-    async function guardarOT(){
-
-      if(!fotoOT) return true;
+    /* FOTO OT */
+    if(fotoOT){
 
       try{
+
+        loading.textContent = "⏳ Guardando foto de OT...";
 
         const respuesta = await enviarDrive({
           accion:"guardarFotos",
@@ -2048,30 +2033,26 @@ mostrarAlerta(
           throw new Error(
             respuesta && respuesta.mensaje
               ? respuesta.mensaje
-              : "Drive no devolvió el enlace de OT."
+              : "Drive no devolvió el enlace de la foto OT."
           );
         }
 
-        await actualizarFoto(
-          "foto_ot",
-          respuesta.fotoOT
-        );
-
+        await actualizarFoto("foto_ot", respuesta.fotoOT);
         resultados.ot = true;
-        return true;
 
       }catch(error){
 
-        console.error("Error foto OT:",error);
-        return false;
+        console.error("Foto OT:", error);
+        errores.push("OT");
       }
     }
 
-    async function guardarVIN(){
-
-      if(!fotoVIN) return true;
+    /* FOTO VIN */
+    if(fotoVIN){
 
       try{
+
+        loading.textContent = "⏳ Guardando foto de VIN...";
 
         const respuesta = await enviarDrive({
           accion:"guardarFotos",
@@ -2083,92 +2064,56 @@ mostrarAlerta(
           throw new Error(
             respuesta && respuesta.mensaje
               ? respuesta.mensaje
-              : "Drive no devolvió el enlace de VIN."
+              : "Drive no devolvió el enlace de la foto VIN."
           );
         }
 
-        await actualizarFoto(
-          "foto_vin",
-          respuesta.fotoVIN
-        );
-
+        await actualizarFoto("foto_vin", respuesta.fotoVIN);
         resultados.vin = true;
-        return true;
 
       }catch(error){
 
-        console.error("Error foto VIN:",error);
-        return false;
+        console.error("Foto VIN:", error);
+        errores.push("VIN");
       }
     }
 
-    /*
-      Ingreso primero.
-      OT y VIN se pueden procesar al mismo tiempo.
-    */
-    await guardarIngreso();
-
-    await Promise.all([
-      guardarOT(),
-      guardarVIN()
-    ]);
-
-    const errores = [];
-
-    if(!resultados.ingreso){
-      errores.push("ingreso");
-    }
-
-    if(fotoOT && !resultados.ot){
-      errores.push("OT");
-    }
-
-    if(fotoVIN && !resultados.vin){
-      errores.push("VIN");
-    }
+    loading.style.display = "none";
 
     if(errores.length){
 
       mostrarAlerta(
-        "El vehículo fue registrado. No se pudo guardar: " +
+        "El vehículo ya está registrado. No se pudo guardar: " +
         errores.join(", ") +
-        ". Las demás fotografías sí fueron procesadas.",
+        ".",
         "error"
       );
 
     }else{
 
-      console.log(
-        "Vehículo y fotografías guardados correctamente:",
-        id
+      mostrarAlerta(
+        "Vehículo y fotografías guardados correctamente.",
+        "success"
       );
-
     }
 
     cargarDatos().catch(function(error){
-      console.warn(
-        "No se pudo actualizar la pantalla:",
-        error
-      );
+      console.warn("No se pudo actualizar la pantalla:", error);
     });
 
   }catch(error){
 
-    console.error(
-      "Vehículo registrado, pero hubo un problema procesando fotografías:",
-      error
-    );
+    console.error("Error procesando fotografías:", error);
+
+    loading.style.display = "none";
 
     mostrarAlerta(
-      "El vehículo fue registrado. Las fotografías se están procesando; revise Historial.",
+      "El vehículo ya está registrado, pero hubo un problema al guardar las fotografías.",
       "error"
     );
 
     cargarDatos().catch(function(error2){
-      console.warn(
-        "No se pudo actualizar la pantalla:",
-        error2
-      );
+      console.warn("No se pudo actualizar la pantalla:", error2);
     });
   }
 
