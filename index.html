@@ -8,6 +8,8 @@
 <title>Control de Carwash</title>
 
 <style>
+.numero-seguimiento { text-align:center; font-weight:700; }
+
 
 *{
     box-sizing:border-box;
@@ -1092,6 +1094,10 @@ Finalizado
 <tr>
 
 <th>
+N°
+</th>
+
+<th>
 Tipo
 </th>
 
@@ -1117,6 +1123,10 @@ Modelo
 
 <th>
 Estado
+</th>
+
+<th>
+Fotos
 </th>
 
 <th>
@@ -2081,7 +2091,7 @@ function renderSeguimiento(){
     tbody.innerHTML = 
     ` 
       <tr> 
-        <td colspan="8" class="empty"> 
+        <td colspan="10" class="empty"> 
           No hay vehículos registrados. 
         </td> 
       </tr> 
@@ -2092,9 +2102,54 @@ function renderSeguimiento(){
   } 
  
  
-  filtrados.forEach(function(r){ 
+  filtrados.forEach(function(r, indice){ 
  
-    let acciones = ""; 
+    let acciones = "";
+    let fotos = "";
+
+    if(r.fotoIngreso){
+      fotos +=
+      `<a class="foto-link"
+          href="${esc(r.fotoIngreso)}"
+          target="_blank"
+          rel="noopener">
+          Ingreso
+       </a>`;
+    }
+
+    if(r.fotoOT){
+      fotos +=
+      `<a class="foto-link"
+          href="${esc(r.fotoOT)}"
+          target="_blank"
+          rel="noopener">
+          OT
+       </a>`;
+    }
+
+    if(r.fotoVIN){
+      fotos +=
+      `<a class="foto-link"
+          href="${esc(r.fotoVIN)}"
+          target="_blank"
+          rel="noopener">
+          VIN
+       </a>`;
+    }
+
+    if(r.fotoFinal){
+      fotos +=
+      `<a class="foto-link"
+          href="${esc(r.fotoFinal)}"
+          target="_blank"
+          rel="noopener">
+          Final
+       </a>`;
+    }
+
+    if(!fotos){
+      fotos = "—";
+    } 
  
  
     /* ---------------------------------------------
@@ -2157,6 +2212,10 @@ function renderSeguimiento(){
  
       <tr> 
  
+        <td class="numero-seguimiento"> 
+          ${indice + 1} 
+        </td> 
+ 
         <td> 
           ${esc(r.tipo)} 
         </td> 
@@ -2190,6 +2249,10 @@ function renderSeguimiento(){
  
           </span> 
  
+        </td> 
+ 
+        <td> 
+          ${fotos} 
         </td> 
  
         <td> 
