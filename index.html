@@ -508,6 +508,58 @@ th{
 
 }
 
+
+/* Controles de orden y paginación del historial */
+.historial-controles{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:15px;
+  flex-wrap:wrap;
+  margin:15px 0;
+}
+.historial-orden{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:14px;
+}
+.historial-orden select{
+  padding:8px 10px;
+  border:1px solid #d1d5db;
+  border-radius:7px;
+  background:#fff;
+}
+.historial-paginacion{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  flex-wrap:wrap;
+  margin-top:15px;
+}
+.historial-paginacion button{
+  min-width:36px;
+  padding:7px 10px;
+  border:1px solid #d1d5db;
+  border-radius:7px;
+  background:#fff;
+  cursor:pointer;
+}
+.historial-paginacion button.activa{
+  background:#111827;
+  color:#fff;
+  border-color:#111827;
+}
+.historial-paginacion button:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+.historial-resumen{
+  font-size:13px;
+  color:#4b5563;
+}
+
 </style>
 
 </head>
@@ -1382,6 +1434,20 @@ oninput="renderSeguimiento()">
 </div>
 
 
+<div class="historial-controles">
+
+<div class="historial-orden">
+  <label for="ordenHistorial"><strong>Ordenar por fecha:</strong></label>
+  <select id="ordenHistorial" onchange="cambiarOrdenHistorial()">
+    <option value="desc">Más reciente primero (descendente)</option>
+    <option value="asc">Más antigua primero (ascendente)</option>
+  </select>
+</div>
+
+<div id="resumenHistorial" class="historial-resumen"></div>
+
+</div>
+
 <div class="table-container">
 
 <table>
@@ -1614,6 +1680,8 @@ id="tablaHistorial">
 </table>
 
 </div>
+
+<div id="paginacionHistorial" class="historial-paginacion"></div>
 
 </div>
 
@@ -3675,6 +3743,12 @@ mostrarAlerta("No se pudo finalizar: " + error.message,"error");
    HISTORIAL
 ===================================================== */
 
+
+let historialRegistrosActuales = [];
+let historialPaginaActual = 1;
+const HISTORIAL_POR_PAGINA = 40;
+let historialOrden = "desc";
+
 function mostrarMensajeHistorial(mensaje){
 
 const tbody =
@@ -3808,14 +3882,15 @@ const filtrados = (filas || []).map(function(r){
   return cumpleTexto && cumpleFecha;
 });
 
-// Asegura que la tabla quede ordenada por la misma fecha que se muestra
-// y que se utiliza para aplicar los filtros.
+// Orden elegido por el usuario.
 filtrados.sort(function(a, b){
   const fechaA = new Date(a.horaInicio || 0).getTime();
   const fechaB = new Date(b.horaInicio || 0).getTime();
-  return fechaB - fechaA;
+  return historialOrden === "asc" ? fechaA - fechaB : fechaB - fechaA;
 });
 
+historialRegistrosActuales = filtrados;
+historialPaginaActual = 1;
 renderHistorial(filtrados);
 
 }catch(error){
@@ -3891,128 +3966,122 @@ function formatearFecha(fecha){
 }
 
 
+function cambiarOrdenHistorial(){
+  const selector = document.getElementById("ordenHistorial");
+  historialOrden = selector ? selector.value : "desc";
+
+  historialRegistrosActuales.sort(function(a, b){
+    const fechaA = new Date(a.horaInicio || 0).getTime();
+    const fechaB = new Date(b.horaInicio || 0).getTime();
+    return historialOrden === "asc" ? fechaA - fechaB : fechaB - fechaA;
+  });
+
+  historialPaginaActual = 1;
+  renderHistorial(historialRegistrosActuales);
+}
+
+function irPaginaHistorial(pagina){
+  const totalPaginas = Math.max(1, Math.ceil(historialRegistrosActuales.length / HISTORIAL_POR_PAGINA));
+  historialPaginaActual = Math.min(Math.max(1, pagina), totalPaginas);
+  renderHistorial(historialRegistrosActuales);
+}
+
+function renderPaginacionHistorial(totalRegistros){
+  const contenedor = document.getElementById("paginacionHistorial");
+  const resumen = document.getElementById("resumenHistorial");
+  if(!contenedor) return;
+
+  const totalPaginas = Math.max(1, Math.ceil(totalRegistros / HISTORIAL_POR_PAGINA));
+  if(historialPaginaActual > totalPaginas) historialPaginaActual = totalPaginas;
+
+  if(resumen){
+    if(totalRegistros === 0){
+      resumen.textContent = "0 registros";
+    }else{
+      const inicio = (historialPaginaActual - 1) * HISTORIAL_POR_PAGINA + 1;
+      const fin = Math.min(historialPaginaActual * HISTORIAL_POR_PAGINA, totalRegistros);
+      resumen.textContent = `Mostrando ${inicio}-${fin} de ${totalRegistros} registros`;
+    }
+  }
+
+  if(totalPaginas <= 1){
+    contenedor.innerHTML = "";
+    return;
+  }
+
+  let html = "";
+  html += `<button type="button" onclick="irPaginaHistorial(${historialPaginaActual - 1})" ${historialPaginaActual === 1 ? "disabled" : ""}>‹</button>`;
+
+  const inicioPagina = Math.max(1, historialPaginaActual - 2);
+  const finPagina = Math.min(totalPaginas, historialPaginaActual + 2);
+
+  if(inicioPagina > 1){
+    html += `<button type="button" onclick="irPaginaHistorial(1)">1</button>`;
+    if(inicioPagina > 2) html += `<span>…</span>`;
+  }
+
+  for(let pagina = inicioPagina; pagina <= finPagina; pagina++){
+    html += `<button type="button" class="${pagina === historialPaginaActual ? "activa" : ""}" onclick="irPaginaHistorial(${pagina})">${pagina}</button>`;
+  }
+
+  if(finPagina < totalPaginas){
+    if(finPagina < totalPaginas - 1) html += `<span>…</span>`;
+    html += `<button type="button" onclick="irPaginaHistorial(${totalPaginas})">${totalPaginas}</button>`;
+  }
+
+  html += `<button type="button" onclick="irPaginaHistorial(${historialPaginaActual + 1})" ${historialPaginaActual === totalPaginas ? "disabled" : ""}>›</button>`;
+  contenedor.innerHTML = html;
+}
+
 function renderHistorial(registrosHistorial){
+  const tbody = document.getElementById("tablaHistorial");
+  if(!tbody) return;
 
-const tbody =
-document.getElementById(
-"tablaHistorial"
-);
+  tbody.innerHTML = "";
 
-tbody.innerHTML = "";
+  if(!registrosHistorial || !registrosHistorial.length){
+    mostrarMensajeHistorial("No se encontraron registros con los filtros seleccionados.");
+    renderPaginacionHistorial(0);
+    return;
+  }
 
-if(!registrosHistorial || !registrosHistorial.length){
+  const inicio = (historialPaginaActual - 1) * HISTORIAL_POR_PAGINA;
+  const paginaRegistros = registrosHistorial.slice(inicio, inicio + HISTORIAL_POR_PAGINA);
 
-mostrarMensajeHistorial(
-"No se encontraron registros con los filtros seleccionados."
-);
+  paginaRegistros.forEach(function(r, indice){
+    let fotos = "";
 
-return;
+    if(r.fotoIngreso){
+      fotos += `<a class="foto-link" href="${esc(r.fotoIngreso)}" target="_blank" rel="noopener">Ingreso</a>`;
+    }
+    if(r.fotoOT){
+      fotos += `<a class="foto-link" href="${esc(r.fotoOT)}" target="_blank" rel="noopener">OT</a>`;
+    }
+    if(r.fotoVIN){
+      fotos += `<a class="foto-link" href="${esc(r.fotoVIN)}" target="_blank" rel="noopener">VIN</a>`;
+    }
+    if(r.fotoFinal){
+      fotos += `<a class="foto-link" href="${esc(r.fotoFinal)}" target="_blank" rel="noopener">Final</a>`;
+    }
+    if(!fotos) fotos = "—";
 
-}
-
-registrosHistorial.forEach(function(r, indice){
-
-let fotos = "";
-
-if(r.fotoIngreso){
-  fotos +=
-  `<a class="foto-link"
-      href="${esc(r.fotoIngreso)}"
-      target="_blank"
-      rel="noopener">
-      Ingreso
-   </a>`;
-}
-
-if(r.fotoOT){
-  fotos +=
-  `<a class="foto-link"
-      href="${esc(r.fotoOT)}"
-      target="_blank"
-      rel="noopener">
-      OT
-   </a>`;
-}
-
-if(r.fotoVIN){
-  fotos +=
-  `<a class="foto-link"
-      href="${esc(r.fotoVIN)}"
-      target="_blank"
-      rel="noopener">
-      VIN
-   </a>`;
-}
-
-if(r.fotoFinal){
-  fotos +=
-  `<a class="foto-link"
-      href="${esc(r.fotoFinal)}"
-      target="_blank"
-      rel="noopener">
-      Final
-   </a>`;
-}
-
-if(!fotos){
-  fotos = "—";
-}
-
-tbody.innerHTML +=
-`
+    tbody.innerHTML += `
 <tr>
+<td class="numero-historial">${inicio + indice + 1}</td>
+<td>${esc(obtenerFechaHistorial(r.horaInicio) || "—")}</td>
+<td>${esc(r.tipo)}</td>
+<td>${esc(r.ot)}</td>
+<td>${esc(r.placa)}</td>
+<td>${esc(r.vin)}</td>
+<td>${esc(r.marca)}</td>
+<td class="col-modelo">${esc(r.modelo)}</td>
+<td>${esc(r.servicio)}</td>
+<td>${esc(formatearFecha(r.horaSalida))}</td>
+<td><div class="fotos-historial">${fotos}</div></td>
+</tr>`;
+  });
 
-<td class="numero-historial">
-${indice + 1}
-</td>
-
-<td>
-${esc(obtenerFechaHistorial(r.horaInicio) || "—")}
-</td>
-
-<td>
-${esc(r.tipo)}
-</td>
-
-<td>
-${esc(r.ot)}
-</td>
-
-<td>
-${esc(r.placa)}
-</td>
-
-<td>
-${esc(r.vin)}
-</td>
-
-<td>
-${esc(r.marca)}
-</td>
-
-<td class="col-modelo">
-${esc(r.modelo)}
-</td>
-
-<td>
-${esc(r.servicio)}
-</td>
-
-<td>
-${esc(formatearFecha(r.horaSalida))}
-</td>
-
-<td>
-<div class="fotos-historial">
-${fotos}
-</div>
-</td>
-
-</tr>
-`;
-
-});
-
+  renderPaginacionHistorial(registrosHistorial.length);
 }
 
 /* =====================================================
@@ -4020,90 +4089,51 @@ ${fotos}
 ===================================================== */
 
 function exportarCSV(){
+  const registros = historialRegistrosActuales || [];
 
-const filas =
-document.querySelectorAll(
-"#tablaHistorial tr"
-);
+  if(!registros.length){
+    mostrarAlerta("No hay información para exportar.","error");
+    return;
+  }
 
-let csv =
-"N°,Fecha lavado,Tipo,OT,Placa,VIN,Marca,Modelo,Servicio,Salida,Fotos\n";
+  let csv = "N°,Fecha lavado,Tipo,OT,Placa,VIN,Marca,Modelo,Servicio,Salida,Fotos\n";
 
-let cantidad = 0;
+  registros.forEach(function(r, indice){
+    const fotos = [
+      r.fotoIngreso ? "Ingreso" : "",
+      r.fotoOT ? "OT" : "",
+      r.fotoVIN ? "VIN" : "",
+      r.fotoFinal ? "Final" : ""
+    ].filter(Boolean).join(" | ");
 
-filas.forEach(function(fila){
+    const datos = [
+      indice + 1,
+      obtenerFechaHistorial(r.horaInicio) || "",
+      r.tipo || "",
+      r.ot || "",
+      r.placa || "",
+      r.vin || "",
+      r.marca || "",
+      r.modelo || "",
+      r.servicio || "",
+      formatearFecha(r.horaSalida) || "",
+      fotos
+    ].map(function(valor){
+      return '"' + String(valor).replace(/"/g,'""') + '"';
+    });
 
-const columnas =
-fila.querySelectorAll("td");
+    csv += datos.join(",") + "\n";
+  });
 
-if(!columnas.length){
-return;
-}
-
-const datos =
-Array
-.from(columnas)
-.map(function(td){
-
-return(
-'"' +
-td.innerText
-.replace(/"/g,'""') +
-'"'
-);
-
-});
-
-csv +=
-datos.join(",") +
-"\n";
-
-cantidad++;
-
-});
-
-if(!cantidad){
-
-mostrarAlerta(
-"No hay información para exportar.",
-"error"
-);
-
-return;
-}
-
-const blob =
-new Blob(
-[
-"\ufeff" +
-csv
-],
-{
-type:
-"text/csv;charset=utf-8;"
-}
-);
-
-const url =
-URL.createObjectURL(blob);
-
-const a =
-document.createElement("a");
-
-a.href = url;
-
-a.download =
-"Historial_Carwash.csv";
-
-document.body
-.appendChild(a);
-
-a.click();
-
-a.remove();
-
-URL.revokeObjectURL(url);
-
+  const blob = new Blob(["\ufeff" + csv], {type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "Historial_Carwash.csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 /* =====================================================
