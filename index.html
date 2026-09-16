@@ -1562,10 +1562,6 @@ N°
 </th>
 
 <th>
-Fecha ingreso
-</th>
-
-<th>
 Fecha lavado
 </th>
 
@@ -2314,36 +2310,46 @@ function normalizarOT(valor){
   return normalizarTexto(valor);
 }
 
+function extraerNumeroPrincipalOT(valor){
+  const texto = String(valor || "").trim();
+  if(!texto) return "";
+
+  const grupos = texto.match(/\d+/g) || [];
+  if(!grupos.length) return "";
+
+  /*
+     Para una OT completa como OT8/1412/2026, el número principal es 1412.
+     Para una OT corta como 1412, el único grupo numérico es 1412.
+     No consideramos 1411, 1415, etc. como relacionadas por tener un dígito parecido.
+  */
+  if(grupos.length >= 3 && grupos[1].length >= 3 && grupos[1].length <= 5){
+    return grupos[1];
+  }
+
+  if(grupos.length === 1 && grupos[0].length >= 3 && grupos[0].length <= 5){
+    return grupos[0];
+  }
+
+  return "";
+}
+
 function tieneMismosDigitosCortos(a,b){
-  const textoA = String(a || "").trim();
-  const textoB = String(b || "").trim();
-  const x = textoA.replace(/\D/g, "");
-  const y = textoB.replace(/\D/g, "");
+  const x = normalizarOT(a);
+  const y = normalizarOT(b);
 
   if(!x || !y) return false;
   if(x === y) return true;
 
-  /* Evitamos falsas coincidencias por compartir dígitos. */
-  const corto = x.length <= y.length ? x : y;
-  const largo = x.length <= y.length ? y : x;
+  /*
+     Solo consideramos relacionada una OT corta con una OT completa
+     cuando el número principal es exactamente el mismo.
+     Ejemplo válido: 1412 <-> OT8/1412/2026.
+     Ejemplo que NO debe alertar: 1412 <-> 1415 o 1411.
+  */
+  const principalA = extraerNumeroPrincipalOT(a);
+  const principalB = extraerNumeroPrincipalOT(b);
 
-  if(corto.length < 3 || corto.length > 5) return false;
-
-  /* Ej.: 1412 coincide con OT8/1412/2026. */
-  if(largo.indexOf(corto) !== -1) return true;
-
-  /* También permite alertar por un posible error de un solo dígito,
-     como 688 frente a 668. */
-  if(x.length === y.length && x.length >= 3 && x.length <= 5){
-    let diferencias = 0;
-    for(let i = 0; i < x.length; i++){
-      if(x[i] !== y[i]) diferencias++;
-      if(diferencias > 1) return false;
-    }
-    return diferencias === 1;
-  }
-
-  return false;
+  return !!principalA && !!principalB && principalA === principalB;
 }
 
 async function obtenerTodosLosRegistros(){
@@ -2442,7 +2448,7 @@ async function verificarDuplicadosAntesDeRegistrar(datos){
       mensaje += "⚠️ POSIBLE COINCIDENCIA DE OT\n\n";
     }
 
-    mensaje += "Se encontró el siguiente registro relacionado con los datos que está editando:\n\n";
+    mensaje += "Se encontraron registros que coinciden con la OT, placa o VIN que está ingresando. Revise cuál corresponde antes de continuar:\n\n";
 
     coincidencias.slice(0,5).forEach(function(x, indice){
       const r = x.registro;
@@ -3961,10 +3967,6 @@ ${indice + 1}
 </td>
 
 <td>
-${esc(r.fechaIngreso || "—")}
-</td>
-
-<td>
 ${esc(obtenerFechaHistorial(r.horaInicio) || "—")}
 </td>
 
@@ -4025,7 +4027,7 @@ document.querySelectorAll(
 );
 
 let csv =
-"N°,Fecha ingreso,Fecha lavado,Tipo,OT,Placa,VIN,Marca,Modelo,Servicio,Salida,Fotos\n";
+"N°,Fecha lavado,Tipo,OT,Placa,VIN,Marca,Modelo,Servicio,Salida,Fotos\n";
 
 let cantidad = 0;
 
