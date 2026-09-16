@@ -1434,19 +1434,6 @@ oninput="renderSeguimiento()">
 </div>
 
 
-<div class="historial-controles">
-
-<div class="historial-orden">
-  <label for="ordenHistorial"><strong>Ordenar por fecha:</strong></label>
-  <select id="ordenHistorial" onchange="cambiarOrdenHistorial()">
-    <option value="desc">Más reciente primero (descendente)</option>
-    <option value="asc">Más antigua primero (ascendente)</option>
-  </select>
-</div>
-
-<div id="resumenHistorial" class="historial-resumen"></div>
-
-</div>
 
 <div class="table-container">
 
@@ -1615,6 +1602,19 @@ onclick="exportarCSV()">
 
 <div class="card">
 
+<div class="historial-controles">
+
+<div class="historial-orden">
+  <label for="ordenHistorial"><strong>Ordenar por fecha:</strong></label>
+  <select id="ordenHistorial" onchange="cambiarOrdenHistorial()">
+    <option value="desc">Más reciente primero (descendente)</option>
+    <option value="asc">Más antigua primero (ascendente)</option>
+  </select>
+</div>
+
+<div id="resumenHistorial" class="historial-resumen"></div>
+
+</div>
 <div class="table-container">
 
 <table>
