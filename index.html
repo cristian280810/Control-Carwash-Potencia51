@@ -772,7 +772,7 @@ th.col-vin {
 }
 
 
-/* Paginación de Regularizar registros */
+/* Paginación de Agregar registros pasados */
 .paginacion-pasados{margin:16px 0 8px;padding:12px;border:1px solid #e5e7eb;border-radius:10px;background:#f8fafc;text-align:center;}
 .paginacion-info{margin-bottom:10px;color:#4b5563;font-size:13px;font-weight:600;}
 .paginacion-botones{display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap;}
@@ -845,7 +845,7 @@ onclick="mostrarSeccion('historial',this)">
 <button
 onclick="mostrarSeccion('registrosPasados',this)">
 
-📋 Regularizar registros
+📋 Agregar registros pasados
 
 </button>
 
@@ -1355,7 +1355,7 @@ class="section">
 
 <div class="card">
 
-<h2>📋 Regularizar registros</h2>
+<h2>📋 Agregar registros pasados</h2>
 
 <p>Regularice lavados que fueron atendidos anteriormente y no se registraron en la aplicación.</p>
 
@@ -3094,6 +3094,21 @@ let registrosPasadosEncontrados = [];
 const REGISTROS_PASADOS_POR_PAGINA = 20;
 let paginaRegistrosPasados = 1;
 
+function formatearFechaRegularizacion(fecha){
+  if(!fecha) return "";
+  const fechaObj = new Date(String(fecha).trim());
+  if(isNaN(fechaObj.getTime())) return "";
+  const partes = new Intl.DateTimeFormat("es-PE", {
+    timeZone: "America/Lima",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(fechaObj);
+  const valores = {};
+  partes.forEach(function(p){ valores[p.type] = p.value; });
+  return valores.day + "-" + valores.month + "-" + valores.year;
+}
+
 function renderizarRegistrosPasadosPaginados(){
   const lista=document.getElementById("listaRegistrosPasados");
   const paginacion=document.getElementById("paginacionRegistrosPasados");
@@ -3111,7 +3126,7 @@ function renderizarRegistrosPasadosPaginados(){
       <div><strong>Placa:</strong> ${esc(r.placa||"—")}</div>
       <div><strong>VIN:</strong> ${esc(r.vin||"—")}</div>
       <div><strong>Estado:</strong> ${esc(r.estado||"—")}</div>
-      <div><strong>Fecha ingreso / lavado:</strong> ${esc(obtenerFechaHistorial(r.hora_inicio_lavado)||"—")}</div>
+      <div><strong>Fecha ingreso / lavado:</strong> ${esc(formatearFechaRegularizacion(r.hora_inicio_lavado)||"—")}</div>
       <div><strong>Servicio:</strong> ${esc(r.servicio||"—")}</div>
       <div><strong>Marca:</strong> ${esc(r.marca||"—")}</div>
       ${renderFotosRegistroPasado(r)}
@@ -3468,6 +3483,16 @@ async function guardarRegistroPasado(){
     const archivoIngreso = document.getElementById("pasadoFotoIngreso").files[0];
     const archivoOT = document.getElementById("pasadoFotoOT").files[0];
     const archivoVIN = document.getElementById("pasadoFotoVIN").files[0];
+
+    if(tipo === "Servicio" && (!ot || !placa)){
+      mostrarAlerta("Para Servicio debe ingresar OT y placa.","error");
+      return;
+    }
+
+    if(tipo === "Nuevo" && !vin){
+      mostrarAlerta("Para Nuevo debe ingresar el VIN.","error");
+      return;
+    }
 
     if(!marca || !servicio || !fecha){
       mostrarAlerta("Complete marca, servicio y fecha de ingreso / lavado.","error");
@@ -5117,6 +5142,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V2.5</div>
+<div class="version-app">V2.8</div>
 </body>
 </html>
