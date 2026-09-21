@@ -3101,20 +3101,40 @@ function limpiarRegistroPasado(){
 function esRegistroIncompletoParaSeguimiento(r){
 
   /*
-     Servicio: si tiene OT o foto de OT, al finalizar puede desaparecer.
-     Nuevo: si tiene VIN o foto de VIN, al finalizar puede desaparecer.
-     Solo permanece durante el día si no tiene ninguno de los dos datos.
+     REGLA DEFINITIVA PARA FINALIZADOS DEL MISMO DÍA:
 
-     Si un registro ya fue finalizado pero le falta alguno de esos datos,
-     podrá permanecer visible en Seguimiento durante el mismo día.
+     SERVICIO:
+       - Si tiene OT O foto de OT -> NO permanece en Seguimiento.
+       - Solo permanece si NO tiene OT Y tampoco tiene foto de OT.
+
+     NUEVO:
+       - Si tiene VIN O foto de VIN -> NO permanece en Seguimiento.
+       - Solo permanece si NO tiene VIN Y tampoco tiene foto de VIN.
+
+     IMPORTANTE:
+     Esta función recibe tanto registros directamente desde Supabase
+     (foto_ot / foto_vin) como registros ya transformados por el frontend
+     (fotoOT / fotoVIN). Por eso comprobamos ambos nombres.
   */
 
-  if(String(r.tipo || "").trim() === "Servicio") {
-    return !(String(r.ot || "").trim() || String(r.fotoOT || "").trim());
+  const tipo = String(r.tipo || "").trim();
+  const ot = String(r.ot || "").trim();
+  const vin = String(r.vin || "").trim();
+
+  const fotoOT = String(
+    r.fotoOT != null ? r.fotoOT : (r.foto_ot || "")
+  ).trim();
+
+  const fotoVIN = String(
+    r.fotoVIN != null ? r.fotoVIN : (r.foto_vin || "")
+  ).trim();
+
+  if(tipo === "Servicio") {
+    return !ot && !fotoOT;
   }
 
-  if(String(r.tipo || "").trim() === "Nuevo") {
-    return !(String(r.vin || "").trim() || String(r.fotoVIN || "").trim());
+  if(tipo === "Nuevo") {
+    return !vin && !fotoVIN;
   }
 
   return false;
@@ -3429,6 +3449,11 @@ function renderSeguimiento(){
 
     }else if(r.estado === "Finalizado" && esRegistroIncompletoParaSeguimiento(r)){
 
+      /*
+         Solo aparece "Completar" cuando faltan AMBOS datos de control:
+         Servicio: OT y foto OT.
+         Nuevo: VIN y foto VIN.
+      */
       acciones =
       `
         <button class="btn btn-secondary btn-editar" onclick="abrirEditar('${esc(r.id)}')" title="Completar datos faltantes">✏️ Completar</button>
