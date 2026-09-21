@@ -2950,6 +2950,7 @@ async function guardarRegistroPasado(){
         servicio:servicio,
         estado:"Finalizado",
         hora_inicio_lavado:fechaLavado,
+        hora_salida:fechaLavado,
         observaciones:observaciones,
         observaciones_finales:"Registro regularizado"
       };
@@ -3001,7 +3002,7 @@ async function guardarRegistroPasado(){
         servicio:servicio,
         estado:"Finalizado",
         hora_inicio_lavado:fechaLavado,
-        hora_salida:null,
+        hora_salida:fechaLavado,
         observaciones:observaciones,
         observaciones_finales:"Registro regularizado",
         foto_ingreso:fotos.fotoIngreso,
@@ -3087,48 +3088,130 @@ function limpiarRegistroPasado(){
    CARGAR DATOS
 ===================================================== */
 
-async function cargarSeguimientoSupabase(){
+function esRegistroIncompletoParaSeguimiento(r){
 
-  const respuesta = await fetch(
-    SUPABASE_URL +
-    "/rest/v1/vehiculos_wankamotors?select=*&estado=eq.Lavando&order=created_at.asc",
-    {
-      method:"GET",
-      headers:{
-        "apikey": SUPABASE_KEY,
-        "Authorization": "Bearer " + SUPABASE_KEY
-      },
-      cache:"no-store"
-    }
-  );
+  /*
+     Servicio: si tiene OT o foto de OT, al finalizar puede desaparecer.
+     Nuevo: si tiene VIN o foto de VIN, al finalizar puede desaparecer.
+     Solo permanece durante el día si no tiene ninguno de los dos datos.
 
-  if(!respuesta.ok){
-    throw new Error("Supabase HTTP " + respuesta.status);
+     Si un registro ya fue finalizado pero le falta alguno de esos datos,
+     podrá permanecer visible en Seguimiento durante el mismo día.
+  */
+
+  if(String(r.tipo || "").trim() === "Servicio") {
+    return !(String(r.ot || "").trim() || String(r.fotoOT || "").trim());
   }
 
-  const filas = await respuesta.json();
+  if(String(r.tipo || "").trim() === "Nuevo") {
+    return !(String(r.vin || "").trim() || String(r.fotoVIN || "").trim());
+  }
 
-  return (filas || []).map(function(r){
-    return {
-      id: r.id || "",
-      tipo: r.tipo || "",
-      ot: r.ot || "",
-      placa: r.placa || "",
-      vin: r.vin || "",
-      marca: r.marca || "",
-      modelo: r.modelo || "",
-      servicio: r.servicio || "",
-      estado: r.estado || "",
-      horaInicio: r.hora_inicio_lavado || r.created_at || "",
-      horaSalida: r.hora_salida || "",
-      observaciones: r.observaciones || "",
-      observacionesFinales: r.observaciones_finales || "",
-      fotoIngreso: r.foto_ingreso || "",
-      fotoFinal: r.foto_final || "",
-      fotoOT: r.foto_ot || "",
-      fotoVIN: r.foto_vin || ""
-    };
-  });
+  return false;
+}
+
+function obtenerRangoHoyLimaISO(){
+
+  const hoy = obtenerFechaHistorial(new Date().toISOString());
+
+  if(!hoy){
+    return {inicio:"", fin:""};
+  }
+
+  const inicio = new Date(hoy + "T00:00:00-05:00");
+  const fin = new Date(hoy + "T23:59:59.999-05:00");
+
+  return {
+    inicio: inicio.toISOString(),
+    fin: fin.toISOString()
+  };
+}
+
+async function cargarSeguimientoSupabase(){
+
+  const headers = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": "Bearer " + SUPABASE_KEY
+  };
+
+  /*
+     1. Los que siguen Lavando siempre aparecen.
+     2. Los Finalizados de HOY también se consultan, pero solo se
+        mantienen visibles si todavía les falta OT/foto OT o VIN/foto VIN.
+  */
+
+  const rangoHoy = obtenerRangoHoyLimaISO();
+
+  const urlLavando =
+    SUPABASE_URL +
+    "/rest/v1/vehiculos_wankamotors?select=*&estado=eq.Lavando&order=created_at.asc";
+
+  const urlFinalizadosHoy =
+    SUPABASE_URL +
+    "/rest/v1/vehiculos_wankamotors?select=*&estado=eq.Finalizado" +
+    "&hora_salida=gte." + encodeURIComponent(rangoHoy.inicio) +
+    "&hora_salida=lt." + encodeURIComponent(rangoHoy.fin) +
+    "&order=hora_salida.asc";
+
+  const respuestas = await Promise.all([
+    fetch(urlLavando, {
+      method:"GET",
+      headers:headers,
+      cache:"no-store"
+    }),
+    fetch(urlFinalizadosHoy, {
+      method:"GET",
+      headers:headers,
+      cache:"no-store"
+    })
+  ]);
+
+  for(const respuesta of respuestas){
+    if(!respuesta.ok){
+      throw new Error("Supabase HTTP " + respuesta.status);
+    }
+  }
+
+  const filasLavando = await respuestas[0].json();
+  const filasFinalizadosHoy = await respuestas[1].json();
+
+  const filasSeguimiento = []
+    .concat(filasLavando || [])
+    .concat((filasFinalizadosHoy || []).filter(function(r){
+      return esRegistroIncompletoParaSeguimiento(r);
+    }));
+
+  /* Evita duplicados por seguridad si un registro aparece en ambas consultas. */
+  const vistos = {};
+
+  return filasSeguimiento
+    .filter(function(r){
+      const clave = String(r.id || "");
+      if(vistos[clave]) return false;
+      vistos[clave] = true;
+      return true;
+    })
+    .map(function(r){
+      return {
+        id: r.id || "",
+        tipo: r.tipo || "",
+        ot: r.ot || "",
+        placa: r.placa || "",
+        vin: r.vin || "",
+        marca: r.marca || "",
+        modelo: r.modelo || "",
+        servicio: r.servicio || "",
+        estado: r.estado || "",
+        horaInicio: r.hora_inicio_lavado || r.created_at || "",
+        horaSalida: r.hora_salida || "",
+        observaciones: r.observaciones || "",
+        observacionesFinales: r.observaciones_finales || "",
+        fotoIngreso: r.foto_ingreso || "",
+        fotoFinal: r.foto_final || "",
+        fotoOT: r.foto_ot || "",
+        fotoVIN: r.foto_vin || ""
+      };
+    });
 }
 
 
