@@ -4141,7 +4141,7 @@ function renderHistorial(registrosHistorial){
     tbody.innerHTML += `
 <tr>
 <td class="numero-historial">${inicio + indice + 1}</td>
-<td>${esc(obtenerFechaHistorial(r.horaInicio) || "—")}</td>
+<td>${esc(formatearFecha(r.horaInicio) || "—")}</td>
 <td>${esc(r.tipo)}</td>
 <td>${esc(r.ot)}</td>
 <td>${esc(r.placa)}</td>
