@@ -549,6 +549,16 @@ th{
 
 
 /* Controles de orden y paginación del historial */
+.historial-filtros{
+  grid-template-columns:repeat(4,1fr);
+}
+
+@media(max-width:800px){
+  .historial-filtros{
+    grid-template-columns:1fr;
+  }
+}
+
 .historial-controles{
   display:flex;
   align-items:center;
@@ -1573,7 +1583,7 @@ Historial
 </h2>
 
 
-<div class="search">
+<div class="search historial-filtros">
 
 
 <div>
@@ -1615,6 +1625,21 @@ placeholder="OT, placa, VIN o marca">
 </div>
 
 
+<div>
+
+<label>
+Tipo
+</label>
+
+<select id="tipoHistorial">
+  <option value="">Todos</option>
+  <option value="Servicio">Servicio</option>
+  <option value="Nuevo">Nuevo</option>
+</select>
+
+</div>
+
+
 </div>
 
 
@@ -1640,9 +1665,9 @@ onclick="limpiarHistorial()">
 
 <button
 class="btn btn-success"
-onclick="exportarCSV()">
+onclick="exportarExcel()">
 
-📥 Exportar
+📥 Exportar Excel
 
 </button>
 
@@ -1950,6 +1975,7 @@ Cancelar
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 
 /* =====================================================
@@ -3846,9 +3872,15 @@ document.getElementById(
 "buscarHistorial"
 );
 
+const tipo =
+document.getElementById(
+"tipoHistorial"
+);
+
 if(desde) desde.value = "";
 if(hasta) hasta.value = "";
 if(buscar) buscar.value = "";
+if(tipo) tipo.value = "";
 
 mostrarMensajeHistorial(
 "Seleccione uno o más filtros y presione Buscar."
@@ -3863,8 +3895,9 @@ const tbody = document.getElementById("tablaHistorial");
 const desde = document.getElementById("fechaDesde").value;
 const hasta = document.getElementById("fechaHasta").value;
 const buscar = document.getElementById("buscarHistorial").value.trim().toLowerCase();
+const tipoFiltro = document.getElementById("tipoHistorial").value;
 
-if(!desde && !hasta && !buscar){
+if(!desde && !hasta && !buscar && !tipoFiltro){
   mostrarMensajeHistorial("Ingrese una fecha o un dato de búsqueda antes de consultar.");
   return;
 }
@@ -3931,6 +3964,7 @@ const filtrados = (filas || []).map(function(r){
     .toLowerCase();
 
   const cumpleTexto = !buscar || texto.includes(buscar);
+  const cumpleTipo = !tipoFiltro || String(r.tipo || "").trim() === tipoFiltro;
 
   // El filtro de fecha usa exactamente la misma fecha que se muestra
   // en la columna "Fecha": hora_inicio_lavado.
@@ -3940,7 +3974,7 @@ const filtrados = (filas || []).map(function(r){
   if(desde){ cumpleFecha = !!fechaInicio && fechaInicio >= desde; }
   if(cumpleFecha && hasta){ cumpleFecha = !!fechaInicio && fechaInicio <= hasta; }
 
-  return cumpleTexto && cumpleFecha;
+  return cumpleTexto && cumpleTipo && cumpleFecha;
 });
 
 // Orden elegido por el usuario.
@@ -4159,10 +4193,10 @@ function renderHistorial(registrosHistorial){
 }
 
 /* =====================================================
-   EXPORTAR CSV
+   EXPORTAR EXCEL
 ===================================================== */
 
-function exportarCSV(){
+function exportarExcel(){
   const registros = historialRegistrosActuales || [];
 
   if(!registros.length){
@@ -4170,9 +4204,12 @@ function exportarCSV(){
     return;
   }
 
-  let csv = "N°,Fecha lavado,Tipo,OT,Placa,VIN,Marca,Modelo,Servicio,Salida,Fotos,Observaciones iniciales,Observaciones finales\n";
+  if(typeof XLSX === "undefined"){
+    mostrarAlerta("No se pudo cargar el módulo de Excel. Verifique su conexión a Internet y vuelva a intentarlo.","error");
+    return;
+  }
 
-  registros.forEach(function(r, indice){
+  const datos = registros.map(function(r, indice){
     const fotos = [
       r.fotoIngreso ? "Ingreso" : "",
       r.fotoOT ? "OT" : "",
@@ -4180,36 +4217,45 @@ function exportarCSV(){
       r.fotoFinal ? "Final" : ""
     ].filter(Boolean).join(" | ");
 
-    const datos = [
-      indice + 1,
-      obtenerFechaHistorial(r.horaInicio) || "",
-      r.tipo || "",
-      r.ot || "",
-      r.placa || "",
-      r.vin || "",
-      r.marca || "",
-      r.modelo || "",
-      r.servicio || "",
-      formatearFecha(r.horaSalida) || "",
-      fotos,
-      r.observaciones || "",
-      r.observacionesFinales || ""
-    ].map(function(valor){
-      return '"' + String(valor).replace(/"/g,'""') + '"';
-    });
-
-    csv += datos.join(",") + "\n";
+    return {
+      "N°": indice + 1,
+      "Fecha lavado": formatearFecha(r.horaInicio) || "",
+      "Tipo": r.tipo || "",
+      "OT": r.ot || "",
+      "Placa": r.placa || "",
+      "VIN": r.vin || "",
+      "Marca": r.marca || "",
+      "Modelo": r.modelo || "",
+      "Servicio": r.servicio || "",
+      "Salida": formatearFecha(r.horaSalida) || "",
+      "Fotos": fotos,
+      "Obs. Inicial": r.observaciones || "",
+      "Obs. Final": r.observacionesFinales || ""
+    };
   });
 
-  const blob = new Blob(["\ufeff" + csv], {type:"text/csv;charset=utf-8;"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "Historial_Carwash.csv";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  const hoja = XLSX.utils.json_to_sheet(datos);
+
+  hoja["!cols"] = [
+    {wch:6},
+    {wch:20},
+    {wch:12},
+    {wch:18},
+    {wch:14},
+    {wch:22},
+    {wch:15},
+    {wch:15},
+    {wch:34},
+    {wch:20},
+    {wch:24},
+    {wch:35},
+    {wch:35}
+  ];
+
+  const libro = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(libro, hoja, "Historial");
+
+  XLSX.writeFile(libro, "Historial_Carwash.xlsx");
 }
 
 /* =====================================================
@@ -4476,6 +4522,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V2.3</div>
+<div class="version-app">V2.4</div>
 </body>
 </html>
