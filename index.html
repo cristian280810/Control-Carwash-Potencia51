@@ -298,6 +298,45 @@ th{
     opacity:.85;
 }
 
+.observaciones-historial{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+    min-width:190px;
+}
+
+.obs-tooltip{
+    position:relative;
+    display:inline-block;
+    padding:5px 8px;
+    border-radius:6px;
+    background:#111827;
+    color:white;
+    font-size:12px;
+    font-weight:bold;
+    cursor:help;
+}
+
+.obs-tooltip:hover::after{
+    content:attr(data-tooltip);
+    position:absolute;
+    left:0;
+    bottom:calc(100% + 8px);
+    z-index:500;
+    width:260px;
+    padding:10px 12px;
+    border-radius:8px;
+    background:#111827;
+    color:white;
+    font-size:12px;
+    font-weight:normal;
+    line-height:1.4;
+    white-space:normal;
+    text-align:left;
+    box-shadow:0 5px 18px rgba(0,0,0,.25);
+    pointer-events:none;
+}
+
 .numero-historial{
     text-align:center;
     font-weight:bold;
@@ -558,14 +597,6 @@ th{
 .historial-resumen{
   font-size:13px;
   color:#4b5563;
-}
-
-/* Versión de la aplicación */
-.version-app{
-  text-align:right;
-  margin:8px 20px 18px;
-  font-size:11px;
-  color:#9ca3af;
 }
 
 </style>
@@ -847,11 +878,7 @@ KIA
 <option value="MG">
 MG
 </option>
-    
-<option value="Nissan">
-Nissan
-</option>
-    
+
 <option value="Peugeot">
 Peugeot
 </option>
@@ -1210,7 +1237,6 @@ onclick="buscarRegistroPasado()">
 <option value="Ford">Ford</option>
 <option value="KIA">KIA</option>
 <option value="MG">MG</option>
-<option value="Nissan">Nissan</option>
 <option value="Peugeot">Peugeot</option>
 <option value="Volkswagen">Volkswagen</option>
 </select>
@@ -1680,6 +1706,10 @@ Salida
 Fotos
 </th>
 
+<th>
+Observaciones
+</th>
+
 </tr>
 
 </thead>
@@ -1703,8 +1733,6 @@ id="tablaHistorial">
 </div>
 
 
-
-<div class="version-app">V2.4</div>
 
 <!-- =====================================================
      POPUP DE MENSAJE
@@ -1769,7 +1797,6 @@ id="tablaHistorial">
           <option value="Ford">Ford</option>
           <option value="KIA">KIA</option>
           <option value="MG">MG</option>
-            <option value="Nissan">Nissan</option>
           <option value="Peugeot">Peugeot</option>
           <option value="Volkswagen">Volkswagen</option>
         </select>
@@ -1777,37 +1804,21 @@ id="tablaHistorial">
     </div>
 
     <div class="form-grid" style="margin-top:12px;">
-
       <div class="form-group">
-        <label>📷 Foto de ingreso</label>
-        <input id="editarFotoIngreso" type="file" accept="image/*" style="display:none;"
-          onchange="mostrarNombreFotoEditar(this,'nombreFotoIngreso')">
-        <button type="button" id="btnCamaraIngreso" class="btn btn-primary"
-          onclick="abrirCamaraEditar('editarFotoIngreso')">📷 Tomar foto</button>
-        <small id="nombreFotoIngreso" style="display:block;margin-top:5px;"></small>
+        <label>Foto de ingreso</label>
+        <input id="editarFotoIngreso" type="file" accept="image/*">
         <small id="estadoFotoIngreso" style="display:block;margin-top:5px;"></small>
       </div>
-
       <div class="form-group">
-        <label>📷 Foto de OT</label>
-        <input id="editarFotoOT" type="file" accept="image/*" style="display:none;"
-          onchange="mostrarNombreFotoEditar(this,'nombreFotoOT')">
-        <button type="button" id="btnCamaraOT" class="btn btn-primary"
-          onclick="abrirCamaraEditar('editarFotoOT')">📷 Tomar foto</button>
-        <small id="nombreFotoOT" style="display:block;margin-top:5px;"></small>
+        <label>Foto de OT</label>
+        <input id="editarFotoOT" type="file" accept="image/*">
         <small id="estadoFotoOT" style="display:block;margin-top:5px;"></small>
       </div>
-
       <div class="form-group">
-        <label>📷 Foto de VIN</label>
-        <input id="editarFotoVIN" type="file" accept="image/*" style="display:none;"
-          onchange="mostrarNombreFotoEditar(this,'nombreFotoVIN')">
-        <button type="button" id="btnCamaraVIN" class="btn btn-primary"
-          onclick="abrirCamaraEditar('editarFotoVIN')">📷 Tomar foto</button>
-        <small id="nombreFotoVIN" style="display:block;margin-top:5px;"></small>
+        <label>Foto de VIN</label>
+        <input id="editarFotoVIN" type="file" accept="image/*">
         <small id="estadoFotoVIN" style="display:block;margin-top:5px;"></small>
       </div>
-
     </div>
 
     <div style="margin-top:8px;font-size:13px;color:#666;">
@@ -1819,38 +1830,6 @@ id="tablaHistorial">
     <div class="actions">
       <button id="btnGuardarEdicion" class="btn btn-primary" onclick="guardarEdicion()">💾 Guardar cambios</button>
       <button class="btn btn-secondary" onclick="cerrarEditar()">Cancelar</button>
-    </div>
-  </div>
-</div>
-
-
-<!-- =====================================================
-     MODAL CÁMARA PARA EDICIÓN
-===================================================== -->
-
-<div id="modalCamaraEditar" class="modal">
-  <div class="modal-content" style="max-width:520px;">
-    <div class="modal-header">
-      <h2>📷 Tomar fotografía</h2>
-      <button type="button" class="close" onclick="cerrarCamaraEditar()">×</button>
-    </div>
-
-    <div style="text-align:center;margin-top:15px;">
-      <video id="videoCamaraEditar" autoplay playsinline muted
-        style="width:100%;max-height:60vh;object-fit:cover;border-radius:10px;background:#111;"></video>
-
-      <canvas id="canvasCamaraEditar" style="display:none;"></canvas>
-
-      <div id="errorCamaraEditar"
-        style="display:none;margin-top:12px;padding:12px;border-radius:8px;background:#fee2e2;color:#991b1b;">
-      </div>
-
-      <div class="actions" style="justify-content:center;">
-        <button type="button" class="btn btn-success"
-          onclick="capturarFotoEditar()">📸 Capturar foto</button>
-        <button type="button" class="btn btn-secondary"
-          onclick="cerrarCamaraEditar()">Cancelar</button>
-      </div>
     </div>
   </div>
 </div>
@@ -2960,7 +2939,6 @@ async function guardarRegistroPasado(){
         servicio:servicio,
         estado:"Finalizado",
         hora_inicio_lavado:fechaLavado,
-        hora_salida:fechaLavado,
         observaciones:observaciones,
         observaciones_finales:"Registro regularizado"
       };
@@ -3012,7 +2990,7 @@ async function guardarRegistroPasado(){
         servicio:servicio,
         estado:"Finalizado",
         hora_inicio_lavado:fechaLavado,
-        hora_salida:fechaLavado,
+        hora_salida:null,
         observaciones:observaciones,
         observaciones_finales:"Registro regularizado",
         foto_ingreso:fotos.fotoIngreso,
@@ -3098,150 +3076,48 @@ function limpiarRegistroPasado(){
    CARGAR DATOS
 ===================================================== */
 
-function esRegistroIncompletoParaSeguimiento(r){
-
-  /*
-     REGLA DEFINITIVA PARA FINALIZADOS DEL MISMO DÍA:
-
-     SERVICIO:
-       - Si tiene OT O foto de OT -> NO permanece en Seguimiento.
-       - Solo permanece si NO tiene OT Y tampoco tiene foto de OT.
-
-     NUEVO:
-       - Si tiene VIN O foto de VIN -> NO permanece en Seguimiento.
-       - Solo permanece si NO tiene VIN Y tampoco tiene foto de VIN.
-
-     IMPORTANTE:
-     Esta función recibe tanto registros directamente desde Supabase
-     (foto_ot / foto_vin) como registros ya transformados por el frontend
-     (fotoOT / fotoVIN). Por eso comprobamos ambos nombres.
-  */
-
-  const tipo = String(r.tipo || "").trim();
-  const ot = String(r.ot || "").trim();
-  const vin = String(r.vin || "").trim();
-
-  const fotoOT = String(
-    r.fotoOT != null ? r.fotoOT : (r.foto_ot || "")
-  ).trim();
-
-  const fotoVIN = String(
-    r.fotoVIN != null ? r.fotoVIN : (r.foto_vin || "")
-  ).trim();
-
-  if(tipo === "Servicio") {
-    return !ot && !fotoOT;
-  }
-
-  if(tipo === "Nuevo") {
-    return !vin && !fotoVIN;
-  }
-
-  return false;
-}
-
-function obtenerRangoHoyLimaISO(){
-
-  const hoy = obtenerFechaHistorial(new Date().toISOString());
-
-  if(!hoy){
-    return {inicio:"", fin:""};
-  }
-
-  const inicio = new Date(hoy + "T00:00:00-05:00");
-  const fin = new Date(hoy + "T23:59:59.999-05:00");
-
-  return {
-    inicio: inicio.toISOString(),
-    fin: fin.toISOString()
-  };
-}
-
 async function cargarSeguimientoSupabase(){
 
-  const headers = {
-    "apikey": SUPABASE_KEY,
-    "Authorization": "Bearer " + SUPABASE_KEY
-  };
-
-  /*
-     1. Los que siguen Lavando siempre aparecen.
-     2. Los Finalizados de HOY también se consultan, pero solo se
-        mantienen visibles si todavía les falta OT/foto OT o VIN/foto VIN.
-  */
-
-  const rangoHoy = obtenerRangoHoyLimaISO();
-
-  const urlLavando =
+  const respuesta = await fetch(
     SUPABASE_URL +
-    "/rest/v1/vehiculos_wankamotors?select=*&estado=eq.Lavando&order=created_at.asc";
-
-  const urlFinalizadosHoy =
-    SUPABASE_URL +
-    "/rest/v1/vehiculos_wankamotors?select=*&estado=eq.Finalizado" +
-    "&hora_salida=gte." + encodeURIComponent(rangoHoy.inicio) +
-    "&hora_salida=lt." + encodeURIComponent(rangoHoy.fin) +
-    "&order=hora_salida.asc";
-
-  const respuestas = await Promise.all([
-    fetch(urlLavando, {
+    "/rest/v1/vehiculos_wankamotors?select=*&estado=eq.Lavando&order=created_at.asc",
+    {
       method:"GET",
-      headers:headers,
+      headers:{
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY
+      },
       cache:"no-store"
-    }),
-    fetch(urlFinalizadosHoy, {
-      method:"GET",
-      headers:headers,
-      cache:"no-store"
-    })
-  ]);
-
-  for(const respuesta of respuestas){
-    if(!respuesta.ok){
-      throw new Error("Supabase HTTP " + respuesta.status);
     }
+  );
+
+  if(!respuesta.ok){
+    throw new Error("Supabase HTTP " + respuesta.status);
   }
 
-  const filasLavando = await respuestas[0].json();
-  const filasFinalizadosHoy = await respuestas[1].json();
+  const filas = await respuesta.json();
 
-  const filasSeguimiento = []
-    .concat(filasLavando || [])
-    .concat((filasFinalizadosHoy || []).filter(function(r){
-      return esRegistroIncompletoParaSeguimiento(r);
-    }));
-
-  /* Evita duplicados por seguridad si un registro aparece en ambas consultas. */
-  const vistos = {};
-
-  return filasSeguimiento
-    .filter(function(r){
-      const clave = String(r.id || "");
-      if(vistos[clave]) return false;
-      vistos[clave] = true;
-      return true;
-    })
-    .map(function(r){
-      return {
-        id: r.id || "",
-        tipo: r.tipo || "",
-        ot: r.ot || "",
-        placa: r.placa || "",
-        vin: r.vin || "",
-        marca: r.marca || "",
-        modelo: r.modelo || "",
-        servicio: r.servicio || "",
-        estado: r.estado || "",
-        horaInicio: r.hora_inicio_lavado || r.created_at || "",
-        horaSalida: r.hora_salida || "",
-        observaciones: r.observaciones || "",
-        observacionesFinales: r.observaciones_finales || "",
-        fotoIngreso: r.foto_ingreso || "",
-        fotoFinal: r.foto_final || "",
-        fotoOT: r.foto_ot || "",
-        fotoVIN: r.foto_vin || ""
-      };
-    });
+  return (filas || []).map(function(r){
+    return {
+      id: r.id || "",
+      tipo: r.tipo || "",
+      ot: r.ot || "",
+      placa: r.placa || "",
+      vin: r.vin || "",
+      marca: r.marca || "",
+      modelo: r.modelo || "",
+      servicio: r.servicio || "",
+      estado: r.estado || "",
+      horaInicio: r.hora_inicio_lavado || r.created_at || "",
+      horaSalida: r.hora_salida || "",
+      observaciones: r.observaciones || "",
+      observacionesFinales: r.observaciones_finales || "",
+      fotoIngreso: r.foto_ingreso || "",
+      fotoFinal: r.foto_final || "",
+      fotoOT: r.foto_ot || "",
+      fotoVIN: r.foto_vin || ""
+    };
+  });
 }
 
 
@@ -3432,32 +3308,21 @@ function renderSeguimiento(){
  
  
     /* ---------------------------------------------
-       ACCIONES
+       VEHÍCULO LAVANDO
     --------------------------------------------- */
 
-    if(r.estado === "Lavando"){
-
-      acciones =
+    if(r.estado === "Lavando"){ 
+ 
+      acciones = 
       `
         <button class="btn btn-secondary btn-editar" onclick="abrirEditar('${esc(r.id)}')" title="Editar datos">✏️</button>
-        <button
-          class="btn btn-success"
+        <button 
+          class="btn btn-success" 
           onclick="abrirFinalizar('${esc(r.id)}')">
           ✅ Finalizar lavado
         </button>
-      `;
-
-    }else if(r.estado === "Finalizado" && esRegistroIncompletoParaSeguimiento(r)){
-
-      /*
-         Solo aparece "Completar" cuando faltan AMBOS datos de control:
-         Servicio: OT y foto OT.
-         Nuevo: VIN y foto VIN.
-      */
-      acciones =
-      `
-        <button class="btn btn-secondary btn-editar" onclick="abrirEditar('${esc(r.id)}')" title="Completar datos faltantes">✏️</button>
-      `;
+      `; 
+ 
     } 
  
  
@@ -3546,43 +3411,6 @@ function abrirEditar(id){
   document.getElementById("editarVIN").value = registro.vin || "";
   document.getElementById("editarMarca").value = registro.marca || "";
 
-  const grupoOT = document.getElementById("editarOT").closest(".form-group");
-  const grupoPlaca = document.getElementById("editarPlaca").closest(".form-group");
-  const grupoVIN = document.getElementById("editarVIN").closest(".form-group");
-  const grupoMarca = document.getElementById("editarMarca").closest(".form-group");
-  const grupoFotoIngreso = document.getElementById("editarFotoIngreso").closest(".form-group");
-  const grupoFotoOT = document.getElementById("editarFotoOT").closest(".form-group");
-  const grupoFotoVIN = document.getElementById("editarFotoVIN").closest(".form-group");
-
-  const soloFaltantes = registro.estado === "Finalizado" && esRegistroIncompletoParaSeguimiento(registro);
-
-  if(soloFaltantes){
-    const esServicio = String(registro.tipo || "").trim() === "Servicio";
-    const faltaOT = !String(registro.ot || "").trim();
-    const faltaFotoOT = !String(registro.fotoOT || "").trim();
-    const faltaVIN = !String(registro.vin || "").trim();
-    const faltaFotoVIN = !String(registro.fotoVIN || "").trim();
-
-    grupoOT.style.display = esServicio && faltaOT ? "flex" : "none";
-    grupoPlaca.style.display = "none";
-    grupoVIN.style.display = !esServicio && faltaVIN ? "flex" : "none";
-    grupoMarca.style.display = "none";
-    grupoFotoIngreso.style.display = "none";
-    grupoFotoOT.style.display = esServicio && faltaFotoOT ? "flex" : "none";
-    grupoFotoVIN.style.display = !esServicio && faltaFotoVIN ? "flex" : "none";
-
-    document.querySelector("#modalEditar .modal-header h2").textContent = "Completar datos faltantes";
-  }else{
-    grupoOT.style.display = "flex";
-    grupoPlaca.style.display = "flex";
-    grupoVIN.style.display = "flex";
-    grupoMarca.style.display = "flex";
-    grupoFotoIngreso.style.display = "flex";
-    grupoFotoOT.style.display = "flex";
-    grupoFotoVIN.style.display = "flex";
-    document.querySelector("#modalEditar .modal-header h2").textContent = "Editar datos del vehículo";
-  }
-
   const inputIngreso = document.getElementById("editarFotoIngreso");
   const inputOT = document.getElementById("editarFotoOT");
   const inputVIN = document.getElementById("editarFotoVIN");
@@ -3594,18 +3422,6 @@ function abrirEditar(id){
   inputIngreso.disabled = !!registro.fotoIngreso;
   inputOT.disabled = !!registro.fotoOT;
   inputVIN.disabled = !!registro.fotoVIN;
-
-  const btnCamaraIngreso = document.getElementById("btnCamaraIngreso");
-  const btnCamaraOT = document.getElementById("btnCamaraOT");
-  const btnCamaraVIN = document.getElementById("btnCamaraVIN");
-
-  if(btnCamaraIngreso) btnCamaraIngreso.disabled = !!registro.fotoIngreso;
-  if(btnCamaraOT) btnCamaraOT.disabled = !!registro.fotoOT;
-  if(btnCamaraVIN) btnCamaraVIN.disabled = !!registro.fotoVIN;
-
-  document.getElementById("nombreFotoIngreso").textContent = "";
-  document.getElementById("nombreFotoOT").textContent = "";
-  document.getElementById("nombreFotoVIN").textContent = "";
 
   document.getElementById("estadoFotoIngreso").textContent = registro.fotoIngreso
     ? "✅ Ya existe una foto de ingreso"
@@ -3629,165 +3445,6 @@ function cerrarEditar(){
   document.getElementById("modalEditar").classList.remove("active");
 }
 
-
-/* =====================================================
-   CÁMARA DIRECTA PARA FOTOS DE EDICIÓN
-===================================================== */
-
-let streamCamaraEditar = null;
-let inputCamaraEditarActual = null;
-
-async function abrirCamaraEditar(inputId){
-
-  const input = document.getElementById(inputId);
-
-  if(!input){
-    mostrarAlerta("No se encontró el campo de fotografía.","error");
-    return;
-  }
-
-  if(input.disabled){
-    mostrarAlerta("Esta fotografía ya existe y no puede reemplazarse.","error");
-    return;
-  }
-
-  inputCamaraEditarActual = inputId;
-
-  const modal = document.getElementById("modalCamaraEditar");
-  const video = document.getElementById("videoCamaraEditar");
-  const error = document.getElementById("errorCamaraEditar");
-
-  error.style.display = "none";
-  error.textContent = "";
-  modal.classList.add("active");
-
-  try{
-
-    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-      throw new Error("El navegador no permite acceso directo a la cámara.");
-    }
-
-    streamCamaraEditar = await navigator.mediaDevices.getUserMedia({
-      video:{
-        facingMode:{ideal:"environment"},
-        width:{ideal:1920},
-        height:{ideal:1080}
-      },
-      audio:false
-    });
-
-    video.srcObject = streamCamaraEditar;
-    await video.play();
-
-  }catch(errorCamara){
-
-    console.error("ERROR CÁMARA:",errorCamara);
-
-    error.textContent =
-      "No se pudo abrir la cámara. Verifique que Chrome tenga permiso para usar la cámara y vuelva a intentarlo.";
-
-    error.style.display = "block";
-  }
-}
-
-
-function capturarFotoEditar(){
-
-  const video = document.getElementById("videoCamaraEditar");
-  const canvas = document.getElementById("canvasCamaraEditar");
-
-  if(!video || !video.videoWidth || !video.videoHeight){
-    mostrarAlerta("La cámara todavía no está lista. Espere un momento.","error");
-    return;
-  }
-
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-
-  const ctx = canvas.getContext("2d");
-
-  ctx.drawImage(video,0,0,canvas.width,canvas.height);
-
-  canvas.toBlob(function(blob){
-
-    if(!blob){
-      mostrarAlerta("No se pudo capturar la fotografía.","error");
-      return;
-    }
-
-    const archivo = new File(
-      [blob],
-      "foto_" + Date.now() + ".jpg",
-      {type:"image/jpeg",lastModified:Date.now()}
-    );
-
-    const input = document.getElementById(inputCamaraEditarActual);
-
-    if(!input){
-      cerrarCamaraEditar();
-      return;
-    }
-
-    const dataTransfer = new DataTransfer();
-    dataTransfer.items.add(archivo);
-    input.files = dataTransfer.files;
-
-    const nombreElemento =
-      inputCamaraEditarActual === "editarFotoIngreso"
-        ? "nombreFotoIngreso"
-        : inputCamaraEditarActual === "editarFotoOT"
-          ? "nombreFotoOT"
-          : "nombreFotoVIN";
-
-    mostrarNombreFotoEditar(input,nombreElemento);
-    cerrarCamaraEditar();
-
-  },"image/jpeg",0.90);
-}
-
-
-function cerrarCamaraEditar(){
-
-  const video = document.getElementById("videoCamaraEditar");
-
-  if(streamCamaraEditar){
-    streamCamaraEditar.getTracks().forEach(function(track){
-      track.stop();
-    });
-    streamCamaraEditar = null;
-  }
-
-  if(video){
-    video.srcObject = null;
-  }
-
-  const modal = document.getElementById("modalCamaraEditar");
-
-  if(modal){
-    modal.classList.remove("active");
-  }
-
-  inputCamaraEditarActual = null;
-}
-
-
-function mostrarNombreFotoEditar(input,elementoId){
-
-  const elemento = document.getElementById(elementoId);
-
-  if(!elemento){
-    return;
-  }
-
-  if(input.files && input.files.length > 0){
-    elemento.textContent = "📸 Foto tomada correctamente";
-    elemento.style.color = "#16a34a";
-  }else{
-    elemento.textContent = "";
-  }
-}
-
-
 async function guardarEdicion(){
 
   const boton = document.getElementById("btnGuardarEdicion");
@@ -3803,18 +3460,16 @@ async function guardarEdicion(){
     if(!id){
       throw new Error("No se encontró el ID del vehículo.");
     }
+    if(!marca){
+      throw new Error("Debe seleccionar una marca.");
+    }
+
     const registro = registros.find(function(r){
       return String(r.id) === String(id);
     });
 
     if(!registro){
       throw new Error("No se encontró el vehículo en Seguimiento.");
-    }
-
-    const soloFaltantes = registro.estado === "Finalizado" && esRegistroIncompletoParaSeguimiento(registro);
-
-    if(!soloFaltantes && !marca){
-      throw new Error("Debe seleccionar una marca.");
     }
 
     const archivoIngreso = document.getElementById("editarFotoIngreso").files[0];
@@ -3872,23 +3527,12 @@ async function guardarEdicion(){
        Esto evita que una respuesta innecesaria del REST API
        provoque un falso error después de guardar correctamente.
     --------------------------------------------- */
-    const cambios = soloFaltantes
-      ? {}
-      : {
-          ot: ot,
-          placa: placa,
-          vin: vin,
-          marca: marca
-        };
-
-    if(soloFaltantes){
-      if(String(registro.tipo || "").trim() === "Servicio" && !String(registro.ot || "").trim() && ot){
-        cambios.ot = ot;
-      }
-      if(String(registro.tipo || "").trim() === "Nuevo" && !String(registro.vin || "").trim() && vin){
-        cambios.vin = vin;
-      }
-    }
+    const cambios = {
+      ot: ot,
+      placa: placa,
+      vin: vin,
+      marca: marca
+    };
 
     if(!registro.fotoIngreso && fotosActualizadas.fotoIngreso){
       cambios.foto_ingreso = fotosActualizadas.fotoIngreso;
@@ -3898,10 +3542,6 @@ async function guardarEdicion(){
     }
     if(!registro.fotoVIN && fotosActualizadas.fotoVIN){
       cambios.foto_vin = fotosActualizadas.fotoVIN;
-    }
-
-    if(soloFaltantes && Object.keys(cambios).length === 0){
-      throw new Error("Debe completar al menos uno de los datos faltantes.");
     }
 
     const urlSupabase = SUPABASE_URL + "/rest/v1/vehiculos_wankamotors?id=eq." + encodeURIComponent(id);
@@ -3937,11 +3577,9 @@ async function guardarEdicion(){
 
     cerrarEditar();
     mostrarAlerta(
-      soloFaltantes
-        ? "Los datos faltantes fueron completados correctamente."
-        : (subioFotos
-            ? "Los datos y las fotografías faltantes fueron actualizados correctamente."
-            : "Los datos del vehículo fueron actualizados correctamente."),
+      subioFotos
+        ? "Los datos y las fotografías faltantes fueron actualizados correctamente."
+        : "Los datos del vehículo fueron actualizados correctamente.",
       "success"
     );
 
@@ -4164,7 +3802,7 @@ document.getElementById(
 tbody.innerHTML =
 `
 <tr>
-<td colspan="12" class="empty">
+<td colspan="13" class="empty">
 ${esc(mensaje)}
 </td>
 </tr>
@@ -4220,7 +3858,7 @@ if(desde && hasta && desde > hasta){
 
 tbody.innerHTML = `
 <tr>
-<td colspan="12" class="empty">
+<td colspan="13" class="empty">
 🔎 Buscando información...
 </td>
 </tr>
@@ -4466,9 +4104,21 @@ function renderHistorial(registrosHistorial){
       fotos += `<a class="foto-link" href="${esc(r.fotoVIN)}" target="_blank" rel="noopener">VIN</a>`;
     }
     if(r.fotoFinal){
-      fotos += `<a class="foto-link" href="${esc(r.fotoFinal)}" target="_blank" rel="noopener">Final</a>`;
+      fotos += `<a class="foto-link" href="${esc(r.fotoFinal)}" target="_blank" rel="noopener">Obs. Final</a>`;
     }
     if(!fotos) fotos = "—";
+
+    let observaciones = "";
+
+    if(r.observaciones){
+      observaciones += `<span class="obs-tooltip" data-tooltip="${esc(r.observaciones)}">Obs. Inicial</span>`;
+    }
+
+    if(r.observacionesFinales){
+      observaciones += `<span class="obs-tooltip" data-tooltip="${esc(r.observacionesFinales)}">Obs. Final</span>`;
+    }
+
+    if(!observaciones) observaciones = "—";
 
     tbody.innerHTML += `
 <tr>
@@ -4483,6 +4133,7 @@ function renderHistorial(registrosHistorial){
 <td>${esc(r.servicio)}</td>
 <td>${esc(formatearFecha(r.horaSalida))}</td>
 <td><div class="fotos-historial">${fotos}</div></td>
+<td><div class="observaciones-historial">${observaciones}</div></td>
 </tr>`;
   });
 
@@ -4501,7 +4152,7 @@ function exportarCSV(){
     return;
   }
 
-  let csv = "N°,Fecha lavado,Tipo,OT,Placa,VIN,Marca,Modelo,Servicio,Salida,Fotos\n";
+  let csv = "N°,Fecha lavado,Tipo,OT,Placa,VIN,Marca,Modelo,Servicio,Salida,Fotos,Observaciones iniciales,Observaciones finales\n";
 
   registros.forEach(function(r, indice){
     const fotos = [
@@ -4522,7 +4173,9 @@ function exportarCSV(){
       r.modelo || "",
       r.servicio || "",
       formatearFecha(r.horaSalida) || "",
-      fotos
+      fotos,
+      r.observaciones || "",
+      r.observacionesFinales || ""
     ].map(function(valor){
       return '"' + String(valor).replace(/"/g,'""') + '"';
     });
