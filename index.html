@@ -635,143 +635,6 @@ th.col-vin {
   min-width: max-content !important;
 }
 
-
-/* Los placeholders no deben heredar text-transform: uppercase */
-#ot::placeholder,
-#placa::placeholder,
-#vin::placeholder,
-#pasadoOT::placeholder,
-#pasadoPlaca::placeholder,
-#pasadoVIN::placeholder {
-  text-transform: none !important;
-}
-
-
-/* Placeholder VIN en formato normal */
-#vin::placeholder {
-  text-transform: none !important;
-}
-
-
-/* =====================================================
-   FILTROS - AGREGAR REGISTROS PASADOS
-===================================================== */
-.filtros-pasados{
-  margin-top:16px;
-  padding:16px;
-  border:1px solid #e5e7eb;
-  border-radius:12px;
-  background:#f8fafc;
-}
-
-.filtros-pasados-titulo{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  margin-bottom:14px;
-  font-weight:700;
-  color:#1f2937;
-  font-size:15px;
-}
-
-.filtros-pasados-grid{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(150px,1fr));
-  gap:10px;
-}
-
-.filtro-pasado-opcion{
-  display:flex;
-  align-items:center;
-  gap:9px;
-  min-height:44px;
-  padding:10px 12px;
-  border:1px solid #d1d5db;
-  border-radius:9px;
-  background:#fff;
-  cursor:pointer;
-  font-size:14px;
-  color:#374151;
-  box-sizing:border-box;
-  transition:.15s ease;
-}
-
-.filtro-pasado-opcion:hover{
-  border-color:#2563eb;
-  background:#eff6ff;
-}
-
-.filtro-pasado-opcion input{
-  width:17px;
-  height:17px;
-  margin:0;
-  flex:0 0 auto;
-  accent-color:#2563eb;
-}
-
-.filtro-pasado-tipo{
-  margin-top:14px;
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
-}
-
-.filtro-pasado-tipo label{
-  display:block;
-  font-size:13px;
-  font-weight:600;
-  color:#4b5563;
-  margin-bottom:6px;
-}
-
-.filtro-pasado-tipo select{
-  width:100%;
-  min-height:44px;
-  padding:9px 12px;
-  border:1px solid #d1d5db;
-  border-radius:9px;
-  background:#fff;
-  font-size:14px;
-}
-
-.filtros-pasados-acciones{
-  margin-top:12px;
-  display:flex;
-  justify-content:flex-end;
-  gap:8px;
-  flex-wrap:wrap;
-}
-
-.filtros-pasados-acciones .btn{
-  min-width:145px;
-}
-
-.filtros-pasados-acciones{
-  justify-content:flex-end;
-}
-
-@media(max-width:700px){
-  .filtros-pasados-grid{
-    grid-template-columns:1fr;
-  }
-  .filtro-pasado-tipo{
-    grid-template-columns:1fr;
-  }
-  .filtros-pasados-acciones{
-    justify-content:stretch;
-  }
-  .filtros-pasados-acciones .btn{
-    width:100%;
-  }
-}
-
-
-/* Paginación de Agregar registros pasados */
-.paginacion-pasados{margin:16px 0 8px;padding:12px;border:1px solid #e5e7eb;border-radius:10px;background:#f8fafc;text-align:center;}
-.paginacion-info{margin-bottom:10px;color:#4b5563;font-size:13px;font-weight:600;}
-.paginacion-botones{display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap;}
-.paginacion-botones .btn{min-width:42px;}
-.paginacion-botones .btn:disabled{opacity:.45;cursor:not-allowed;}
 </style>
 
 </head>
@@ -839,7 +702,7 @@ onclick="mostrarSeccion('historial',this)">
 <button
 onclick="mostrarSeccion('registrosPasados',this)">
 
-📋 Agregar registros pasados
+📋 Regularizar registros
 
 </button>
 
@@ -926,7 +789,7 @@ Número de OT
 <input
 id="ot"
 type="text"
-placeholder="Ingrese Nro. de OT"
+placeholder="Número de OT"
 autocomplete="off"
 style="text-transform:uppercase"
 oninput="this.value=this.value.toUpperCase()">
@@ -970,7 +833,7 @@ Placa *
 <input
 id="placa"
 type="text"
-placeholder="Ingrese Nro. de Placa"
+placeholder="Ingrese Nro. Placa"
 autocomplete="off"
 style="text-transform:uppercase"
 oninput="this.value=this.value.toUpperCase()">
@@ -994,7 +857,7 @@ VIN
 <input
 id="vin"
 type="text"
-placeholder="Ingrese Nro. de VIN"
+placeholder="VIN"
 autocomplete="off"
 style="text-transform:uppercase"
 oninput="this.value=this.value.toUpperCase()">
@@ -1340,7 +1203,7 @@ onclick="limpiarFormulario()">
 
 
 <!-- =====================================================
-     AGREGAR REGISTROS PASADOS
+     REGULARIZAR REGISTROS
 ===================================================== -->
 
 <section
@@ -1349,7 +1212,7 @@ class="section">
 
 <div class="card">
 
-<h2>📋 Agregar registros pasados</h2>
+<h2>📋 Regularizar registros</h2>
 
 <p>Regularice lavados que fueron atendidos anteriormente y no se registraron en la aplicación.</p>
 
@@ -1367,63 +1230,6 @@ onclick="buscarRegistroPasado()">
 🔎 Buscar
 
 </button>
-
-</div>
-
-<div class="filtros-pasados">
-
-  <div class="filtros-pasados-titulo">
-    🔎 Buscar registros que no tengan:
-  </div>
-
-  <div class="filtros-pasados-grid">
-
-    <label class="filtro-pasado-opcion">
-      <input type="checkbox" id="filtroPasadoSinOT">
-      <span>Nro. de OT</span>
-    </label>
-
-    <label class="filtro-pasado-opcion">
-      <input type="checkbox" id="filtroPasadoSinFotoOT">
-      <span>Foto de OT</span>
-    </label>
-
-    <label class="filtro-pasado-opcion">
-      <input type="checkbox" id="filtroPasadoSinPlaca">
-      <span>Placa</span>
-    </label>
-
-    <label class="filtro-pasado-opcion">
-      <input type="checkbox" id="filtroPasadoSinVIN">
-      <span>VIN</span>
-    </label>
-
-    <label class="filtro-pasado-opcion">
-      <input type="checkbox" id="filtroPasadoSinFotoVIN">
-      <span>Foto de VIN</span>
-    </label>
-
-  </div>
-
-  <div class="filtro-pasado-tipo">
-    <div>
-      <label for="filtroPasadoTipo">Tipo de registro</label>
-      <select id="filtroPasadoTipo">
-        <option value="">Todos los tipos</option>
-        <option value="Servicio">🔧 Servicio</option>
-        <option value="Nuevo">🚘 Nuevo</option>
-      </select>
-    </div>
-  </div>
-
-  <div class="filtros-pasados-acciones">
-    <button
-      type="button"
-      class="btn btn-secondary"
-      onclick="limpiarFiltrosPasados()">
-      🧹 Limpiar filtros
-    </button>
-  </div>
 
 </div>
 
@@ -1453,7 +1259,7 @@ onclick="buscarRegistroPasado()">
 <div class="form-grid">
 
 <div id="pasadoCampoOT" class="form-group">
-<label>Número de OT</label>
+<label>Ingrese Nro. de OT</label>
 <input id="pasadoOT" type="text" placeholder="Ingrese número de OT" autocomplete="off" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
 </div>
 
@@ -3015,7 +2821,7 @@ async function verificarDuplicadosAntesDeRegistrar(datos){
 
 
 /* =====================================================
-   AGREGAR REGISTROS PASADOS
+   REGULARIZAR REGISTROS
 ===================================================== */
 
 function cambiarTipoPasado(tipo){
@@ -3050,172 +2856,99 @@ function cambiarTipoPasado(tipo){
 let registroPasadoSeleccionadoId = null;
 let registrosPasadosEncontrados = [];
 
-const REGISTROS_PASADOS_POR_PAGINA = 20;
-let paginaRegistrosPasados = 1;
-
-function renderizarRegistrosPasadosPaginados(){
-  const lista=document.getElementById("listaRegistrosPasados");
-  const paginacion=document.getElementById("paginacionRegistrosPasados");
-  if(!lista||!paginacion)return;
-  const total=registrosPasadosEncontrados.length;
-  if(!total){lista.innerHTML="";paginacion.innerHTML="";return;}
-  const totalPaginas=Math.ceil(total/REGISTROS_PASADOS_POR_PAGINA);
-  if(paginaRegistrosPasados>totalPaginas)paginaRegistrosPasados=totalPaginas;
-  const inicio=(paginaRegistrosPasados-1)*REGISTROS_PASADOS_POR_PAGINA;
-  const fin=inicio+REGISTROS_PASADOS_POR_PAGINA;
-  const registrosPagina=registrosPasadosEncontrados.slice(inicio,fin);
-  lista.innerHTML=registrosPagina.map(function(r){return `
-    <div class="resultado-item" id="registroPasado_${esc(r.id)}">
-      <div><strong>OT:</strong> ${esc(r.ot||"—")}</div>
-      <div><strong>Placa:</strong> ${esc(r.placa||"—")}</div>
-      <div><strong>VIN:</strong> ${esc(r.vin||"—")}</div>
-      <div><strong>Estado:</strong> ${esc(r.estado||"—")}</div>
-      <div><strong>Fecha ingreso / lavado:</strong> ${esc(obtenerFechaHistorial(r.hora_inicio_lavado)||"—")}</div>
-      <div><strong>Servicio:</strong> ${esc(r.servicio||"—")}</div>
-      <div><strong>Marca:</strong> ${esc(r.marca||"—")}</div>
-      ${renderFotosRegistroPasado(r)}
-      <div style="margin-top:12px;"><button type="button" class="btn btn-primary" onclick="seleccionarRegistroPasado('${esc(r.id)}')">✏️ Seleccionar para editar</button></div>
-    </div>`;}).join("");
-  if(totalPaginas<=1){paginacion.innerHTML="";return;}
-  let botones=`<button type="button" class="btn btn-secondary" ${paginaRegistrosPasados===1?"disabled":""} onclick="cambiarPaginaRegistrosPasados(${paginaRegistrosPasados-1})">◀ Anterior</button>`;
-  for(let i=1;i<=totalPaginas;i++){botones+=`<button type="button" class="btn ${i===paginaRegistrosPasados?"btn-primary":"btn-secondary"}" onclick="cambiarPaginaRegistrosPasados(${i})">${i}</button>`;}
-  botones+=`<button type="button" class="btn btn-secondary" ${paginaRegistrosPasados===totalPaginas?"disabled":""} onclick="cambiarPaginaRegistrosPasados(${paginaRegistrosPasados+1})">Siguiente ▶</button>`;
-  paginacion.innerHTML=`<div class="paginacion-info">Mostrando ${inicio+1}-${Math.min(fin,total)} de ${total} registros</div><div class="paginacion-botones">${botones}</div>`;
-}
-
-function cambiarPaginaRegistrosPasados(pagina){
-  const totalPaginas=Math.ceil(registrosPasadosEncontrados.length/REGISTROS_PASADOS_POR_PAGINA);
-  if(pagina<1||pagina>totalPaginas)return;
-  paginaRegistrosPasados=pagina;
-  renderizarRegistrosPasadosPaginados();
-  const zona=document.getElementById("resultadoBusquedaPasado");
-  if(zona)zona.scrollIntoView({behavior:"smooth",block:"start"});
-}
-
 async function buscarRegistroPasado(){
-  const terminoOriginal=document.getElementById("buscarPasado").value.trim();
-  const termino=normalizarTexto(terminoOriginal);
-  const terminoOT=normalizarOTBusqueda(terminoOriginal);
-  const resultado=document.getElementById("resultadoBusquedaPasado");
 
-  const filtros={
-    sinOT:document.getElementById("filtroPasadoSinOT")?.checked||false,
-    sinFotoOT:document.getElementById("filtroPasadoSinFotoOT")?.checked||false,
-    sinPlaca:document.getElementById("filtroPasadoSinPlaca")?.checked||false,
-    sinVIN:document.getElementById("filtroPasadoSinVIN")?.checked||false,
-    sinFotoVIN:document.getElementById("filtroPasadoSinFotoVIN")?.checked||false,
-    tipo:document.getElementById("filtroPasadoTipo")?.value||""
-  };
-  const hayFiltros=
-    filtros.sinOT ||
-    filtros.sinFotoOT ||
-    filtros.sinPlaca ||
-    filtros.sinVIN ||
-    filtros.sinFotoVIN ||
-    !!filtros.tipo;
+  const terminoOriginal = document.getElementById("buscarPasado").value.trim();
+  const termino = normalizarTexto(terminoOriginal);
+  const terminoOT = normalizarOTBusqueda(terminoOriginal);
+  const resultado = document.getElementById("resultadoBusquedaPasado");
 
-  registroPasadoSeleccionadoId=null;
-  registrosPasadosEncontrados=[];
+  registroPasadoSeleccionadoId = null;
+  registrosPasadosEncontrados = [];
   actualizarModoEdicionPasado();
 
-  if(!termino&&!hayFiltros){
-    resultado.innerHTML='<div class="alert error">Ingrese una OT, placa o VIN, o seleccione al menos un filtro.</div>';
+  if(!termino){
+    resultado.innerHTML = `<div class="alert error">Ingrese una OT, placa o VIN para buscar.</div>`;
     return;
   }
 
-  resultado.innerHTML='<div class="loading" style="display:block">🔎 Buscando...</div>';
+  resultado.innerHTML = `<div class="loading" style="display:block">🔎 Buscando...</div>`;
 
   try{
-    const existentes=await obtenerTodosLosRegistros();
 
-    const encontrados=(existentes||[]).filter(function(r){
+    const existentes = await obtenerTodosLosRegistros();
 
-      if(filtros.tipo &&
-         String(r.tipo||"").trim() !== filtros.tipo){
-        return false;
-      }
+    const encontrados = (existentes || []).filter(function(r){
 
-      if(filtros.sinOT && String(r.ot||"").trim()!=="") return false;
-      if(filtros.sinFotoOT && String(r.foto_ot||"").trim()!=="") return false;
-      if(filtros.sinPlaca && String(r.placa||"").trim()!=="") return false;
-      if(filtros.sinVIN && String(r.vin||"").trim()!=="") return false;
-      if(filtros.sinFotoVIN && String(r.foto_vin||"").trim()!=="") return false;
+      /*
+         OT: NO se eliminan los separadores "/".
+         Esto evita coincidencias falsas entre partes de la OT.
+         Ejemplo: OT9/1112/2026 NO debe coincidir con "22".
+      */
+      const otRegistro = normalizarOTBusqueda(r.ot);
+      const coincideOT = terminoOT && otRegistro.includes(terminoOT);
 
-      if(!termino) return true;
+      /* Placa y VIN mantienen búsqueda parcial normalizada. */
+      const placaRegistro = normalizarTexto(r.placa);
+      const vinRegistro = normalizarTexto(r.vin);
 
-      const otRegistro=normalizarOTBusqueda(r.ot);
-      const coincideOT=terminoOT&&otRegistro.includes(terminoOT);
-      const placaRegistro=normalizarTexto(r.placa);
-      const coincidePlaca=placaRegistro.includes(normalizarTexto(terminoOriginal));
-      const vinRegistro=normalizarTexto(r.vin);
-      const coincideVIN=vinRegistro.includes(termino);
+      const coincidePlaca = placaRegistro.includes(termino);
+      const coincideVIN = vinRegistro.includes(termino);
 
-      return coincideOT||coincidePlaca||coincideVIN;
+      return coincideOT || coincidePlaca || coincideVIN;
     });
 
-    registrosPasadosEncontrados=encontrados;
-    paginaRegistrosPasados=1;
-
-    const filtrosTexto=[];
-    if(filtros.sinOT) filtrosTexto.push("sin Nro. de OT");
-    if(filtros.sinFotoOT) filtrosTexto.push("sin foto de OT");
-    if(filtros.sinPlaca) filtrosTexto.push("sin placa");
-    if(filtros.sinVIN) filtrosTexto.push("sin VIN");
-    if(filtros.sinFotoVIN) filtrosTexto.push("sin foto de VIN");
-    if(filtros.tipo) filtrosTexto.push("tipo: " + filtros.tipo);
+    registrosPasadosEncontrados = encontrados;
 
     if(!encontrados.length){
-      resultado.innerHTML=`<div class="alert success">✅ No se encontraron registros que coincidan con los filtros seleccionados.</div>`;
+
+      resultado.innerHTML = `
+        <div class="alert success">
+          ✅ No se encontró un registro con "${esc(terminoOriginal)}".
+          Puede ingresar el lavado pasado y regularizarlo.
+        </div>`;
+
     }else{
-      resultado.innerHTML=`
+
+      resultado.innerHTML = `
         <div class="alert error">
           ⚠️ Se encontraron ${encontrados.length} registro(s) relacionados.
-          ${filtrosTexto.length?"— "+esc(filtrosTexto.join(" + ")):""}
           Seleccione el registro que desea revisar o editar.
         </div>
-        <div id="listaRegistrosPasados"></div>
-        <div id="paginacionRegistrosPasados" class="paginacion-pasados"></div>
+        ${encontrados.slice(0,10).map(function(r){
+          return `
+            <div class="resultado-item" id="registroPasado_${esc(r.id)}">
+              <div><strong>OT:</strong> ${esc(r.ot || "—")}</div>
+              <div><strong>Placa:</strong> ${esc(r.placa || "—")}</div>
+              <div><strong>VIN:</strong> ${esc(r.vin || "—")}</div>
+              <div><strong>Estado:</strong> ${esc(r.estado || "—")}</div>
+              <div><strong>Fecha ingreso / lavado:</strong> ${esc(obtenerFechaHistorial(r.hora_inicio_lavado) || "—")}</div>
+              <div><strong>Servicio:</strong> ${esc(r.servicio || "—")}</div>
+              <div><strong>Marca:</strong> ${esc(r.marca || "—")}</div>
+              ${renderFotosRegistroPasado(r)}
+              <div style="margin-top:12px;">
+                <button type="button" class="btn btn-primary" onclick="seleccionarRegistroPasado('${esc(r.id)}')">
+                  ✏️ Seleccionar para editar
+                </button>
+              </div>
+            </div>`;
+        }).join("")}
       `;
     }
 
-    if(encontrados.length){ renderizarRegistrosPasadosPaginados(); }
+    document.getElementById("formularioPasado").style.display = "block";
 
-    document.getElementById("formularioPasado").style.display="block";
-
-    if(terminoOriginal&&!document.getElementById("pasadoOT").value){
-      document.getElementById("pasadoOT").value=terminoOriginal.toUpperCase();
+    /* Si la búsqueda corresponde a una OT abreviada, dejamos el formulario
+       disponible para que el usuario pueda escribir la OT completa. */
+    const ot = terminoOriginal.toUpperCase();
+    if(ot && !document.getElementById("pasadoOT").value){
+      document.getElementById("pasadoOT").value = ot;
     }
+
   }catch(error){
     console.error("Error buscando registro pasado:",error);
-    resultado.innerHTML=`<div class="alert error">No se pudo realizar la búsqueda: ${esc(error.message)}</div>`;
+    resultado.innerHTML = `<div class="alert error">No se pudo realizar la búsqueda: ${esc(error.message)}</div>`;
   }
-}
-
-function limpiarFiltrosPasados(){
-  [
-    "filtroPasadoSinOT",
-    "filtroPasadoSinFotoOT",
-    "filtroPasadoSinPlaca",
-    "filtroPasadoSinVIN",
-    "filtroPasadoSinFotoVIN"
-  ].forEach(function(id){
-    const el=document.getElementById(id);
-    if(el) el.checked=false;
-  });
-
-  const tipo=document.getElementById("filtroPasadoTipo");
-  if(tipo) tipo.value="";
-
-  const buscar=document.getElementById("buscarPasado");
-  if(buscar) buscar.value="";
-
-  const resultado=document.getElementById("resultadoBusquedaPasado");
-  if(resultado) resultado.innerHTML="";
-
-  registrosPasadosEncontrados=[];
-  paginaRegistrosPasados=1;
-  registroPasadoSeleccionadoId=null;
-  actualizarModoEdicionPasado();
 }
 
 function actualizarModoEdicionPasado(){
@@ -5023,6 +4756,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V2.8</div>
+<div class="version-app">V2.3</div>
 </body>
 </html>
