@@ -3050,6 +3050,7 @@ async function verificarDuplicadosAntesDeRegistrar(datos){
         "• Placa: " + (r.placa || "—") + "\n" +
         "• VIN: " + (r.vin || "—") + "\n" +
         "• Estado: " + (r.estado || "—") + "\n" +
+        "• Fecha: " + (formatearFechaRegularizacion(r.hora_inicio_lavado) || "—") + "\n" +
         "• Motivo: " + (x.motivos.join(", ") || "coincidencia") + "\n\n";
     });
 
@@ -5256,6 +5257,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V3.0</div>
+<div class="version-app">V2.8</div>
 </body>
 </html>
