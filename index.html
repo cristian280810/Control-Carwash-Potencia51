@@ -772,7 +772,7 @@ th.col-vin {
 }
 
 
-/* Paginación de Agregar registros pasados */
+/* Paginación de Regularizar registros */
 .paginacion-pasados{margin:16px 0 8px;padding:12px;border:1px solid #e5e7eb;border-radius:10px;background:#f8fafc;text-align:center;}
 .paginacion-info{margin-bottom:10px;color:#4b5563;font-size:13px;font-weight:600;}
 .paginacion-botones{display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap;}
@@ -858,7 +858,7 @@ onclick="mostrarSeccion('historial',this)">
 <button
 onclick="mostrarSeccion('registrosPasados',this)">
 
-📋 Agregar registros pasados
+📋 Regularizar registros
 
 </button>
 
@@ -1368,7 +1368,7 @@ class="section">
 
 <div class="card">
 
-<h2>📋 Agregar registros pasados</h2>
+<h2>📋 Regularizar registros</h2>
 
 <p>Regularice lavados que fueron atendidos anteriormente y no se registraron en la aplicación.</p>
 
@@ -1725,7 +1725,7 @@ Shampoo x 2 (no es el proveedor, es stock)
 
 <div class="actions">
 <button id="btnGuardarPasado" class="btn btn-primary" onclick="guardarRegistroPasado()">
-💾 Guardar registro pasado
+💾 Guardar regularización
 </button>
 
 <button class="btn btn-secondary" onclick="limpiarRegistroPasado()">
@@ -3377,7 +3377,7 @@ function actualizarModoEdicionPasado(){
     boton.innerHTML = "💾 Actualizar registro";
     if(aviso) aviso.style.display = "block";
   }else{
-    boton.innerHTML = "💾 Guardar registro pasado";
+    boton.innerHTML = "💾 Guardar regularización";
     if(aviso) aviso.style.display = "none";
   }
 }
@@ -3693,16 +3693,23 @@ async function guardarRegistroPasado(){
       );
     }
 
-    await cargarDatos();
+    // El registro ya fue guardado correctamente en Supabase.
+    // La actualización visual de Seguimiento no debe convertir un guardado
+    // exitoso en un mensaje de error si alguna función de refresco de la UI falla.
+    try{
+      await cargarDatos();
+    }catch(errorRefresco){
+      console.warn("El registro se guardó, pero no se pudo refrescar la vista:", errorRefresco);
+    }
 
   }catch(error){
 
     console.error("Error guardando registro pasado:",error);
-    mostrarAlerta("No se pudo guardar el registro pasado: " + error.message,"error");
+    mostrarAlerta("No se pudo guardar la regularización: " + error.message,"error");
 
   }finally{
-    boton.disabled = false;
-    loading.style.display = "none";
+    if(boton) boton.disabled = false;
+    if(loading) loading.style.display = "none";
     actualizarModoEdicionPasado();
   }
 }
@@ -5173,6 +5180,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V2.8</div>
+<div class="version-app">V2.9</div>
 </body>
 </html>
