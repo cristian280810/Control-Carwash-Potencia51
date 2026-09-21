@@ -599,6 +599,18 @@ th{
   color:#4b5563;
 }
 
+
+
+.version-app{
+  position:fixed;
+  right:12px;
+  bottom:8px;
+  font-size:11px;
+  color:#6b7280;
+  opacity:.8;
+  z-index:20;
+  pointer-events:none;
+}
 </style>
 
 </head>
@@ -4104,7 +4116,7 @@ function renderHistorial(registrosHistorial){
       fotos += `<a class="foto-link" href="${esc(r.fotoVIN)}" target="_blank" rel="noopener">VIN</a>`;
     }
     if(r.fotoFinal){
-      fotos += `<a class="foto-link" href="${esc(r.fotoFinal)}" target="_blank" rel="noopener">Obs. Final</a>`;
+      fotos += `<a class="foto-link" href="${esc(r.fotoFinal)}" target="_blank" rel="noopener">Final</a>`;
     }
     if(!fotos) fotos = "—";
 
@@ -4457,5 +4469,7 @@ iniciarRealtimeSupabase();
 
 </script>
 
+
+<div class="version-app">V2.3</div>
 </body>
 </html>
