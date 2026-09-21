@@ -1761,22 +1761,47 @@ id="tablaHistorial">
     </div>
 
     <div class="form-grid" style="margin-top:12px;">
-      <div class="form-group">
-        <label>Foto de ingreso</label>
-        <input id="editarFotoIngreso" type="file" accept="image/*">
-        <small id="estadoFotoIngreso" style="display:block;margin-top:5px;"></small>
-      </div>
-      <div class="form-group">
-        <label>Foto de OT</label>
-        <input id="editarFotoOT" type="file" accept="image/*">
-        <small id="estadoFotoOT" style="display:block;margin-top:5px;"></small>
-      </div>
-      <div class="form-group">
-        <label>Foto de VIN</label>
-        <input id="editarFotoVIN" type="file" accept="image/*">
-        <small id="estadoFotoVIN" style="display:block;margin-top:5px;"></small>
-      </div>
-    </div>
+
+  <div class="form-group">
+    <label>📷 Foto de ingreso</label>
+    <input
+      id="editarFotoIngreso"
+      type="file"
+      accept="image/*"
+      capture="environment">
+    <small
+      id="estadoFotoIngreso"
+      style="display:block;margin-top:5px;">
+    </small>
+  </div>
+
+  <div class="form-group">
+    <label>📷 Foto de OT</label>
+    <input
+      id="editarFotoOT"
+      type="file"
+      accept="image/*"
+      capture="environment">
+    <small
+      id="estadoFotoOT"
+      style="display:block;margin-top:5px;">
+    </small>
+  </div>
+
+  <div class="form-group">
+    <label>📷 Foto de VIN</label>
+    <input
+      id="editarFotoVIN"
+      type="file"
+      accept="image/*"
+      capture="environment">
+    <small
+      id="estadoFotoVIN"
+      style="display:block;margin-top:5px;">
+    </small>
+  </div>
+
+</div>
 
     <div style="margin-top:8px;font-size:13px;color:#666;">
       Las fotografías que ya existen se conservan. Solo se subirán las fotografías que estén faltantes y que selecciones.
