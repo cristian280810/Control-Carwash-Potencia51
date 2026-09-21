@@ -842,7 +842,7 @@ class="form-group"
 style="display:none">
 
 <label>
-Foto del VIN
+Foto del VIN *
 </label>
 
 <input
@@ -2310,6 +2310,12 @@ if(!marca || !servicio){
 
 if(!archivoIngreso){
   mostrarAlerta("Debe adjuntar la foto de ingreso.","error");
+  return;
+}
+
+/* Para vehículos NUEVOS, solo la fotografía del VIN es obligatoria. */
+if(tipo === "Nuevo" && !archivoVIN){
+  mostrarAlerta("Debe adjuntar la foto del VIN para registrar un vehículo nuevo.","error");
   return;
 }
 
