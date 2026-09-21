@@ -625,10 +625,14 @@ th{
 /* Evitar que OT, placa y VIN se partan en varias líneas */
 td.col-ot,
 td.col-placa,
-td.col-vin {
+td.col-vin,
+th.col-ot,
+th.col-placa,
+th.col-vin {
   white-space: nowrap !important;
-  word-break: keep-all !important;
+  word-break: normal !important;
   overflow-wrap: normal !important;
+  min-width: max-content !important;
 }
 
 </style>
@@ -829,7 +833,7 @@ Placa *
 <input
 id="placa"
 type="text"
-placeholder="Placa"
+placeholder="Ingrese Nro. Placa"
 autocomplete="off"
 style="text-transform:uppercase"
 oninput="this.value=this.value.toUpperCase()">
@@ -4390,9 +4394,9 @@ function renderHistorial(registrosHistorial){
 <td class="numero-historial">${inicio + indice + 1}</td>
 <td>${esc(formatearFecha(r.horaInicio) || "—")}</td>
 <td>${esc(r.tipo)}</td>
-<td>${esc(r.ot)}</td>
-<td>${esc(r.placa)}</td>
-<td>${esc(r.vin)}</td>
+<td class="col-ot">${esc(r.ot)}</td>
+<td class="col-placa">${esc(r.placa)}</td>
+<td class="col-vin">${esc(r.vin)}</td>
 <td>${esc(r.marca)}</td>
 <td class="col-modelo">${esc(r.modelo)}</td>
 <td>${esc(r.servicio)}</td>
@@ -4752,6 +4756,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V2.6</div>
+<div class="version-app">V2.3</div>
 </body>
 </html>
