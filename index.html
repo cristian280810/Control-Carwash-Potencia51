@@ -635,6 +635,17 @@ th.col-vin {
   min-width: max-content !important;
 }
 
+
+/* Los placeholders no deben heredar text-transform: uppercase */
+#ot::placeholder,
+#placa::placeholder,
+#vin::placeholder,
+#pasadoOT::placeholder,
+#pasadoPlaca::placeholder,
+#pasadoVIN::placeholder {
+  text-transform: none !important;
+}
+
 </style>
 
 </head>
@@ -789,7 +800,7 @@ Número de OT
 <input
 id="ot"
 type="text"
-placeholder="Número de OT"
+placeholder="Ingrese Nro. de OT"
 autocomplete="off"
 style="text-transform:uppercase"
 oninput="this.value=this.value.toUpperCase()">
@@ -4756,6 +4767,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V2.7</div>
+<div class="version-app">V2.3</div>
 </body>
 </html>
