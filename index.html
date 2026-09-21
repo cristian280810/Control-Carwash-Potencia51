@@ -621,6 +621,16 @@ th{
   z-index:20;
   pointer-events:none;
 }
+
+/* Evitar que OT, placa y VIN se partan en varias líneas */
+td.col-ot,
+td.col-placa,
+td.col-vin {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+}
+
 </style>
 
 </head>
@@ -4742,6 +4752,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V2.5</div>
+<div class="version-app">V2.6</div>
 </body>
 </html>
