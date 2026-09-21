@@ -3175,21 +3175,6 @@ async function buscarRegistroPasado(){
         </div>
         <div id="listaRegistrosPasados"></div>
         <div id="paginacionRegistrosPasados" class="paginacion-pasados"></div>
-          return `
-            <div class="resultado-item" id="registroPasado_${esc(r.id)}">
-              <div><strong>OT:</strong> ${esc(r.ot||"—")}</div>
-              <div><strong>Placa:</strong> ${esc(r.placa||"—")}</div>
-              <div><strong>VIN:</strong> ${esc(r.vin||"—")}</div>
-              <div><strong>Estado:</strong> ${esc(r.estado||"—")}</div>
-              <div><strong>Fecha ingreso / lavado:</strong> ${esc(obtenerFechaHistorial(r.hora_inicio_lavado)||"—")}</div>
-              <div><strong>Servicio:</strong> ${esc(r.servicio||"—")}</div>
-              <div><strong>Marca:</strong> ${esc(r.marca||"—")}</div>
-              ${renderFotosRegistroPasado(r)}
-              <div style="margin-top:12px;">
-                <button type="button" class="btn btn-primary" onclick="seleccionarRegistroPasado('${esc(r.id)}')">✏️ Seleccionar para editar</button>
-              </div>
-            </div>`;
-        }).join("")}
       `;
     }
 
@@ -5038,6 +5023,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V2.9</div>
+<div class="version-app">V2.8</div>
 </body>
 </html>
