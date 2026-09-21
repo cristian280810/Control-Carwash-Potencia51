@@ -664,6 +664,12 @@ th.col-vin {
   background:#f8fafc;
 }
 
+.filtros-pasados-separador{
+  height:1px;
+  background:#dbe2ea;
+  margin:18px 0;
+}
+
 .filtros-pasados-titulo{
   display:flex;
   align-items:center;
@@ -746,6 +752,10 @@ th.col-vin {
   min-width:145px;
 }
 
+.filtros-pasados-acciones{
+  justify-content:flex-end;
+}
+
 @media(max-width:700px){
   .filtros-pasados-grid{
     grid-template-columns:1fr;
@@ -761,6 +771,26 @@ th.col-vin {
   }
 }
 
+
+/* Paginación de Regularizar registros */
+.paginacion-pasados{margin:16px 0 8px;padding:12px;border:1px solid #e5e7eb;border-radius:10px;background:#f8fafc;text-align:center;}
+.paginacion-info{margin-bottom:10px;color:#4b5563;font-size:13px;font-weight:600;}
+.paginacion-botones{display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap;}
+.paginacion-botones .btn{min-width:42px;}
+.paginacion-botones .btn:disabled{opacity:.45;cursor:not-allowed;}
+
+/* Formulario de regularización dentro de la tarjeta seleccionada */
+.formulario-pasado-inline {
+  margin-top: 18px !important;
+  width: 100% !important;
+  box-sizing: border-box;
+  border: 1px solid #bfdbfe;
+  background: #ffffff;
+}
+
+.formulario-pasado-inline h2 {
+  margin-top: 0;
+}
 </style>
 
 </head>
@@ -828,7 +858,7 @@ onclick="mostrarSeccion('historial',this)">
 <button
 onclick="mostrarSeccion('registrosPasados',this)">
 
-📋 Agregar registros pasados
+📋 Regularizar registros
 
 </button>
 
@@ -1338,7 +1368,7 @@ class="section">
 
 <div class="card">
 
-<h2>📋 Agregar registros pasados</h2>
+<h2>📋 Regularizar registros</h2>
 
 <p>Regularice lavados que fueron atendidos anteriormente y no se registraron en la aplicación.</p>
 
@@ -1394,6 +1424,41 @@ onclick="buscarRegistroPasado()">
 
   </div>
 
+  <div class="filtros-pasados-separador"></div>
+
+  <div class="filtros-pasados-titulo">
+    ✅ Buscar registros que sí tengan:
+  </div>
+
+  <div class="filtros-pasados-grid">
+
+    <label class="filtro-pasado-opcion">
+      <input type="checkbox" id="filtroPasadoConOT">
+      <span>Nro. de OT</span>
+    </label>
+
+    <label class="filtro-pasado-opcion">
+      <input type="checkbox" id="filtroPasadoConFotoOT">
+      <span>Foto de OT</span>
+    </label>
+
+    <label class="filtro-pasado-opcion">
+      <input type="checkbox" id="filtroPasadoConPlaca">
+      <span>Placa</span>
+    </label>
+
+    <label class="filtro-pasado-opcion">
+      <input type="checkbox" id="filtroPasadoConVIN">
+      <span>VIN</span>
+    </label>
+
+    <label class="filtro-pasado-opcion">
+      <input type="checkbox" id="filtroPasadoConFotoVIN">
+      <span>Foto de VIN</span>
+    </label>
+
+  </div>
+
   <div class="filtro-pasado-tipo">
     <div>
       <label for="filtroPasadoTipo">Tipo de registro</label>
@@ -1408,13 +1473,6 @@ onclick="buscarRegistroPasado()">
   <div class="filtros-pasados-acciones">
     <button
       type="button"
-      class="btn btn-primary"
-      onclick="buscarRegistroPasado()">
-      🔎 Aplicar filtros
-    </button>
-
-    <button
-      type="button"
       class="btn btn-secondary"
       onclick="limpiarFiltrosPasados()">
       🧹 Limpiar filtros
@@ -1426,6 +1484,10 @@ onclick="buscarRegistroPasado()">
 <div id="resultadoBusquedaPasado" class="past-search-result"></div>
 
 </div>
+
+<div id="formularioPasadoPlaceholder"></div>
+
+<div id="formularioPasadoAnchor" style="display:none;"></div>
 
 <div id="formularioPasado" class="card" style="display:none;">
 
@@ -1666,7 +1728,7 @@ Shampoo x 2 (no es el proveedor, es stock)
 
 <div class="actions">
 <button id="btnGuardarPasado" class="btn btn-primary" onclick="guardarRegistroPasado()">
-💾 Guardar registro pasado
+💾 Guardar regularización
 </button>
 
 <button class="btn btn-secondary" onclick="limpiarRegistroPasado()">
@@ -3047,7 +3109,78 @@ function cambiarTipoPasado(tipo){
 let registroPasadoSeleccionadoId = null;
 let registrosPasadosEncontrados = [];
 
+const REGISTROS_PASADOS_POR_PAGINA = 20;
+let paginaRegistrosPasados = 1;
+
+function formatearFechaRegularizacion(fecha){
+  if(!fecha) return "";
+  const fechaObj = new Date(String(fecha).trim());
+  if(isNaN(fechaObj.getTime())) return "";
+  const partes = new Intl.DateTimeFormat("es-PE", {
+    timeZone: "America/Lima",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(fechaObj);
+  const valores = {};
+  partes.forEach(function(p){ valores[p.type] = p.value; });
+  return valores.day + "-" + valores.month + "-" + valores.year;
+}
+
+function renderizarRegistrosPasadosPaginados(){
+  const lista=document.getElementById("listaRegistrosPasados");
+  const paginacion=document.getElementById("paginacionRegistrosPasados");
+  if(!lista||!paginacion)return;
+  const total=registrosPasadosEncontrados.length;
+  if(!total){lista.innerHTML="";paginacion.innerHTML="";return;}
+  const totalPaginas=Math.ceil(total/REGISTROS_PASADOS_POR_PAGINA);
+  if(paginaRegistrosPasados>totalPaginas)paginaRegistrosPasados=totalPaginas;
+  const inicio=(paginaRegistrosPasados-1)*REGISTROS_PASADOS_POR_PAGINA;
+  const fin=inicio+REGISTROS_PASADOS_POR_PAGINA;
+  const registrosPagina=registrosPasadosEncontrados.slice(inicio,fin);
+  lista.innerHTML=registrosPagina.map(function(r){return `
+    <div class="resultado-item" id="registroPasado_${esc(r.id)}">
+      <div><strong>OT:</strong> ${esc(r.ot||"—")}</div>
+      <div><strong>Placa:</strong> ${esc(r.placa||"—")}</div>
+      <div><strong>VIN:</strong> ${esc(r.vin||"—")}</div>
+      <div><strong>Estado:</strong> ${esc(r.estado||"—")}</div>
+      <div><strong>Fecha ingreso / lavado:</strong> ${esc(formatearFechaRegularizacion(r.hora_inicio_lavado)||"—")}</div>
+      <div><strong>Servicio:</strong> ${esc(r.servicio||"—")}</div>
+      <div><strong>Marca:</strong> ${esc(r.marca||"—")}</div>
+      ${renderFotosRegistroPasado(r)}
+      <div style="margin-top:12px;"><button type="button" class="btn btn-primary" onclick="seleccionarRegistroPasado('${esc(r.id)}')">✏️ Seleccionar para editar</button></div>
+    </div>`;}).join("");
+  if(totalPaginas<=1){paginacion.innerHTML="";return;}
+  let botones=`<button type="button" class="btn btn-secondary" ${paginaRegistrosPasados===1?"disabled":""} onclick="cambiarPaginaRegistrosPasados(${paginaRegistrosPasados-1})">◀ Anterior</button>`;
+  for(let i=1;i<=totalPaginas;i++){botones+=`<button type="button" class="btn ${i===paginaRegistrosPasados?"btn-primary":"btn-secondary"}" onclick="cambiarPaginaRegistrosPasados(${i})">${i}</button>`;}
+  botones+=`<button type="button" class="btn btn-secondary" ${paginaRegistrosPasados===totalPaginas?"disabled":""} onclick="cambiarPaginaRegistrosPasados(${paginaRegistrosPasados+1})">Siguiente ▶</button>`;
+  paginacion.innerHTML=`<div class="paginacion-info">Mostrando ${inicio+1}-${Math.min(fin,total)} de ${total} registros</div><div class="paginacion-botones">${botones}</div>`;
+}
+
+function restaurarFormularioPasado(){
+  const formulario = document.getElementById("formularioPasado");
+  const placeholder = document.getElementById("formularioPasadoPlaceholder");
+  if(!formulario || !placeholder) return;
+
+  if(formulario.parentElement !== placeholder){
+    placeholder.appendChild(formulario);
+  }
+
+  formulario.style.display = "none";
+  formulario.classList.remove("formulario-pasado-inline");
+}
+
+function cambiarPaginaRegistrosPasados(pagina){
+  const totalPaginas=Math.ceil(registrosPasadosEncontrados.length/REGISTROS_PASADOS_POR_PAGINA);
+  if(pagina<1||pagina>totalPaginas)return;
+  paginaRegistrosPasados=pagina;
+  renderizarRegistrosPasadosPaginados();
+  const zona=document.getElementById("resultadoBusquedaPasado");
+  if(zona)zona.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
 async function buscarRegistroPasado(){
+  restaurarFormularioPasado();
   const terminoOriginal=document.getElementById("buscarPasado").value.trim();
   const termino=normalizarTexto(terminoOriginal);
   const terminoOT=normalizarOTBusqueda(terminoOriginal);
@@ -3059,6 +3192,13 @@ async function buscarRegistroPasado(){
     sinPlaca:document.getElementById("filtroPasadoSinPlaca")?.checked||false,
     sinVIN:document.getElementById("filtroPasadoSinVIN")?.checked||false,
     sinFotoVIN:document.getElementById("filtroPasadoSinFotoVIN")?.checked||false,
+
+    conOT:document.getElementById("filtroPasadoConOT")?.checked||false,
+    conFotoOT:document.getElementById("filtroPasadoConFotoOT")?.checked||false,
+    conPlaca:document.getElementById("filtroPasadoConPlaca")?.checked||false,
+    conVIN:document.getElementById("filtroPasadoConVIN")?.checked||false,
+    conFotoVIN:document.getElementById("filtroPasadoConFotoVIN")?.checked||false,
+
     tipo:document.getElementById("filtroPasadoTipo")?.value||""
   };
   const hayFiltros=
@@ -3067,6 +3207,11 @@ async function buscarRegistroPasado(){
     filtros.sinPlaca ||
     filtros.sinVIN ||
     filtros.sinFotoVIN ||
+    filtros.conOT ||
+    filtros.conFotoOT ||
+    filtros.conPlaca ||
+    filtros.conVIN ||
+    filtros.conFotoVIN ||
     !!filtros.tipo;
 
   registroPasadoSeleccionadoId=null;
@@ -3096,6 +3241,13 @@ async function buscarRegistroPasado(){
       if(filtros.sinVIN && String(r.vin||"").trim()!=="") return false;
       if(filtros.sinFotoVIN && String(r.foto_vin||"").trim()!=="") return false;
 
+      /* Filtros de campos que SÍ deben existir */
+      if(filtros.conOT && String(r.ot||"").trim()==="") return false;
+      if(filtros.conFotoOT && String(r.foto_ot||"").trim()==="") return false;
+      if(filtros.conPlaca && String(r.placa||"").trim()==="") return false;
+      if(filtros.conVIN && String(r.vin||"").trim()==="") return false;
+      if(filtros.conFotoVIN && String(r.foto_vin||"").trim()==="") return false;
+
       if(!termino) return true;
 
       const otRegistro=normalizarOTBusqueda(r.ot);
@@ -3109,6 +3261,7 @@ async function buscarRegistroPasado(){
     });
 
     registrosPasadosEncontrados=encontrados;
+    paginaRegistrosPasados=1;
 
     const filtrosTexto=[];
     if(filtros.sinOT) filtrosTexto.push("sin Nro. de OT");
@@ -3116,6 +3269,13 @@ async function buscarRegistroPasado(){
     if(filtros.sinPlaca) filtrosTexto.push("sin placa");
     if(filtros.sinVIN) filtrosTexto.push("sin VIN");
     if(filtros.sinFotoVIN) filtrosTexto.push("sin foto de VIN");
+
+    if(filtros.conOT) filtrosTexto.push("con Nro. de OT");
+    if(filtros.conFotoOT) filtrosTexto.push("con foto de OT");
+    if(filtros.conPlaca) filtrosTexto.push("con placa");
+    if(filtros.conVIN) filtrosTexto.push("con VIN");
+    if(filtros.conFotoVIN) filtrosTexto.push("con foto de VIN");
+
     if(filtros.tipo) filtrosTexto.push("tipo: " + filtros.tipo);
 
     if(!encontrados.length){
@@ -3127,24 +3287,12 @@ async function buscarRegistroPasado(){
           ${filtrosTexto.length?"— "+esc(filtrosTexto.join(" + ")):""}
           Seleccione el registro que desea revisar o editar.
         </div>
-        ${encontrados.slice(0,10).map(function(r){
-          return `
-            <div class="resultado-item" id="registroPasado_${esc(r.id)}">
-              <div><strong>OT:</strong> ${esc(r.ot||"—")}</div>
-              <div><strong>Placa:</strong> ${esc(r.placa||"—")}</div>
-              <div><strong>VIN:</strong> ${esc(r.vin||"—")}</div>
-              <div><strong>Estado:</strong> ${esc(r.estado||"—")}</div>
-              <div><strong>Fecha ingreso / lavado:</strong> ${esc(obtenerFechaHistorial(r.hora_inicio_lavado)||"—")}</div>
-              <div><strong>Servicio:</strong> ${esc(r.servicio||"—")}</div>
-              <div><strong>Marca:</strong> ${esc(r.marca||"—")}</div>
-              ${renderFotosRegistroPasado(r)}
-              <div style="margin-top:12px;">
-                <button type="button" class="btn btn-primary" onclick="seleccionarRegistroPasado('${esc(r.id)}')">✏️ Seleccionar para editar</button>
-              </div>
-            </div>`;
-        }).join("")}
+        <div id="listaRegistrosPasados"></div>
+        <div id="paginacionRegistrosPasados" class="paginacion-pasados"></div>
       `;
     }
+
+    if(encontrados.length){ renderizarRegistrosPasadosPaginados(); }
 
     document.getElementById("formularioPasado").style.display="block";
 
@@ -3157,13 +3305,51 @@ async function buscarRegistroPasado(){
   }
 }
 
+function configurarFiltrosExclusivosPasados(){
+
+  const pares = [
+    ["filtroPasadoSinOT","filtroPasadoConOT"],
+    ["filtroPasadoSinFotoOT","filtroPasadoConFotoOT"],
+    ["filtroPasadoSinPlaca","filtroPasadoConPlaca"],
+    ["filtroPasadoSinVIN","filtroPasadoConVIN"],
+    ["filtroPasadoSinFotoVIN","filtroPasadoConFotoVIN"]
+  ];
+
+  pares.forEach(function(par){
+
+    const sin = document.getElementById(par[0]);
+    const con = document.getElementById(par[1]);
+
+    if(!sin || !con) return;
+
+    sin.addEventListener("change", function(){
+      if(this.checked) con.checked = false;
+    });
+
+    con.addEventListener("change", function(){
+      if(this.checked) sin.checked = false;
+    });
+
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  configurarFiltrosExclusivosPasados();
+});
+
 function limpiarFiltrosPasados(){
+  restaurarFormularioPasado();
   [
     "filtroPasadoSinOT",
     "filtroPasadoSinFotoOT",
     "filtroPasadoSinPlaca",
     "filtroPasadoSinVIN",
-    "filtroPasadoSinFotoVIN"
+    "filtroPasadoSinFotoVIN",
+    "filtroPasadoConOT",
+    "filtroPasadoConFotoOT",
+    "filtroPasadoConPlaca",
+    "filtroPasadoConVIN",
+    "filtroPasadoConFotoVIN"
   ].forEach(function(id){
     const el=document.getElementById(id);
     if(el) el.checked=false;
@@ -3179,6 +3365,7 @@ function limpiarFiltrosPasados(){
   if(resultado) resultado.innerHTML="";
 
   registrosPasadosEncontrados=[];
+  paginaRegistrosPasados=1;
   registroPasadoSeleccionadoId=null;
   actualizarModoEdicionPasado();
 }
@@ -3193,7 +3380,7 @@ function actualizarModoEdicionPasado(){
     boton.innerHTML = "💾 Actualizar registro";
     if(aviso) aviso.style.display = "block";
   }else{
-    boton.innerHTML = "💾 Guardar registro pasado";
+    boton.innerHTML = "💾 Guardar regularización";
     if(aviso) aviso.style.display = "none";
   }
 }
@@ -3229,7 +3416,7 @@ function seleccionarRegistroPasado(id){
   document.getElementById("pasadoFotoOT").value = "";
   document.getElementById("pasadoFotoVIN").value = "";
 
-  const observaciones = registro.observaciones || registro.observaciones_finales || "";
+  const observaciones = registro.observaciones || "";
   document.getElementById("pasadoObservaciones").value = observaciones;
 
   document.querySelectorAll(".resultado-item").forEach(function(el){
@@ -3238,26 +3425,30 @@ function seleccionarRegistroPasado(id){
   });
 
   const tarjeta = document.getElementById("registroPasado_" + registro.id);
-  if(tarjeta){
-    tarjeta.style.borderColor = "#1d4ed8";
-    tarjeta.style.background = "#eff6ff";
+  if(!tarjeta){
+    mostrarAlerta("No se encontró la tarjeta del registro seleccionado.","error");
+    return;
   }
 
-  document.getElementById("formularioPasado").style.display = "block";
+  tarjeta.style.borderColor = "#1d4ed8";
+  tarjeta.style.background = "#eff6ff";
+
+  const formulario = document.getElementById("formularioPasado");
+  if(!formulario){
+    mostrarAlerta("No se encontró el formulario de edición.","error");
+    return;
+  }
+
+  /* Mostrar el formulario DENTRO de la tarjeta seleccionada.
+     Así ya no obliga al usuario a desplazarse hasta el final de la página. */
+  tarjeta.appendChild(formulario);
+  formulario.style.display = "block";
+  formulario.classList.add("formulario-pasado-inline");
+
   actualizarModoEdicionPasado();
 
-  document.getElementById("formularioPasado").scrollIntoView({behavior:"smooth", block:"start"});
-
-  mostrarAlerta(
-    "Registro seleccionado. Puede corregir la OT completa y los demás datos antes de actualizar.",
-    "success",
-    false
-  );
-
-  // Llevar al formulario de edición y evitar que la alerta devuelva la pantalla al inicio.
-  setTimeout(function(){
-    document.getElementById("formularioPasado").scrollIntoView({behavior:"smooth", block:"start"});
-  }, 50);
+  /* La tarjeta ya está visible: no hacemos scroll de toda la página. */
+  formulario.scrollIntoView({behavior:"smooth", block:"nearest"});
 }
 
 function urlMiniaturaDrive(url){
@@ -3330,16 +3521,6 @@ async function guardarRegistroPasado(){
     const archivoOT = document.getElementById("pasadoFotoOT").files[0];
     const archivoVIN = document.getElementById("pasadoFotoVIN").files[0];
 
-    if(tipo === "Servicio" && (!ot || !placa)){
-      mostrarAlerta("Para Servicio debe ingresar OT y placa.","error");
-      return;
-    }
-
-    if(tipo === "Nuevo" && !vin){
-      mostrarAlerta("Para Nuevo debe ingresar el VIN.","error");
-      return;
-    }
-
     if(!marca || !servicio || !fecha){
       mostrarAlerta("Complete marca, servicio y fecha de ingreso / lavado.","error");
       return;
@@ -3408,6 +3589,13 @@ async function guardarRegistroPasado(){
 
     if(registroPasadoSeleccionadoId){
 
+      // La observación final no se reemplaza si ya existe.
+      // Si estaba vacía, sí se completa como "Registro regularizado".
+      const registroOriginal = (registrosPasadosEncontrados || []).find(function(r){
+        return String(r.id) === String(registroPasadoSeleccionadoId);
+      });
+      const observacionFinalExistente = registroOriginal && String(registroOriginal.observaciones_finales || "").trim();
+
       const cambios = {
         tipo:tipo,
         ot:tipo === "Servicio" ? ot : "",
@@ -3418,7 +3606,7 @@ async function guardarRegistroPasado(){
         estado:"Finalizado",
         hora_inicio_lavado:fechaLavado,
         observaciones:observaciones,
-        observaciones_finales:"Registro regularizado"
+        observaciones_finales: observacionFinalExistente || "Registro regularizado"
       };
 
       if(fotos.fotoIngreso) cambios.foto_ingreso = fotos.fotoIngreso;
@@ -3448,12 +3636,33 @@ async function guardarRegistroPasado(){
         );
       }
 
-      limpiarRegistroPasado();
+      /*
+         Al editar un registro NO debemos borrar la búsqueda ni la lista de
+         resultados. Conservamos el término, filtros y página actual,
+         actualizamos los datos y volvemos a consultar para reflejar el cambio.
+      */
+      const paginaAntesDeActualizar = paginaRegistrosPasados;
+
+      limpiarCamposFormularioPasadoSinResultados();
+      registroPasadoSeleccionadoId = null;
+
       mostrarPopup(
         "Registro actualizado",
         "La OT y los datos del registro fueron actualizados correctamente.",
         "success"
       );
+
+      await buscarRegistroPasado();
+
+      const totalPaginasActualizadas = Math.max(
+        1,
+        Math.ceil(registrosPasadosEncontrados.length / REGISTROS_PASADOS_POR_PAGINA)
+      );
+      paginaRegistrosPasados = Math.min(paginaAntesDeActualizar, totalPaginasActualizadas);
+      if(registrosPasadosEncontrados.length){
+        renderizarRegistrosPasadosPaginados();
+      }
+      restaurarFormularioPasado();
 
     }else{
 
@@ -3508,28 +3717,87 @@ async function guardarRegistroPasado(){
       );
     }
 
-    await cargarDatos();
+    // El registro ya fue guardado correctamente en Supabase.
+    // La actualización visual de Seguimiento no debe convertir un guardado
+    // exitoso en un mensaje de error si alguna función de refresco de la UI falla.
+    try{
+      await cargarDatos();
+    }catch(errorRefresco){
+      console.warn("El registro se guardó, pero no se pudo refrescar la vista:", errorRefresco);
+    }
 
   }catch(error){
 
     console.error("Error guardando registro pasado:",error);
-    mostrarAlerta("No se pudo guardar el registro pasado: " + error.message,"error");
+    mostrarAlerta("No se pudo guardar la regularización: " + error.message,"error");
 
   }finally{
-    boton.disabled = false;
-    loading.style.display = "none";
+    if(boton) boton.disabled = false;
+    if(loading) loading.style.display = "none";
     actualizarModoEdicionPasado();
   }
 }
 
+function limpiarCamposFormularioPasadoSinResultados(){
+  const ids = [
+    "pasadoOT",
+    "pasadoPlaca",
+    "pasadoVIN",
+    "pasadoMarca",
+    "pasadoFecha",
+    "pasadoObservaciones",
+    "pasadoFotoIngreso",
+    "pasadoFotoOT",
+    "pasadoFotoVIN"
+  ];
+
+  ids.forEach(function(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    if(el.type === "file") el.value = "";
+    else el.value = "";
+  });
+
+  const servicio = document.getElementById("pasadoServicio");
+  if(servicio) servicio.value = "Lavado básico";
+
+  const opcionServicio = document.querySelector('input[name="tipoPasado"][value="Servicio"]');
+  if(opcionServicio) opcionServicio.checked = true;
+  cambiarTipoPasado("Servicio");
+
+  const hoyLima = obtenerFechaHistorial(new Date().toISOString());
+  const fecha = document.getElementById("pasadoFecha");
+  if(fecha) fecha.value = hoyLima;
+}
+
 function limpiarRegistroPasado(){
+
+  /*
+     El formulario de regularización puede estar temporalmente dentro de la
+     tarjeta seleccionada. Primero lo devolvemos a su posición original antes
+     de limpiar el contenedor de resultados. Si se limpia primero, el innerHTML
+     elimina el formulario y luego getElementById(...) devuelve null.
+  */
+  const formulario = document.getElementById("formularioPasado");
+  const anclaFormulario = document.getElementById("formularioPasadoAnchor");
+
+  if(formulario && anclaFormulario && anclaFormulario.parentNode){
+    anclaFormulario.parentNode.insertBefore(formulario, anclaFormulario.nextSibling);
+  }
+
+  if(formulario){
+    formulario.style.display = "none";
+    formulario.classList.remove("formulario-pasado-inline");
+  }
 
   registroPasadoSeleccionadoId = null;
   registrosPasadosEncontrados = [];
 
-  document.getElementById("buscarPasado").value = "";
-  document.getElementById("resultadoBusquedaPasado").innerHTML = "";
-  document.getElementById("formularioPasado").style.display = "none";
+  const buscarPasado = document.getElementById("buscarPasado");
+  const resultadoBusquedaPasado = document.getElementById("resultadoBusquedaPasado");
+
+  if(buscarPasado) buscarPasado.value = "";
+  if(resultadoBusquedaPasado) resultadoBusquedaPasado.innerHTML = "";
 
   document.getElementById("pasadoOT").value = "";
   document.getElementById("pasadoPlaca").value = "";
@@ -4988,6 +5256,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V2.8</div>
+<div class="version-app">V3.0</div>
 </body>
 </html>
