@@ -778,6 +778,19 @@ th.col-vin {
 .paginacion-botones{display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap;}
 .paginacion-botones .btn{min-width:42px;}
 .paginacion-botones .btn:disabled{opacity:.45;cursor:not-allowed;}
+
+/* Formulario de regularización dentro de la tarjeta seleccionada */
+.formulario-pasado-inline {
+  margin-top: 18px !important;
+  width: 100% !important;
+  box-sizing: border-box;
+  border: 1px solid #bfdbfe;
+  background: #ffffff;
+}
+
+.formulario-pasado-inline h2 {
+  margin-top: 0;
+}
 </style>
 
 </head>
@@ -1471,6 +1484,8 @@ onclick="buscarRegistroPasado()">
 <div id="resultadoBusquedaPasado" class="past-search-result"></div>
 
 </div>
+
+<div id="formularioPasadoPlaceholder"></div>
 
 <div id="formularioPasado" class="card" style="display:none;">
 
@@ -3139,6 +3154,19 @@ function renderizarRegistrosPasadosPaginados(){
   paginacion.innerHTML=`<div class="paginacion-info">Mostrando ${inicio+1}-${Math.min(fin,total)} de ${total} registros</div><div class="paginacion-botones">${botones}</div>`;
 }
 
+function restaurarFormularioPasado(){
+  const formulario = document.getElementById("formularioPasado");
+  const placeholder = document.getElementById("formularioPasadoPlaceholder");
+  if(!formulario || !placeholder) return;
+
+  if(formulario.parentElement !== placeholder){
+    placeholder.appendChild(formulario);
+  }
+
+  formulario.style.display = "none";
+  formulario.classList.remove("formulario-pasado-inline");
+}
+
 function cambiarPaginaRegistrosPasados(pagina){
   const totalPaginas=Math.ceil(registrosPasadosEncontrados.length/REGISTROS_PASADOS_POR_PAGINA);
   if(pagina<1||pagina>totalPaginas)return;
@@ -3149,6 +3177,7 @@ function cambiarPaginaRegistrosPasados(pagina){
 }
 
 async function buscarRegistroPasado(){
+  restaurarFormularioPasado();
   const terminoOriginal=document.getElementById("buscarPasado").value.trim();
   const termino=normalizarTexto(terminoOriginal);
   const terminoOT=normalizarOTBusqueda(terminoOriginal);
@@ -3306,6 +3335,7 @@ document.addEventListener("DOMContentLoaded", function(){
 });
 
 function limpiarFiltrosPasados(){
+  restaurarFormularioPasado();
   [
     "filtroPasadoSinOT",
     "filtroPasadoSinFotoOT",
@@ -3383,8 +3413,6 @@ function seleccionarRegistroPasado(id){
   document.getElementById("pasadoFotoOT").value = "";
   document.getElementById("pasadoFotoVIN").value = "";
 
-  // Solo cargar la observación inicial en el campo editable.
-  // La observación final pertenece al cierre del lavado y no debe modificarse desde Regularizar registros.
   const observaciones = registro.observaciones || "";
   document.getElementById("pasadoObservaciones").value = observaciones;
 
@@ -3394,26 +3422,30 @@ function seleccionarRegistroPasado(id){
   });
 
   const tarjeta = document.getElementById("registroPasado_" + registro.id);
-  if(tarjeta){
-    tarjeta.style.borderColor = "#1d4ed8";
-    tarjeta.style.background = "#eff6ff";
+  if(!tarjeta){
+    mostrarAlerta("No se encontró la tarjeta del registro seleccionado.","error");
+    return;
   }
 
-  document.getElementById("formularioPasado").style.display = "block";
+  tarjeta.style.borderColor = "#1d4ed8";
+  tarjeta.style.background = "#eff6ff";
+
+  const formulario = document.getElementById("formularioPasado");
+  if(!formulario){
+    mostrarAlerta("No se encontró el formulario de edición.","error");
+    return;
+  }
+
+  /* Mostrar el formulario DENTRO de la tarjeta seleccionada.
+     Así ya no obliga al usuario a desplazarse hasta el final de la página. */
+  tarjeta.appendChild(formulario);
+  formulario.style.display = "block";
+  formulario.classList.add("formulario-pasado-inline");
+
   actualizarModoEdicionPasado();
 
-  document.getElementById("formularioPasado").scrollIntoView({behavior:"smooth", block:"start"});
-
-  mostrarAlerta(
-    "Registro seleccionado. Puede corregir la OT completa y los demás datos antes de actualizar.",
-    "success",
-    false
-  );
-
-  // Llevar al formulario de edición y evitar que la alerta devuelva la pantalla al inicio.
-  setTimeout(function(){
-    document.getElementById("formularioPasado").scrollIntoView({behavior:"smooth", block:"start"});
-  }, 50);
+  /* La tarjeta ya está visible: no hacemos scroll de toda la página. */
+  formulario.scrollIntoView({behavior:"smooth", block:"nearest"});
 }
 
 function urlMiniaturaDrive(url){
@@ -3485,16 +3517,6 @@ async function guardarRegistroPasado(){
     const archivoIngreso = document.getElementById("pasadoFotoIngreso").files[0];
     const archivoOT = document.getElementById("pasadoFotoOT").files[0];
     const archivoVIN = document.getElementById("pasadoFotoVIN").files[0];
-
-    if(tipo === "Servicio" && (!ot || !placa)){
-      mostrarAlerta("Para Servicio debe ingresar OT y placa.","error");
-      return;
-    }
-
-    if(tipo === "Nuevo" && !vin){
-      mostrarAlerta("Para Nuevo debe ingresar el VIN.","error");
-      return;
-    }
 
     if(!marca || !servicio || !fecha){
       mostrarAlerta("Complete marca, servicio y fecha de ingreso / lavado.","error");
@@ -5151,6 +5173,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V3.1</div>
+<div class="version-app">V2.8</div>
 </body>
 </html>
