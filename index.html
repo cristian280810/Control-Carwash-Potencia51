@@ -1762,46 +1762,37 @@ id="tablaHistorial">
 
     <div class="form-grid" style="margin-top:12px;">
 
-  <div class="form-group">
-    <label>📷 Foto de ingreso</label>
-    <input
-      id="editarFotoIngreso"
-      type="file"
-      accept="image/*"
-      capture="environment">
-    <small
-      id="estadoFotoIngreso"
-      style="display:block;margin-top:5px;">
-    </small>
-  </div>
+      <div class="form-group">
+        <label>📷 Foto de ingreso</label>
+        <input id="editarFotoIngreso" type="file" accept="image/*" style="display:none;"
+          onchange="mostrarNombreFotoEditar(this,'nombreFotoIngreso')">
+        <button type="button" id="btnCamaraIngreso" class="btn btn-primary"
+          onclick="abrirCamaraEditar('editarFotoIngreso')">📷 Tomar foto</button>
+        <small id="nombreFotoIngreso" style="display:block;margin-top:5px;"></small>
+        <small id="estadoFotoIngreso" style="display:block;margin-top:5px;"></small>
+      </div>
 
-  <div class="form-group">
-    <label>📷 Foto de OT</label>
-    <input
-      id="editarFotoOT"
-      type="file"
-      accept="image/*"
-      capture="environment">
-    <small
-      id="estadoFotoOT"
-      style="display:block;margin-top:5px;">
-    </small>
-  </div>
+      <div class="form-group">
+        <label>📷 Foto de OT</label>
+        <input id="editarFotoOT" type="file" accept="image/*" style="display:none;"
+          onchange="mostrarNombreFotoEditar(this,'nombreFotoOT')">
+        <button type="button" id="btnCamaraOT" class="btn btn-primary"
+          onclick="abrirCamaraEditar('editarFotoOT')">📷 Tomar foto</button>
+        <small id="nombreFotoOT" style="display:block;margin-top:5px;"></small>
+        <small id="estadoFotoOT" style="display:block;margin-top:5px;"></small>
+      </div>
 
-  <div class="form-group">
-    <label>📷 Foto de VIN</label>
-    <input
-      id="editarFotoVIN"
-      type="file"
-      accept="image/*"
-      capture="environment">
-    <small
-      id="estadoFotoVIN"
-      style="display:block;margin-top:5px;">
-    </small>
-  </div>
+      <div class="form-group">
+        <label>📷 Foto de VIN</label>
+        <input id="editarFotoVIN" type="file" accept="image/*" style="display:none;"
+          onchange="mostrarNombreFotoEditar(this,'nombreFotoVIN')">
+        <button type="button" id="btnCamaraVIN" class="btn btn-primary"
+          onclick="abrirCamaraEditar('editarFotoVIN')">📷 Tomar foto</button>
+        <small id="nombreFotoVIN" style="display:block;margin-top:5px;"></small>
+        <small id="estadoFotoVIN" style="display:block;margin-top:5px;"></small>
+      </div>
 
-</div>
+    </div>
 
     <div style="margin-top:8px;font-size:13px;color:#666;">
       Las fotografías que ya existen se conservan. Solo se subirán las fotografías que estén faltantes y que selecciones.
@@ -1812,6 +1803,38 @@ id="tablaHistorial">
     <div class="actions">
       <button id="btnGuardarEdicion" class="btn btn-primary" onclick="guardarEdicion()">💾 Guardar cambios</button>
       <button class="btn btn-secondary" onclick="cerrarEditar()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- =====================================================
+     MODAL CÁMARA PARA EDICIÓN
+===================================================== -->
+
+<div id="modalCamaraEditar" class="modal">
+  <div class="modal-content" style="max-width:520px;">
+    <div class="modal-header">
+      <h2>📷 Tomar fotografía</h2>
+      <button type="button" class="close" onclick="cerrarCamaraEditar()">×</button>
+    </div>
+
+    <div style="text-align:center;margin-top:15px;">
+      <video id="videoCamaraEditar" autoplay playsinline muted
+        style="width:100%;max-height:60vh;object-fit:cover;border-radius:10px;background:#111;"></video>
+
+      <canvas id="canvasCamaraEditar" style="display:none;"></canvas>
+
+      <div id="errorCamaraEditar"
+        style="display:none;margin-top:12px;padding:12px;border-radius:8px;background:#fee2e2;color:#991b1b;">
+      </div>
+
+      <div class="actions" style="justify-content:center;">
+        <button type="button" class="btn btn-success"
+          onclick="capturarFotoEditar()">📸 Capturar foto</button>
+        <button type="button" class="btn btn-secondary"
+          onclick="cerrarCamaraEditar()">Cancelar</button>
+      </div>
     </div>
   </div>
 </div>
@@ -3405,6 +3428,18 @@ function abrirEditar(id){
   inputOT.disabled = !!registro.fotoOT;
   inputVIN.disabled = !!registro.fotoVIN;
 
+  const btnCamaraIngreso = document.getElementById("btnCamaraIngreso");
+  const btnCamaraOT = document.getElementById("btnCamaraOT");
+  const btnCamaraVIN = document.getElementById("btnCamaraVIN");
+
+  if(btnCamaraIngreso) btnCamaraIngreso.disabled = !!registro.fotoIngreso;
+  if(btnCamaraOT) btnCamaraOT.disabled = !!registro.fotoOT;
+  if(btnCamaraVIN) btnCamaraVIN.disabled = !!registro.fotoVIN;
+
+  document.getElementById("nombreFotoIngreso").textContent = "";
+  document.getElementById("nombreFotoOT").textContent = "";
+  document.getElementById("nombreFotoVIN").textContent = "";
+
   document.getElementById("estadoFotoIngreso").textContent = registro.fotoIngreso
     ? "✅ Ya existe una foto de ingreso"
     : "⚠️ Foto faltante: puedes subirla";
@@ -3426,6 +3461,165 @@ function abrirEditar(id){
 function cerrarEditar(){
   document.getElementById("modalEditar").classList.remove("active");
 }
+
+
+/* =====================================================
+   CÁMARA DIRECTA PARA FOTOS DE EDICIÓN
+===================================================== */
+
+let streamCamaraEditar = null;
+let inputCamaraEditarActual = null;
+
+async function abrirCamaraEditar(inputId){
+
+  const input = document.getElementById(inputId);
+
+  if(!input){
+    mostrarAlerta("No se encontró el campo de fotografía.","error");
+    return;
+  }
+
+  if(input.disabled){
+    mostrarAlerta("Esta fotografía ya existe y no puede reemplazarse.","error");
+    return;
+  }
+
+  inputCamaraEditarActual = inputId;
+
+  const modal = document.getElementById("modalCamaraEditar");
+  const video = document.getElementById("videoCamaraEditar");
+  const error = document.getElementById("errorCamaraEditar");
+
+  error.style.display = "none";
+  error.textContent = "";
+  modal.classList.add("active");
+
+  try{
+
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      throw new Error("El navegador no permite acceso directo a la cámara.");
+    }
+
+    streamCamaraEditar = await navigator.mediaDevices.getUserMedia({
+      video:{
+        facingMode:{ideal:"environment"},
+        width:{ideal:1920},
+        height:{ideal:1080}
+      },
+      audio:false
+    });
+
+    video.srcObject = streamCamaraEditar;
+    await video.play();
+
+  }catch(errorCamara){
+
+    console.error("ERROR CÁMARA:",errorCamara);
+
+    error.textContent =
+      "No se pudo abrir la cámara. Verifique que Chrome tenga permiso para usar la cámara y vuelva a intentarlo.";
+
+    error.style.display = "block";
+  }
+}
+
+
+function capturarFotoEditar(){
+
+  const video = document.getElementById("videoCamaraEditar");
+  const canvas = document.getElementById("canvasCamaraEditar");
+
+  if(!video || !video.videoWidth || !video.videoHeight){
+    mostrarAlerta("La cámara todavía no está lista. Espere un momento.","error");
+    return;
+  }
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  const ctx = canvas.getContext("2d");
+
+  ctx.drawImage(video,0,0,canvas.width,canvas.height);
+
+  canvas.toBlob(function(blob){
+
+    if(!blob){
+      mostrarAlerta("No se pudo capturar la fotografía.","error");
+      return;
+    }
+
+    const archivo = new File(
+      [blob],
+      "foto_" + Date.now() + ".jpg",
+      {type:"image/jpeg",lastModified:Date.now()}
+    );
+
+    const input = document.getElementById(inputCamaraEditarActual);
+
+    if(!input){
+      cerrarCamaraEditar();
+      return;
+    }
+
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(archivo);
+    input.files = dataTransfer.files;
+
+    const nombreElemento =
+      inputCamaraEditarActual === "editarFotoIngreso"
+        ? "nombreFotoIngreso"
+        : inputCamaraEditarActual === "editarFotoOT"
+          ? "nombreFotoOT"
+          : "nombreFotoVIN";
+
+    mostrarNombreFotoEditar(input,nombreElemento);
+    cerrarCamaraEditar();
+
+  },"image/jpeg",0.90);
+}
+
+
+function cerrarCamaraEditar(){
+
+  const video = document.getElementById("videoCamaraEditar");
+
+  if(streamCamaraEditar){
+    streamCamaraEditar.getTracks().forEach(function(track){
+      track.stop();
+    });
+    streamCamaraEditar = null;
+  }
+
+  if(video){
+    video.srcObject = null;
+  }
+
+  const modal = document.getElementById("modalCamaraEditar");
+
+  if(modal){
+    modal.classList.remove("active");
+  }
+
+  inputCamaraEditarActual = null;
+}
+
+
+function mostrarNombreFotoEditar(input,elementoId){
+
+  const elemento = document.getElementById(elementoId);
+
+  if(!elemento){
+    return;
+  }
+
+  if(input.files && input.files.length > 0){
+    elemento.textContent = "📸 Foto tomada correctamente";
+    elemento.style.color = "#16a34a";
+  }else{
+    elemento.textContent = "";
+  }
+}
+
 
 async function guardarEdicion(){
 
