@@ -775,7 +775,10 @@ Número de OT
 <input
 id="ot"
 type="text"
-placeholder="Número de OT">
+placeholder="Número de OT"
+autocomplete="off"
+style="text-transform:uppercase"
+oninput="this.value=this.value.toUpperCase()">
 
 </div>
 
@@ -816,7 +819,10 @@ Placa *
 <input
 id="placa"
 type="text"
-placeholder="Placa">
+placeholder="Placa"
+autocomplete="off"
+style="text-transform:uppercase"
+oninput="this.value=this.value.toUpperCase()">
 
 </div>
 
@@ -837,7 +843,10 @@ VIN
 <input
 id="vin"
 type="text"
-placeholder="VIN">
+placeholder="VIN"
+autocomplete="off"
+style="text-transform:uppercase"
+oninput="this.value=this.value.toUpperCase()">
 
 </div>
 
@@ -1237,17 +1246,17 @@ onclick="buscarRegistroPasado()">
 
 <div id="pasadoCampoOT" class="form-group">
 <label>Número de OT</label>
-<input id="pasadoOT" type="text" placeholder="Ingrese número de OT">
+<input id="pasadoOT" type="text" placeholder="Ingrese número de OT" autocomplete="off" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
 </div>
 
 <div id="pasadoCampoPlaca" class="form-group">
 <label>Placa *</label>
-<input id="pasadoPlaca" type="text" placeholder="Ingrese placa">
+<input id="pasadoPlaca" type="text" placeholder="Ingrese placa" autocomplete="off" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
 </div>
 
 <div id="pasadoCampoVIN" class="form-group" style="display:none">
 <label>VIN *</label>
-<input id="pasadoVIN" type="text" placeholder="Ingrese VIN">
+<input id="pasadoVIN" type="text" placeholder="Ingrese VIN" autocomplete="off" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
 </div>
 
 <div class="form-group">
@@ -1855,15 +1864,15 @@ id="tablaHistorial">
     <div class="form-grid">
       <div class="form-group">
         <label>OT</label>
-        <input id="editarOT" type="text">
+        <input id="editarOT" type="text" autocomplete="off" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
       </div>
       <div class="form-group">
         <label>Placa</label>
-        <input id="editarPlaca" type="text">
+        <input id="editarPlaca" type="text" autocomplete="off" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
       </div>
       <div class="form-group">
         <label>Número de VIN</label>
-        <input id="editarVIN" type="text">
+        <input id="editarVIN" type="text" autocomplete="off" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
       </div>
       <div class="form-group">
         <label>Marca</label>
@@ -2466,9 +2475,9 @@ const loading = document.getElementById("loadingRegistro");
 try{
 
 const tipo = document.querySelector('input[name="tipo"]:checked').value;
-const ot = document.getElementById("ot").value.trim();
-const placa = document.getElementById("placa").value.trim();
-const vin = document.getElementById("vin").value.trim();
+const ot = document.getElementById("ot").value.trim().toUpperCase();
+const placa = document.getElementById("placa").value.trim().toUpperCase();
+const vin = document.getElementById("vin").value.trim().toUpperCase();
 const marca = document.getElementById("marca").value;
 const modelo = "";
 const servicio = document.getElementById("servicio").value.trim();
@@ -2606,6 +2615,13 @@ mostrarAlerta("No se pudo registrar el vehículo: " + error.message,"error");
 /* =====================================================
    DUPLICADOS
 ===================================================== */
+
+function normalizarOTBusqueda(valor){
+  return String(valor || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+}
 
 function normalizarTexto(valor){
   return String(valor || "")
@@ -2830,6 +2846,7 @@ async function buscarRegistroPasado(){
 
   const terminoOriginal = document.getElementById("buscarPasado").value.trim();
   const termino = normalizarTexto(terminoOriginal);
+  const terminoOT = normalizarOTBusqueda(terminoOriginal);
   const resultado = document.getElementById("resultadoBusquedaPasado");
 
   registroPasadoSeleccionadoId = null;
@@ -2846,28 +2863,45 @@ async function buscarRegistroPasado(){
   try{
 
     const existentes = await obtenerTodosLosRegistros();
+
     const encontrados = (existentes || []).filter(function(r){
-      const texto = [r.ot,r.placa,r.vin]
-        .map(function(x){ return normalizarTexto(x); })
-        .join(" ");
-      return texto.includes(termino);
+
+      /*
+         OT: NO se eliminan los separadores "/".
+         Esto evita coincidencias falsas entre partes de la OT.
+         Ejemplo: OT9/1112/2026 NO debe coincidir con "22".
+      */
+      const otRegistro = normalizarOTBusqueda(r.ot);
+      const coincideOT = terminoOT && otRegistro.includes(terminoOT);
+
+      /* Placa y VIN mantienen búsqueda parcial normalizada. */
+      const placaRegistro = normalizarTexto(r.placa);
+      const vinRegistro = normalizarTexto(r.vin);
+
+      const coincidePlaca = placaRegistro.includes(termino);
+      const coincideVIN = vinRegistro.includes(termino);
+
+      return coincideOT || coincidePlaca || coincideVIN;
     });
 
     registrosPasadosEncontrados = encontrados;
 
     if(!encontrados.length){
+
       resultado.innerHTML = `
         <div class="alert success">
           ✅ No se encontró un registro con "${esc(terminoOriginal)}".
           Puede ingresar el lavado pasado y regularizarlo.
         </div>`;
+
     }else{
+
       resultado.innerHTML = `
         <div class="alert error">
           ⚠️ Se encontraron ${encontrados.length} registro(s) relacionados.
           Seleccione el registro que desea revisar o editar.
         </div>
-        ${encontrados.slice(0,10).map(function(r, indice){
+        ${encontrados.slice(0,10).map(function(r){
           return `
             <div class="resultado-item" id="registroPasado_${esc(r.id)}">
               <div><strong>OT:</strong> ${esc(r.ot || "—")}</div>
@@ -2892,7 +2926,7 @@ async function buscarRegistroPasado(){
 
     /* Si la búsqueda corresponde a una OT abreviada, dejamos el formulario
        disponible para que el usuario pueda escribir la OT completa. */
-    const ot = terminoOriginal;
+    const ot = terminoOriginal.toUpperCase();
     if(ot && !document.getElementById("pasadoOT").value){
       document.getElementById("pasadoOT").value = ot;
     }
@@ -2938,9 +2972,9 @@ function seleccionarRegistroPasado(id){
   }
   cambiarTipoPasado(tipo);
 
-  document.getElementById("pasadoOT").value = registro.ot || "";
-  document.getElementById("pasadoPlaca").value = registro.placa || "";
-  document.getElementById("pasadoVIN").value = registro.vin || "";
+  document.getElementById("pasadoOT").value = String(registro.ot || "").toUpperCase();
+  document.getElementById("pasadoPlaca").value = String(registro.placa || "").toUpperCase();
+  document.getElementById("pasadoVIN").value = String(registro.vin || "").toUpperCase();
   document.getElementById("pasadoMarca").value = registro.marca || "";
   document.getElementById("pasadoServicio").value = registro.servicio || "Lavado básico";
   document.getElementById("pasadoFecha").value = obtenerFechaHistorial(registro.hora_inicio_lavado) || "";
@@ -3038,9 +3072,9 @@ async function guardarRegistroPasado(){
   try{
 
     const tipo = document.querySelector('input[name="tipoPasado"]:checked').value;
-    const ot = document.getElementById("pasadoOT").value.trim();
-    const placa = document.getElementById("pasadoPlaca").value.trim();
-    const vin = document.getElementById("pasadoVIN").value.trim();
+    const ot = document.getElementById("pasadoOT").value.trim().toUpperCase();
+    const placa = document.getElementById("pasadoPlaca").value.trim().toUpperCase();
+    const vin = document.getElementById("pasadoVIN").value.trim().toUpperCase();
     const marca = document.getElementById("pasadoMarca").value;
     const servicio = document.getElementById("pasadoServicio").value;
     const fecha = document.getElementById("pasadoFecha").value;
@@ -3650,9 +3684,9 @@ async function guardarEdicion(){
 
   try{
     const id = document.getElementById("idEditar").value.trim();
-    const ot = document.getElementById("editarOT").value.trim();
-    const placa = document.getElementById("editarPlaca").value.trim();
-    const vin = document.getElementById("editarVIN").value.trim();
+    const ot = document.getElementById("editarOT").value.trim().toUpperCase();
+    const placa = document.getElementById("editarPlaca").value.trim().toUpperCase();
+    const vin = document.getElementById("editarVIN").value.trim().toUpperCase();
     const marca = document.getElementById("editarMarca").value;
 
     if(!id){
@@ -4112,12 +4146,27 @@ const filtrados = (filas || []).map(function(r){
   };
 }).filter(function(r){
 
-  const texto = [r.ot,r.placa,r.vin,r.marca,r.modelo,r.servicio]
+  /*
+     BÚSQUEDA DE HISTORIAL
+     - La placa se compara ignorando guiones.
+       Ejemplo:
+       ABC-123 = ABC123
+       Si se busca ABC-123 o ABC123, ambos encuentran la misma placa.
+     - OT, VIN, marca, modelo y servicio mantienen su búsqueda normal.
+  */
+  const textoGeneral = [r.ot,r.vin,r.marca,r.modelo,r.servicio]
     .map(function(x){ return String(x || ""); })
     .join(" ")
     .toLowerCase();
 
-  const cumpleTexto = !buscar || texto.includes(buscar);
+  const placaNormalizada = normalizarTexto(r.placa);
+  const terminoPlacaNormalizado = normalizarTexto(buscar);
+
+  const cumpleTexto =
+    !buscar ||
+    textoGeneral.includes(buscar) ||
+    placaNormalizada.includes(terminoPlacaNormalizado);
+
   const cumpleTipo = !tipoFiltro || String(r.tipo || "").trim() === tipoFiltro;
 
   // El filtro de fecha usa exactamente la misma fecha que se muestra
@@ -4668,6 +4717,23 @@ function(){
 
   cambiarTipo("Servicio");
 
+  [
+    "ot", "placa", "vin",
+    "pasadoOT", "pasadoPlaca", "pasadoVIN",
+    "editarOT", "editarPlaca", "editarVIN"
+  ].forEach(function(id){
+    const campo = document.getElementById(id);
+    if(!campo) return;
+
+    campo.style.textTransform = "uppercase";
+    campo.addEventListener("input", function(){
+      const inicio = this.selectionStart;
+      const fin = this.selectionEnd;
+      this.value = this.value.toUpperCase();
+      try{ this.setSelectionRange(inicio, fin); }catch(e){}
+    });
+  });
+
 }
 );
 
@@ -4676,6 +4742,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V2.3</div>
+<div class="version-app">V2.5</div>
 </body>
 </html>
