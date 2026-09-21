@@ -3635,12 +3635,33 @@ async function guardarRegistroPasado(){
         );
       }
 
-      limpiarRegistroPasado();
+      /*
+         Al editar un registro NO debemos borrar la búsqueda ni la lista de
+         resultados. Conservamos el término, filtros y página actual,
+         actualizamos los datos y volvemos a consultar para reflejar el cambio.
+      */
+      const paginaAntesDeActualizar = paginaRegistrosPasados;
+
+      limpiarCamposFormularioPasadoSinResultados();
+      registroPasadoSeleccionadoId = null;
+
       mostrarPopup(
         "Registro actualizado",
         "La OT y los datos del registro fueron actualizados correctamente.",
         "success"
       );
+
+      await buscarRegistroPasado();
+
+      const totalPaginasActualizadas = Math.max(
+        1,
+        Math.ceil(registrosPasadosEncontrados.length / REGISTROS_PASADOS_POR_PAGINA)
+      );
+      paginaRegistrosPasados = Math.min(paginaAntesDeActualizar, totalPaginasActualizadas);
+      if(registrosPasadosEncontrados.length){
+        renderizarRegistrosPasadosPaginados();
+      }
+      restaurarFormularioPasado();
 
     }else{
 
@@ -3714,6 +3735,38 @@ async function guardarRegistroPasado(){
     if(loading) loading.style.display = "none";
     actualizarModoEdicionPasado();
   }
+}
+
+function limpiarCamposFormularioPasadoSinResultados(){
+  const ids = [
+    "pasadoOT",
+    "pasadoPlaca",
+    "pasadoVIN",
+    "pasadoMarca",
+    "pasadoFecha",
+    "pasadoObservaciones",
+    "pasadoFotoIngreso",
+    "pasadoFotoOT",
+    "pasadoFotoVIN"
+  ];
+
+  ids.forEach(function(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    if(el.type === "file") el.value = "";
+    else el.value = "";
+  });
+
+  const servicio = document.getElementById("pasadoServicio");
+  if(servicio) servicio.value = "Lavado básico";
+
+  const opcionServicio = document.querySelector('input[name="tipoPasado"][value="Servicio"]');
+  if(opcionServicio) opcionServicio.checked = true;
+  cambiarTipoPasado("Servicio");
+
+  const hoyLima = obtenerFechaHistorial(new Date().toISOString());
+  const fecha = document.getElementById("pasadoFecha");
+  if(fecha) fecha.value = hoyLima;
 }
 
 function limpiarRegistroPasado(){
@@ -5202,6 +5255,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V2.8</div>
+<div class="version-app">V3.0</div>
 </body>
 </html>
