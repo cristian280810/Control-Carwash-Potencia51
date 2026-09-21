@@ -560,6 +560,14 @@ th{
   color:#4b5563;
 }
 
+/* Versión de la aplicación */
+.version-app{
+  text-align:right;
+  margin:8px 20px 18px;
+  font-size:11px;
+  color:#9ca3af;
+}
+
 </style>
 
 </head>
@@ -1695,6 +1703,8 @@ id="tablaHistorial">
 </div>
 
 
+
+<div class="version-app">V2.3</div>
 
 <!-- =====================================================
      POPUP DE MENSAJE
@@ -3402,21 +3412,27 @@ function renderSeguimiento(){
  
  
     /* ---------------------------------------------
-       VEHÍCULO LAVANDO
+       ACCIONES
     --------------------------------------------- */
 
-    if(r.estado === "Lavando"){ 
- 
-      acciones = 
+    if(r.estado === "Lavando"){
+
+      acciones =
       `
         <button class="btn btn-secondary btn-editar" onclick="abrirEditar('${esc(r.id)}')" title="Editar datos">✏️</button>
-        <button 
-          class="btn btn-success" 
+        <button
+          class="btn btn-success"
           onclick="abrirFinalizar('${esc(r.id)}')">
           ✅ Finalizar lavado
         </button>
-      `; 
- 
+      `;
+
+    }else if(r.estado === "Finalizado" && esRegistroIncompletoParaSeguimiento(r)){
+
+      acciones =
+      `
+        <button class="btn btn-secondary btn-editar" onclick="abrirEditar('${esc(r.id)}')" title="Completar datos faltantes">✏️ Completar</button>
+      `;
     } 
  
  
@@ -3504,6 +3520,43 @@ function abrirEditar(id){
   document.getElementById("editarPlaca").value = registro.placa || "";
   document.getElementById("editarVIN").value = registro.vin || "";
   document.getElementById("editarMarca").value = registro.marca || "";
+
+  const grupoOT = document.getElementById("editarOT").closest(".form-group");
+  const grupoPlaca = document.getElementById("editarPlaca").closest(".form-group");
+  const grupoVIN = document.getElementById("editarVIN").closest(".form-group");
+  const grupoMarca = document.getElementById("editarMarca").closest(".form-group");
+  const grupoFotoIngreso = document.getElementById("editarFotoIngreso").closest(".form-group");
+  const grupoFotoOT = document.getElementById("editarFotoOT").closest(".form-group");
+  const grupoFotoVIN = document.getElementById("editarFotoVIN").closest(".form-group");
+
+  const soloFaltantes = registro.estado === "Finalizado" && esRegistroIncompletoParaSeguimiento(registro);
+
+  if(soloFaltantes){
+    const esServicio = String(registro.tipo || "").trim() === "Servicio";
+    const faltaOT = !String(registro.ot || "").trim();
+    const faltaFotoOT = !String(registro.fotoOT || "").trim();
+    const faltaVIN = !String(registro.vin || "").trim();
+    const faltaFotoVIN = !String(registro.fotoVIN || "").trim();
+
+    grupoOT.style.display = esServicio && faltaOT ? "flex" : "none";
+    grupoPlaca.style.display = "none";
+    grupoVIN.style.display = !esServicio && faltaVIN ? "flex" : "none";
+    grupoMarca.style.display = "none";
+    grupoFotoIngreso.style.display = "none";
+    grupoFotoOT.style.display = esServicio && faltaFotoOT ? "flex" : "none";
+    grupoFotoVIN.style.display = !esServicio && faltaFotoVIN ? "flex" : "none";
+
+    document.querySelector("#modalEditar .modal-header h2").textContent = "Completar datos faltantes";
+  }else{
+    grupoOT.style.display = "flex";
+    grupoPlaca.style.display = "flex";
+    grupoVIN.style.display = "flex";
+    grupoMarca.style.display = "flex";
+    grupoFotoIngreso.style.display = "flex";
+    grupoFotoOT.style.display = "flex";
+    grupoFotoVIN.style.display = "flex";
+    document.querySelector("#modalEditar .modal-header h2").textContent = "Editar datos del vehículo";
+  }
 
   const inputIngreso = document.getElementById("editarFotoIngreso");
   const inputOT = document.getElementById("editarFotoOT");
@@ -3725,16 +3778,18 @@ async function guardarEdicion(){
     if(!id){
       throw new Error("No se encontró el ID del vehículo.");
     }
-    if(!marca){
-      throw new Error("Debe seleccionar una marca.");
-    }
-
     const registro = registros.find(function(r){
       return String(r.id) === String(id);
     });
 
     if(!registro){
       throw new Error("No se encontró el vehículo en Seguimiento.");
+    }
+
+    const soloFaltantes = registro.estado === "Finalizado" && esRegistroIncompletoParaSeguimiento(registro);
+
+    if(!soloFaltantes && !marca){
+      throw new Error("Debe seleccionar una marca.");
     }
 
     const archivoIngreso = document.getElementById("editarFotoIngreso").files[0];
@@ -3792,12 +3847,23 @@ async function guardarEdicion(){
        Esto evita que una respuesta innecesaria del REST API
        provoque un falso error después de guardar correctamente.
     --------------------------------------------- */
-    const cambios = {
-      ot: ot,
-      placa: placa,
-      vin: vin,
-      marca: marca
-    };
+    const cambios = soloFaltantes
+      ? {}
+      : {
+          ot: ot,
+          placa: placa,
+          vin: vin,
+          marca: marca
+        };
+
+    if(soloFaltantes){
+      if(String(registro.tipo || "").trim() === "Servicio" && !String(registro.ot || "").trim() && ot){
+        cambios.ot = ot;
+      }
+      if(String(registro.tipo || "").trim() === "Nuevo" && !String(registro.vin || "").trim() && vin){
+        cambios.vin = vin;
+      }
+    }
 
     if(!registro.fotoIngreso && fotosActualizadas.fotoIngreso){
       cambios.foto_ingreso = fotosActualizadas.fotoIngreso;
@@ -3807,6 +3873,10 @@ async function guardarEdicion(){
     }
     if(!registro.fotoVIN && fotosActualizadas.fotoVIN){
       cambios.foto_vin = fotosActualizadas.fotoVIN;
+    }
+
+    if(soloFaltantes && Object.keys(cambios).length === 0){
+      throw new Error("Debe completar al menos uno de los datos faltantes.");
     }
 
     const urlSupabase = SUPABASE_URL + "/rest/v1/vehiculos_wankamotors?id=eq." + encodeURIComponent(id);
@@ -3842,9 +3912,11 @@ async function guardarEdicion(){
 
     cerrarEditar();
     mostrarAlerta(
-      subioFotos
-        ? "Los datos y las fotografías faltantes fueron actualizados correctamente."
-        : "Los datos del vehículo fueron actualizados correctamente.",
+      soloFaltantes
+        ? "Los datos faltantes fueron completados correctamente."
+        : (subioFotos
+            ? "Los datos y las fotografías faltantes fueron actualizados correctamente."
+            : "Los datos del vehículo fueron actualizados correctamente."),
       "success"
     );
 
