@@ -1772,6 +1772,46 @@ id="tablaHistorial">
 
 
 <!-- =====================================================
+     ACCESO PROTEGIDO A REGISTROS PASADOS
+===================================================== -->
+<div id="modalPasswordRegistrosPasados" class="modal">
+  <div class="modal-content" style="max-width:420px;">
+    <div class="modal-header">
+      <h2>🔐 Acceso restringido</h2>
+      <button type="button" class="close" onclick="cerrarPasswordRegistrosPasados()">×</button>
+    </div>
+
+    <p style="margin-top:15px;">
+      Esta sección permite regularizar y editar registros. Ingrese la contraseña para continuar.
+    </p>
+
+    <div class="form-group" style="margin-top:15px;">
+      <label for="passwordRegistrosPasados">Contraseña</label>
+      <input
+        id="passwordRegistrosPasados"
+        type="password"
+        autocomplete="off"
+        placeholder="Ingrese la contraseña"
+        onkeydown="if(event.key === 'Enter'){ validarPasswordRegistrosPasados(); }">
+    </div>
+
+    <div id="errorPasswordRegistrosPasados"
+      style="display:none;margin-top:10px;padding:10px;border-radius:8px;background:#fee2e2;color:#991b1b;">
+      Contraseña incorrecta.
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn btn-primary" onclick="validarPasswordRegistrosPasados()">
+        🔓 Ingresar
+      </button>
+      <button type="button" class="btn btn-secondary" onclick="cerrarPasswordRegistrosPasados()">
+        Cancelar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- =====================================================
      POPUP DE MENSAJE
 ===================================================== -->
 
@@ -2010,7 +2050,17 @@ let registros = [];
    NAVEGACIÓN
 ===================================================== */
 
+let botonRegistrosPasadosPendiente = null;
+
+const PASSWORD_REGISTROS_PASADOS = "Cristian100512**";
+
 function mostrarSeccion(nombre, boton){
+
+if(nombre === "registrosPasados"){
+  botonRegistrosPasadosPendiente = boton;
+  abrirPasswordRegistrosPasados();
+  return;
+}
 
 document
 .querySelectorAll(".section")
@@ -2050,6 +2100,110 @@ if(nombre === "historial"){
 
 }
 
+}
+
+function abrirPasswordRegistrosPasados(){
+
+  const modal = document.getElementById("modalPasswordRegistrosPasados");
+  const input = document.getElementById("passwordRegistrosPasados");
+  const error = document.getElementById("errorPasswordRegistrosPasados");
+
+  if(error){
+    error.style.display = "none";
+  }
+
+  if(input){
+    input.value = "";
+  }
+
+  if(modal){
+    modal.classList.add("active");
+  }
+
+  setTimeout(function(){
+    if(input) input.focus();
+  },100);
+}
+
+function cerrarPasswordRegistrosPasados(){
+
+  const modal = document.getElementById("modalPasswordRegistrosPasados");
+  const input = document.getElementById("passwordRegistrosPasados");
+  const error = document.getElementById("errorPasswordRegistrosPasados");
+
+  if(modal){
+    modal.classList.remove("active");
+  }
+
+  if(input){
+    input.value = "";
+  }
+
+  if(error){
+    error.style.display = "none";
+  }
+
+  botonRegistrosPasadosPendiente = null;
+}
+
+function validarPasswordRegistrosPasados(){
+
+  const input = document.getElementById("passwordRegistrosPasados");
+  const error = document.getElementById("errorPasswordRegistrosPasados");
+  const boton = botonRegistrosPasadosPendiente;
+
+  if(!input){
+    return;
+  }
+
+  if(input.value === PASSWORD_REGISTROS_PASADOS){
+
+    const modal = document.getElementById("modalPasswordRegistrosPasados");
+    if(modal){
+      modal.classList.remove("active");
+    }
+
+    input.value = "";
+
+    if(error){
+      error.style.display = "none";
+    }
+
+    botonRegistrosPasadosPendiente = null;
+
+    // Entra a la sección únicamente después de validar la contraseña.
+    mostrarSeccionSinPassword("registrosPasados", boton);
+    return;
+  }
+
+  if(error){
+    error.style.display = "block";
+  }
+
+  input.select();
+}
+
+function mostrarSeccionSinPassword(nombre, boton){
+
+  document
+  .querySelectorAll(".section")
+  .forEach(function(x){
+    x.classList.remove("active");
+  });
+
+  document
+  .getElementById(nombre)
+  .classList.add("active");
+
+  document
+  .querySelectorAll(".menu button")
+  .forEach(function(x){
+    x.classList.remove("active");
+  });
+
+  if(boton){
+    boton.classList.add("active");
+  }
 }
 
 
@@ -4522,6 +4676,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V2.4</div>
+<div class="version-app">V2.3</div>
 </body>
 </html>
