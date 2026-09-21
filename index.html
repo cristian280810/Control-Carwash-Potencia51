@@ -3383,7 +3383,9 @@ function seleccionarRegistroPasado(id){
   document.getElementById("pasadoFotoOT").value = "";
   document.getElementById("pasadoFotoVIN").value = "";
 
-  const observaciones = registro.observaciones || registro.observaciones_finales || "";
+  // Solo cargar la observación inicial en el campo editable.
+  // La observación final pertenece al cierre del lavado y no debe modificarse desde Regularizar registros.
+  const observaciones = registro.observaciones || "";
   document.getElementById("pasadoObservaciones").value = observaciones;
 
   document.querySelectorAll(".resultado-item").forEach(function(el){
@@ -3562,6 +3564,13 @@ async function guardarRegistroPasado(){
 
     if(registroPasadoSeleccionadoId){
 
+      // La observación final no se reemplaza si ya existe.
+      // Si estaba vacía, sí se completa como "Registro regularizado".
+      const registroOriginal = (registrosPasadosEncontrados || []).find(function(r){
+        return String(r.id) === String(registroPasadoSeleccionadoId);
+      });
+      const observacionFinalExistente = registroOriginal && String(registroOriginal.observaciones_finales || "").trim();
+
       const cambios = {
         tipo:tipo,
         ot:tipo === "Servicio" ? ot : "",
@@ -3572,7 +3581,7 @@ async function guardarRegistroPasado(){
         estado:"Finalizado",
         hora_inicio_lavado:fechaLavado,
         observaciones:observaciones,
-        observaciones_finales:"Registro regularizado"
+        observaciones_finales: observacionFinalExistente || "Registro regularizado"
       };
 
       if(fotos.fotoIngreso) cambios.foto_ingreso = fotos.fotoIngreso;
@@ -5142,6 +5151,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V2.8</div>
+<div class="version-app">V3.1</div>
 </body>
 </html>
