@@ -1487,6 +1487,8 @@ onclick="buscarRegistroPasado()">
 
 <div id="formularioPasadoPlaceholder"></div>
 
+<div id="formularioPasadoAnchor" style="display:none;"></div>
+
 <div id="formularioPasado" class="card" style="display:none;">
 
 <h2>Datos del lavado realizado</h2>
@@ -3716,12 +3718,32 @@ async function guardarRegistroPasado(){
 
 function limpiarRegistroPasado(){
 
+  /*
+     El formulario de regularización puede estar temporalmente dentro de la
+     tarjeta seleccionada. Primero lo devolvemos a su posición original antes
+     de limpiar el contenedor de resultados. Si se limpia primero, el innerHTML
+     elimina el formulario y luego getElementById(...) devuelve null.
+  */
+  const formulario = document.getElementById("formularioPasado");
+  const anclaFormulario = document.getElementById("formularioPasadoAnchor");
+
+  if(formulario && anclaFormulario && anclaFormulario.parentNode){
+    anclaFormulario.parentNode.insertBefore(formulario, anclaFormulario.nextSibling);
+  }
+
+  if(formulario){
+    formulario.style.display = "none";
+    formulario.classList.remove("formulario-pasado-inline");
+  }
+
   registroPasadoSeleccionadoId = null;
   registrosPasadosEncontrados = [];
 
-  document.getElementById("buscarPasado").value = "";
-  document.getElementById("resultadoBusquedaPasado").innerHTML = "";
-  document.getElementById("formularioPasado").style.display = "none";
+  const buscarPasado = document.getElementById("buscarPasado");
+  const resultadoBusquedaPasado = document.getElementById("resultadoBusquedaPasado");
+
+  if(buscarPasado) buscarPasado.value = "";
+  if(resultadoBusquedaPasado) resultadoBusquedaPasado.innerHTML = "";
 
   document.getElementById("pasadoOT").value = "";
   document.getElementById("pasadoPlaca").value = "";
@@ -5180,6 +5202,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V2.9</div>
+<div class="version-app">V2.8</div>
 </body>
 </html>
