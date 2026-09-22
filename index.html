@@ -67,7 +67,7 @@ header p{
 
 .menu{
     display:grid;
-    grid-template-columns:repeat(4,1fr);
+    grid-template-columns:repeat(5,1fr);
     gap:15px;
     margin-bottom:25px;
 }
@@ -2148,8 +2148,8 @@ async function cargarServiciosWankamotors(){
     });
 
     // Mantener Lavado básico como opción inicial si existe en el catálogo.
-    seleccionarServicioPorNombre("servicio", "Lavado básico (incluye lavado de motor)");
-    seleccionarServicioPorNombre("pasadoServicio", "Lavado básico (incluye lavado de motor)");
+    seleccionarServicioPorNombre("servicio", "Lavado básico");
+    seleccionarServicioPorNombre("pasadoServicio", "Lavado básico");
 
   }catch(error){
 
@@ -2175,7 +2175,7 @@ function seleccionarServicioPorNombre(selectId, nombre){
     return String(s.nombre_servicio || "").trim().toLowerCase() === nombreBuscado;
   });
 
-  // Si el catálogo tiene "Lavado básico" o "Lavado básico (incluye lavado de motor)",
+  // Si el catálogo tiene "Lavado básico" o "Lavado básico",
   // ambos se consideran el mismo servicio para la selección inicial.
   if(!servicio){
     servicio = serviciosWankamotors.find(function(s){
@@ -3374,7 +3374,7 @@ function seleccionarRegistroPasado(id){
   document.getElementById("pasadoPlaca").value = String(registro.placa || "").toUpperCase();
   document.getElementById("pasadoVIN").value = String(registro.vin || "").toUpperCase();
   document.getElementById("pasadoMarca").value = registro.marca || "";
-  seleccionarServicioPorIdONombre("pasadoServicio", registro.servicio_id, registro.servicio || "Lavado básico (incluye lavado de motor)");
+  seleccionarServicioPorIdONombre("pasadoServicio", registro.servicio_id, registro.servicio || "Lavado básico");
   document.getElementById("pasadoFecha").value = obtenerFechaHistorial(registro.hora_inicio_lavado) || "";
 
   document.getElementById("pasadoFotoIngreso").value = "";
@@ -3811,7 +3811,7 @@ function limpiarCamposFormularioPasadoSinResultados(){
     else el.value = "";
   });
 
-  seleccionarServicioPorNombre("pasadoServicio", "Lavado básico (incluye lavado de motor)");
+  seleccionarServicioPorNombre("pasadoServicio", "Lavado básico");
 
   const opcionServicio = document.querySelector('input[name="tipoPasado"][value="Servicio"]');
   if(opcionServicio) opcionServicio.checked = true;
@@ -3855,7 +3855,7 @@ function limpiarRegistroPasado(){
   document.getElementById("pasadoPlaca").value = "";
   document.getElementById("pasadoVIN").value = "";
   document.getElementById("pasadoMarca").value = "";
-  seleccionarServicioPorNombre("pasadoServicio", "Lavado básico (incluye lavado de motor)");
+  seleccionarServicioPorNombre("pasadoServicio", "Lavado básico");
   document.getElementById("pasadoFecha").value = "";
   document.getElementById("pasadoObservaciones").value = "";
   document.getElementById("pasadoFotoIngreso").value = "";
@@ -5065,7 +5065,7 @@ document.getElementById("observaciones").value = "";
 
 document.getElementById("marca").value = "";
 
-seleccionarServicioPorNombre("servicio", "Lavado básico (incluye lavado de motor)");
+seleccionarServicioPorNombre("servicio", "Lavado básico");
 
 
 /* LIMPIAR FOTOS */
@@ -5455,6 +5455,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V2.9</div>
+<div class="version-app">V3.6</div>
 </body>
 </html>
