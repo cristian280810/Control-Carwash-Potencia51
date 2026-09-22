@@ -2742,9 +2742,16 @@ const loading = document.getElementById("loadingRegistro");
 try{
 
 const tipo = document.querySelector('input[name="tipo"]:checked').value;
-const ot = document.getElementById("ot").value.trim().toUpperCase();
-const placa = document.getElementById("placa").value.trim().toUpperCase();
-const vin = document.getElementById("vin").value.trim().toUpperCase();
+
+const otIngresada = document.getElementById("ot").value.trim().toUpperCase();
+const placaIngresada = document.getElementById("placa").value.trim().toUpperCase();
+const vinIngresado = document.getElementById("vin").value.trim().toUpperCase();
+
+/* El usuario puede escribir espacios y guiones.
+   Internamente se guardan concatenados, sin espacios ni guiones. */
+const ot = normalizarValorInterno(otIngresada);
+const placa = normalizarValorInterno(placaIngresada);
+const vin = normalizarValorInterno(vinIngresado);
 const marca = document.getElementById("marca").value;
 const modelo = "";
 const servicio = document.getElementById("servicio").value.trim();
@@ -2882,6 +2889,13 @@ mostrarAlerta("No se pudo registrar el vehículo: " + error.message,"error");
 /* =====================================================
    DUPLICADOS
 ===================================================== */
+
+function normalizarValorInterno(valor){
+  return String(valor || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, "");
+}
 
 function normalizarOTBusqueda(valor){
   return String(valor || "")
@@ -5301,6 +5315,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V2.9</div>
+<div class="version-app">V2.8</div>
 </body>
 </html>
