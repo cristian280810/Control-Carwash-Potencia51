@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1314,11 +1315,13 @@ onclick="limpiarFormulario()">
 <div class="card">
 <h2>🧾 Facturación</h2>
 <p>Controle los servicios realizados y marque los que ya fueron facturados.</p>
-<div class="facturacion-filtros">
+<div class="facturacion-filtros" style="grid-template-columns:repeat(3,minmax(180px,1fr));">
 <div class="form-group"><label>Desde</label><input id="facturacionDesde" type="date"></div>
 <div class="form-group"><label>Hasta</label><input id="facturacionHasta" type="date"></div>
+<div class="form-group"><label>Tipo de atención</label><select id="facturacionTipo"><option value="">Todos</option><option value="Servicio">Servicio</option><option value="Nuevo">Nuevo</option></select></div>
+<div class="form-group"><label>Servicio</label><select id="facturacionServicio"><option value="">Todos los servicios</option></select></div>
 <div class="form-group"><label>Estado</label><select id="facturacionEstado"><option value="">Todos</option><option value="pendiente">Pendiente</option><option value="facturado">Facturado</option></select></div>
-<div class="form-group"><label>Buscar</label><input id="facturacionBuscar" type="text" placeholder="OT, placa, VIN, marca o servicio"></div>
+<div class="form-group"><label>Buscar</label><input id="facturacionBuscar" type="text" placeholder="OT, placa, VIN o marca"></div>
 </div>
 <div class="orden-fecha">
 <label for="facturacionOrdenFecha">Ordenar por fecha:</label>
@@ -5478,14 +5481,18 @@ function ordenarPorFechaModulo(lista, orden, getter){
 function filtrarFacturacion(){
   const desde=document.getElementById("facturacionDesde").value;
   const hasta=document.getElementById("facturacionHasta").value;
+  const tipo=document.getElementById("facturacionTipo")?.value || "";
+  const servicioFiltro=document.getElementById("facturacionServicio")?.value || "";
   const estado=document.getElementById("facturacionEstado").value;
   const buscar=document.getElementById("facturacionBuscar").value.toLowerCase().trim();
   const lista=registrosFacturacion.filter(function(r){
     const fecha=valorFechaFacturacion(obtenerFechaServicioFacturacion(r));
     const coincideFecha=(!desde || fecha>=desde)&&(!hasta || fecha<=hasta);
+    const coincideTipo=!tipo || String(r.tipo || "").trim()===tipo;
+    const coincideServicio=!servicioFiltro || String(r.servicio || "").trim()===servicioFiltro;
     const coincideEstado=!estado || (estado==="facturado" ? !!r.facturado : !r.facturado);
-    const texto=[r.ot,r.placa,r.vin,r.marca,r.modelo,r.servicio].join(" ").toLowerCase();
-    return coincideFecha&&coincideEstado&&(!buscar||texto.includes(buscar));
+    const texto=[r.ot,r.placa,r.vin,r.marca,r.modelo].join(" ").toLowerCase();
+    return coincideFecha&&coincideTipo&&coincideServicio&&coincideEstado&&(!buscar||texto.includes(buscar));
   });
   const orden=document.getElementById("facturacionOrdenFecha")?.value || "desc";
   return ordenarPorFechaModulo(lista,orden,obtenerFechaServicioFacturacion);
@@ -5551,15 +5558,48 @@ function renderPaginacionFacturacion(totalRegistros){
 }
 function irPaginaFacturacion(p){facturacionPaginaActual=Math.max(1,p);renderFacturacion();}
 
+function cargarOpcionesFiltroServicioFacturacion(){
+  const select=document.getElementById("facturacionServicio");
+  if(!select) return;
+
+  const nombres=new Set();
+  (registrosFacturacion || []).forEach(function(r){
+    const nombre=String(r.servicio || "").trim();
+    if(nombre) nombres.add(nombre);
+  });
+  (serviciosWankamotors || []).forEach(function(s){
+    const nombre=String(s.nombre_servicio || "").trim();
+    if(nombre) nombres.add(nombre);
+  });
+
+  const actual=select.value;
+  select.innerHTML='<option value="">Todos los servicios</option>';
+  Array.from(nombres).sort(function(a,b){return a.localeCompare(b,"es");}).forEach(function(nombre){
+    const option=document.createElement("option");
+    option.value=nombre;
+    option.textContent=nombre;
+    select.appendChild(option);
+  });
+  if(Array.from(nombres).includes(actual)) select.value=actual;
+}
+
 async function inicializarFacturacion(){
-  try{registrosFacturacion=await cargarRegistrosFacturacion();renderFacturacion();}
-  catch(error){console.error(error);mostrarAlerta("No se pudo cargar Facturación: "+error.message,"error");}
+  try{
+    registrosFacturacion=await cargarRegistrosFacturacion();
+    cargarOpcionesFiltroServicioFacturacion();
+    renderFacturacion();
+  }catch(error){
+    console.error(error);
+    mostrarAlerta("No se pudo cargar Facturación: "+error.message,"error");
+  }
 }
 function buscarFacturacion(){facturacionPaginaActual=1;renderFacturacion();}
 function limpiarFiltrosFacturacion(){
   facturacionPaginaActual=1;
   document.getElementById("facturacionDesde").value="";
   document.getElementById("facturacionHasta").value="";
+  if(document.getElementById("facturacionTipo")) document.getElementById("facturacionTipo").value="";
+  if(document.getElementById("facturacionServicio")) document.getElementById("facturacionServicio").value="";
   document.getElementById("facturacionEstado").value="";
   document.getElementById("facturacionBuscar").value="";
   renderFacturacion();
@@ -5964,7 +6004,7 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V5.0 Facturación</div>
+<div class="version-app">V5.1 Facturación</div>
 </body>
 </html>
 
