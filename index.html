@@ -823,6 +823,16 @@ th.col-vin {
 .facturacion-check{width:18px;height:18px;}
 @media(max-width:900px){.facturacion-filtros,.facturacion-resumen{grid-template-columns:1fr 1fr;}}
 @media(max-width:600px){.facturacion-filtros,.facturacion-resumen{grid-template-columns:1fr;}}
+
+/* Paginacion y orden - Dashboard / Facturacion */
+.paginacion-modulo{display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap;margin:16px 0 6px;padding:12px;border:1px solid #e5e7eb;border-radius:10px;background:#f8fafc;}
+.paginacion-modulo button{min-width:38px;padding:8px 11px;border:1px solid #d1d5db;border-radius:7px;background:#fff;cursor:pointer;}
+.paginacion-modulo button.activa{background:#111827;color:#fff;border-color:#111827;}
+.paginacion-modulo button:disabled{opacity:.45;cursor:not-allowed;}
+.paginacion-modulo .info{font-size:13px;color:#4b5563;font-weight:600;margin:0 8px;}
+.orden-fecha{display:flex;align-items:center;gap:8px;margin:12px 0;flex-wrap:wrap;}
+.orden-fecha label{margin:0;font-size:13px;}
+.orden-fecha select{width:auto;min-width:190px;}
 </style>
 
 </head>
@@ -1270,6 +1280,13 @@ onclick="limpiarFormulario()">
 <div class="form-group"><label>Marca</label><select id="dashboardMarca"><option value="">Todas las marcas</option></select></div>
 <div class="form-group"><label>Servicio</label><select id="dashboardServicio"><option value="">Todos los servicios</option></select></div>
 </div>
+<div class="orden-fecha">
+<label for="dashboardOrdenFecha">Ordenar por fecha:</label>
+<select id="dashboardOrdenFecha" onchange="cargarDashboard()">
+<option value="desc">Más reciente primero</option>
+<option value="asc">Más antigua primero</option>
+</select>
+</div>
 <div class="actions">
 <button class="btn btn-primary" onclick="cargarDashboard()">🔎 Actualizar dashboard</button>
 <button class="btn btn-secondary" onclick="limpiarDashboard()">🧹 Limpiar filtros</button>
@@ -1291,6 +1308,13 @@ onclick="limpiarFormulario()">
 <div class="form-group"><label>Estado</label><select id="facturacionEstado"><option value="">Todos</option><option value="pendiente">Pendiente</option><option value="facturado">Facturado</option></select></div>
 <div class="form-group"><label>Buscar</label><input id="facturacionBuscar" type="text" placeholder="OT, placa, VIN, marca o servicio"></div>
 </div>
+<div class="orden-fecha">
+<label for="facturacionOrdenFecha">Ordenar por fecha:</label>
+<select id="facturacionOrdenFecha" onchange="buscarFacturacion()">
+<option value="desc">Más reciente primero</option>
+<option value="asc">Más antigua primero</option>
+</select>
+</div>
 <div class="actions">
 <button class="btn btn-primary" onclick="buscarFacturacion()">🔎 Buscar</button>
 <button class="btn btn-secondary" onclick="limpiarFiltrosFacturacion()">🧹 Limpiar</button>
@@ -1307,6 +1331,7 @@ onclick="limpiarFormulario()">
 <th><input type="checkbox" class="facturacion-check" id="facturacionTodos" onchange="seleccionarTodosFacturacion(this)"></th>
 <th>Fecha</th><th>OT</th><th>Placa</th><th>VIN</th><th>Marca</th><th>Servicio</th><th>Sin IGV</th><th>IGV</th><th>Total</th><th>Estado</th><th>Fecha facturación</th>
 </tr></thead><tbody id="tablaFacturacion"><tr><td colspan="12" class="empty">Cargando facturación...</td></tr></tbody></table></div>
+<div id="paginacionFacturacion" class="paginacion-modulo"></div>
 </div>
 </section>
 
@@ -5382,27 +5407,44 @@ function valorFechaFacturacion(valor){
 }
 function obtenerFechaServicioFacturacion(r){return r.hora_inicio_lavado || r.created_at || "";}
 
+let facturacionPaginaActual = 1;
+const FACTURACION_POR_PAGINA = 40;
+
+function ordenarPorFechaModulo(lista, orden, getter){
+  return lista.slice().sort(function(a,b){
+    const da = new Date(getter(a) || 0).getTime() || 0;
+    const db = new Date(getter(b) || 0).getTime() || 0;
+    return orden === "asc" ? da - db : db - da;
+  });
+}
+
 function filtrarFacturacion(){
   const desde=document.getElementById("facturacionDesde").value;
   const hasta=document.getElementById("facturacionHasta").value;
   const estado=document.getElementById("facturacionEstado").value;
   const buscar=document.getElementById("facturacionBuscar").value.toLowerCase().trim();
-  return registrosFacturacion.filter(function(r){
+  const lista=registrosFacturacion.filter(function(r){
     const fecha=valorFechaFacturacion(obtenerFechaServicioFacturacion(r));
     const coincideFecha=(!desde || fecha>=desde)&&(!hasta || fecha<=hasta);
     const coincideEstado=!estado || (estado==="facturado" ? !!r.facturado : !r.facturado);
     const texto=[r.ot,r.placa,r.vin,r.marca,r.modelo,r.servicio].join(" ").toLowerCase();
     return coincideFecha&&coincideEstado&&(!buscar||texto.includes(buscar));
   });
+  const orden=document.getElementById("facturacionOrdenFecha")?.value || "desc";
+  return ordenarPorFechaModulo(lista,orden,obtenerFechaServicioFacturacion);
 }
 
 function renderFacturacion(){
   const tbody=document.getElementById("tablaFacturacion");
   if(!tbody) return;
   const lista=filtrarFacturacion();
+  const totalPaginas=Math.max(1,Math.ceil(lista.length/FACTURACION_POR_PAGINA));
+  if(facturacionPaginaActual>totalPaginas) facturacionPaginaActual=totalPaginas;
+  const inicio=(facturacionPaginaActual-1)*FACTURACION_POR_PAGINA;
+  const pagina=lista.slice(inicio,inicio+FACTURACION_POR_PAGINA);
   tbody.innerHTML="";
   let sumaSin=0,sumaIgv=0,sumaTotal=0;
-  lista.forEach(function(r){
+  pagina.forEach(function(r){
     const x=calcularImportesFacturacion(r.precio_sin_igv);
     sumaSin+=x.sinIgv;sumaIgv+=x.igv;sumaTotal+=x.total;
     const facturado=!!r.facturado;
@@ -5422,14 +5464,32 @@ function renderFacturacion(){
   document.getElementById("facturacionIgv").textContent="S/ "+sumaIgv.toFixed(2);
   document.getElementById("facturacionTotal").textContent="S/ "+sumaTotal.toFixed(2);
   document.getElementById("facturacionTodos").checked=false;
+  renderPaginacionFacturacion(lista.length);
 }
+
+
+
+function renderPaginacionFacturacion(totalRegistros){
+  const c=document.getElementById("paginacionFacturacion"); if(!c) return;
+  const totalPaginas=Math.max(1,Math.ceil(totalRegistros/FACTURACION_POR_PAGINA));
+  if(totalPaginas<=1){c.innerHTML="";return;}
+  let h=`<button type="button" onclick="irPaginaFacturacion(${facturacionPaginaActual-1})" ${facturacionPaginaActual===1?"disabled":""}>‹</button>`;
+  const ini=Math.max(1,facturacionPaginaActual-2), fin=Math.min(totalPaginas,facturacionPaginaActual+2);
+  if(ini>1){h+=`<button type="button" onclick="irPaginaFacturacion(1)">1</button>`;if(ini>2)h+='<span>…</span>';}
+  for(let i=ini;i<=fin;i++) h+=`<button type="button" class="${i===facturacionPaginaActual?"activa":""}" onclick="irPaginaFacturacion(${i})">${i}</button>`;
+  if(fin<totalPaginas){if(fin<totalPaginas-1)h+='<span>…</span>';h+=`<button type="button" onclick="irPaginaFacturacion(${totalPaginas})">${totalPaginas}</button>`;}
+  h+=`<button type="button" onclick="irPaginaFacturacion(${facturacionPaginaActual+1})" ${facturacionPaginaActual===totalPaginas?"disabled":""}>›</button>`;
+  h+=`<span class="info">Página ${facturacionPaginaActual} de ${totalPaginas}</span>`; c.innerHTML=h;
+}
+function irPaginaFacturacion(p){facturacionPaginaActual=Math.max(1,p);renderFacturacion();}
 
 async function inicializarFacturacion(){
   try{registrosFacturacion=await cargarRegistrosFacturacion();renderFacturacion();}
   catch(error){console.error(error);mostrarAlerta("No se pudo cargar Facturación: "+error.message,"error");}
 }
-function buscarFacturacion(){renderFacturacion();}
+function buscarFacturacion(){facturacionPaginaActual=1;renderFacturacion();}
 function limpiarFiltrosFacturacion(){
+  facturacionPaginaActual=1;
   document.getElementById("facturacionDesde").value="";
   document.getElementById("facturacionHasta").value="";
   document.getElementById("facturacionEstado").value="";
@@ -5489,6 +5549,9 @@ function poblarFiltrosDashboard(registros){
   servicio.innerHTML = '<option value="">Todos los servicios</option>' + servicios.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("");
 }
 
+let dashboardPaginaActual = 1;
+const DASHBOARD_POR_PAGINA = 40;
+
 async function cargarDashboard(){
   const cont = document.getElementById("dashboardContenido");
   if(cont) cont.innerHTML = '<div class="card dashboard-vacio">⏳ Cargando información...</div>';
@@ -5508,7 +5571,9 @@ async function cargarDashboard(){
       const fecha = fechaLocalDashboard(r.created_at || r.hora_inicio_lavado);
       return (!desde || fecha >= desde) && (!hasta || fecha <= hasta) && (!marca || String(r.marca||"").trim()===marca) && (!servicio || String(r.servicio||"").trim()===servicio);
     });
-    renderDashboard(filtrados);
+    const orden=document.getElementById("dashboardOrdenFecha")?.value || "desc";
+    dashboardPaginaActual=1;
+    renderDashboard(ordenarPorFechaModulo(filtrados,orden,r=>r.created_at || r.hora_inicio_lavado));
   }catch(e){
     console.error(e);
     if(cont) cont.innerHTML = '<div class="card dashboard-vacio">❌ No se pudo cargar el Dashboard: '+esc(e.message||e)+'</div>';
@@ -5545,10 +5610,25 @@ function renderDashboard(lista){
     <div class="dashboard-panel"><h3>🚗 Servicios por marca</h3>${barras(porMarca)}</div>
     <div class="dashboard-panel"><h3>🔧 Servicios realizados</h3>${barras(porServicio)}</div>
   </div>
-  <div class="card"><h3>📋 Detalle</h3><div class="table-container"><table class="dashboard-table"><thead><tr><th>Fecha</th><th>OT</th><th>Placa</th><th>Marca</th><th>Servicio</th><th>Sin IGV</th><th>Total</th><th>Estado</th></tr></thead><tbody>${lista.slice(0,100).map(r=>{const p=Number(r.precio_sin_igv||0);return `<tr><td>${esc(fechaLocalDashboard(r.created_at||r.hora_inicio_lavado))}</td><td>${esc(r.ot||"")}</td><td>${esc(r.placa||"")}</td><td>${esc(r.marca||"")}</td><td>${esc(r.servicio||"")}</td><td>S/ ${p.toFixed(2)}</td><td>S/ ${(p*1.18).toFixed(2)}</td><td>${r.facturado?'Facturado':'Pendiente'}</td></tr>`}).join("") || '<tr><td colspan="8" class="dashboard-vacio">Sin registros</td></tr>'}</tbody></table></div>${lista.length>100?'<p>Mostrando los primeros 100 registros del detalle.</p>':''}</div>`;
+  <div class="card"><h3>📋 Detalle</h3><div class="table-container"><table class="dashboard-table"><thead><tr><th>Fecha</th><th>OT</th><th>Placa</th><th>Marca</th><th>Servicio</th><th>Sin IGV</th><th>Total</th><th>Estado</th></tr></thead><tbody>${lista.slice((dashboardPaginaActual-1)*DASHBOARD_POR_PAGINA,dashboardPaginaActual*DASHBOARD_POR_PAGINA).map(r=>{const p=Number(r.precio_sin_igv||0);return `<tr><td>${esc(fechaLocalDashboard(r.created_at||r.hora_inicio_lavado))}</td><td>${esc(r.ot||"")}</td><td>${esc(r.placa||"")}</td><td>${esc(r.marca||"")}</td><td>${esc(r.servicio||"")}</td><td>S/ ${p.toFixed(2)}</td><td>S/ ${(p*1.18).toFixed(2)}</td><td>${r.facturado?'Facturado':'Pendiente'}</td></tr>`}).join("") || '<tr><td colspan="8" class="dashboard-vacio">Sin registros</td></tr>'}</tbody></table></div>${renderPaginacionDashboardHtml(lista.length)}</div>`;
 }
 
+function renderPaginacionDashboardHtml(totalRegistros){
+  const totalPaginas=Math.max(1,Math.ceil(totalRegistros/DASHBOARD_POR_PAGINA));
+  if(totalRegistros<=DASHBOARD_POR_PAGINA) return '';
+  let h='<div id="paginacionDashboard" class="paginacion-modulo">';
+  h+=`<button type="button" onclick="irPaginaDashboard(${dashboardPaginaActual-1})" ${dashboardPaginaActual===1?"disabled":""}>‹</button>`;
+  const ini=Math.max(1,dashboardPaginaActual-2), fin=Math.min(totalPaginas,dashboardPaginaActual+2);
+  if(ini>1){h+=`<button type="button" onclick="irPaginaDashboard(1)">1</button>`;if(ini>2)h+='<span>…</span>';}
+  for(let i=ini;i<=fin;i++) h+=`<button type="button" class="${i===dashboardPaginaActual?"activa":""}" onclick="irPaginaDashboard(${i})">${i}</button>`;
+  if(fin<totalPaginas){if(fin<totalPaginas-1)h+='<span>…</span>';h+=`<button type="button" onclick="irPaginaDashboard(${totalPaginas})">${totalPaginas}</button>`;}
+  h+=`<button type="button" onclick="irPaginaDashboard(${dashboardPaginaActual+1})" ${dashboardPaginaActual===totalPaginas?"disabled":""}>›</button>`;
+  h+=`<span class="info">Página ${dashboardPaginaActual} de ${totalPaginas}</span></div>`; return h;
+}
+function irPaginaDashboard(p){dashboardPaginaActual=Math.max(1,p); const desde=document.getElementById("dashboardDesde")?.value||"", hasta=document.getElementById("dashboardHasta")?.value||"", marca=document.getElementById("dashboardMarca")?.value||"", servicio=document.getElementById("dashboardServicio")?.value||""; const filtrados=registrosDashboard.filter(r=>{const f=fechaLocalDashboard(r.created_at||r.hora_inicio_lavado);return (!desde||f>=desde)&&(!hasta||f<=hasta)&&(!marca||String(r.marca||"").trim()===marca)&&(!servicio||String(r.servicio||"").trim()===servicio);}); const orden=document.getElementById("dashboardOrdenFecha")?.value||"desc"; renderDashboard(ordenarPorFechaModulo(filtrados,orden,r=>r.created_at||r.hora_inicio_lavado));}
+
 function limpiarDashboard(){
+  dashboardPaginaActual=1;
   document.getElementById("dashboardDesde").value="";
   document.getElementById("dashboardHasta").value="";
   document.getElementById("dashboardMarca").value="";
@@ -5597,7 +5677,7 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V4.1 Dashboard</div>
+<div class="version-app">V4.4 Dashboard</div>
 </body>
 </html>
 
