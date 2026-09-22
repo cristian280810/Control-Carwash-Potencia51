@@ -3140,40 +3140,38 @@ async function obtenerTodosLosRegistros(){
 
 function analizarDuplicados(registrosExistentes, datos){
 
+  /*
+     La placa puede repetirse porque un mismo vehículo puede ingresar
+     varias veces al taller. Por eso NO se considera duplicado por placa.
+
+     La alerta de duplicidad se genera únicamente cuando la OT se repite
+     (exacta o cuando corresponde al mismo número principal de una OT
+     completa).
+  */
   const ot = normalizarOT(datos.ot);
-  const placa = normalizarTexto(datos.placa);
-  const vin = normalizarTexto(datos.vin);
+
+  if(!ot){
+    return [];
+  }
 
   const coincidencias = [];
 
   (registrosExistentes || []).forEach(function(r){
 
     const otExistente = normalizarOT(r.ot);
-    const placaExistente = normalizarTexto(r.placa);
-    const vinExistente = normalizarTexto(r.vin);
+
+    if(!otExistente) return;
 
     let exacta = false;
     let posible = false;
     let motivos = [];
 
-    if(ot && otExistente){
-      if(ot === otExistente){
-        exacta = true;
-        motivos.push("OT exacta");
-      }else if(tieneMismosDigitosCortos(ot, otExistente)){
-        posible = true;
-        motivos.push("OT posiblemente relacionada");
-      }
-    }
-
-    if(placa && placaExistente && placa === placaExistente){
+    if(ot === otExistente){
       exacta = true;
-      motivos.push("placa exacta");
-    }
-
-    if(vin && vinExistente && vin === vinExistente){
-      exacta = true;
-      motivos.push("VIN exacto");
+      motivos.push("OT exacta");
+    }else if(tieneMismosDigitosCortos(ot, otExistente)){
+      posible = true;
+      motivos.push("OT posiblemente relacionada");
     }
 
     if(exacta || posible){
@@ -3212,7 +3210,7 @@ async function verificarDuplicadosAntesDeRegistrar(datos){
       mensaje += "⚠️ POSIBLE COINCIDENCIA DE OT\n\n";
     }
 
-    mensaje += "Se encontraron registros que coinciden con la OT, placa o VIN que está ingresando. Revise cuál corresponde antes de continuar:\n\n";
+    mensaje += "Se encontraron registros con una OT igual o posiblemente relacionada. La placa puede repetirse porque un vehículo puede ingresar varias veces. Revise cuál corresponde antes de continuar:\n\n";
 
     coincidencias.slice(0,5).forEach(function(x, indice){
       const r = x.registro;
