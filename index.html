@@ -550,7 +550,7 @@ th{
 
 /* Controles de orden y paginación del historial */
 .historial-filtros{
-  grid-template-columns:repeat(4,1fr);
+  grid-template-columns:repeat(5,1fr);
 }
 
 @media(max-width:800px){
@@ -1911,6 +1911,26 @@ Tipo
   <option value="">Todos</option>
   <option value="Servicio">Servicio</option>
   <option value="Nuevo">Nuevo</option>
+</select>
+
+</div>
+
+<div>
+
+<label>
+Marca
+</label>
+
+<select id="marcaHistorial">
+  <option value="">Todas las marcas</option>
+  <option value="Chery">Chery</option>
+  <option value="Chevrolet">Chevrolet</option>
+  <option value="Ford">Ford</option>
+  <option value="KIA">KIA</option>
+  <option value="MG">MG</option>
+  <option value="Nissan">Nissan</option>
+  <option value="Peugeot">Peugeot</option>
+  <option value="Volkswagen">Volkswagen</option>
 </select>
 
 </div>
@@ -4687,10 +4707,16 @@ document.getElementById(
 "tipoHistorial"
 );
 
+const marca =
+document.getElementById(
+"marcaHistorial"
+);
+
 if(desde) desde.value = "";
 if(hasta) hasta.value = "";
 if(buscar) buscar.value = "";
 if(tipo) tipo.value = "";
+if(marca) marca.value = "";
 
 mostrarMensajeHistorial(
 "Seleccione uno o más filtros y presione Buscar."
@@ -4706,8 +4732,9 @@ const desde = document.getElementById("fechaDesde").value;
 const hasta = document.getElementById("fechaHasta").value;
 const buscar = document.getElementById("buscarHistorial").value.trim().toLowerCase();
 const tipoFiltro = document.getElementById("tipoHistorial").value;
+const marcaFiltro = document.getElementById("marcaHistorial").value;
 
-if(!desde && !hasta && !buscar && !tipoFiltro){
+if(!desde && !hasta && !buscar && !tipoFiltro && !marcaFiltro){
   mostrarMensajeHistorial("Ingrese una fecha o un dato de búsqueda antes de consultar.");
   return;
 }
@@ -4790,6 +4817,7 @@ const filtrados = (filas || []).map(function(r){
     placaNormalizada.includes(terminoPlacaNormalizado);
 
   const cumpleTipo = !tipoFiltro || String(r.tipo || "").trim() === tipoFiltro;
+  const cumpleMarca = !marcaFiltro || String(r.marca || "").trim() === marcaFiltro;
 
   // El filtro de fecha usa exactamente la misma fecha que se muestra
   // en la columna "Fecha": hora_inicio_lavado.
@@ -4799,7 +4827,7 @@ const filtrados = (filas || []).map(function(r){
   if(desde){ cumpleFecha = !!fechaInicio && fechaInicio >= desde; }
   if(cumpleFecha && hasta){ cumpleFecha = !!fechaInicio && fechaInicio <= hasta; }
 
-  return cumpleTexto && cumpleTipo && cumpleFecha;
+  return cumpleTexto && cumpleTipo && cumpleMarca && cumpleFecha;
 });
 
 // Orden elegido por el usuario.
@@ -5364,6 +5392,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V2.8</div>
+<div class="version-app">V3.0</div>
 </body>
 </html>
