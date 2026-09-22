@@ -611,6 +611,27 @@ th{
 
 
 
+
+/* =====================================================
+   DASHBOARD
+===================================================== */
+.dashboard-filtros{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+.dashboard-resumen{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:15px 0;}
+.dashboard-card{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;}
+.dashboard-card .dashboard-label{font-size:13px;color:#6b7280;font-weight:700;}
+.dashboard-card strong{display:block;font-size:25px;margin-top:6px;color:#111827;}
+.dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.dashboard-panel{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;}
+.dashboard-panel h3{margin-top:0;}
+.dashboard-bar-row{display:grid;grid-template-columns:140px 1fr 70px;gap:10px;align-items:center;margin:10px 0;font-size:13px;}
+.dashboard-bar{height:14px;background:#e5e7eb;border-radius:99px;overflow:hidden;}
+.dashboard-bar > span{display:block;height:100%;background:#1d4ed8;border-radius:99px;}
+.dashboard-table{width:100%;min-width:0;}
+.dashboard-table th,.dashboard-table td{padding:8px;}
+.dashboard-vacio{text-align:center;color:#6b7280;padding:25px;}
+@media(max-width:1000px){.dashboard-resumen{grid-template-columns:repeat(3,1fr);}.dashboard-filtros{grid-template-columns:1fr 1fr;}.dashboard-grid{grid-template-columns:1fr;}}
+@media(max-width:700px){.dashboard-resumen{grid-template-columns:1fr 1fr;}.dashboard-filtros{grid-template-columns:1fr;}.dashboard-bar-row{grid-template-columns:100px 1fr 55px;}}
+
 .version-app{
   position:fixed;
   right:12px;
@@ -5415,6 +5436,94 @@ function exportarFacturacionExcel(){
 }
 
 /* =====================================================
+   DASHBOARD
+===================================================== */
+let registrosDashboard = [];
+
+function fechaLocalDashboard(d){
+  const x = new Date(d);
+  if(isNaN(x.getTime())) return "";
+  return new Intl.DateTimeFormat("en-CA", {timeZone:"America/Lima",year:"numeric",month:"2-digit",day:"2-digit"}).format(x);
+}
+
+function poblarFiltrosDashboard(registros){
+  const marca = document.getElementById("dashboardMarca");
+  const servicio = document.getElementById("dashboardServicio");
+  if(!marca || !servicio) return;
+  const marcas = [...new Set((registros||[]).map(r=>String(r.marca||"").trim()).filter(Boolean))].sort();
+  const servicios = [...new Set((registros||[]).map(r=>String(r.servicio||"").trim()).filter(Boolean))].sort();
+  marca.innerHTML = '<option value="">Todas las marcas</option>' + marcas.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("");
+  servicio.innerHTML = '<option value="">Todos los servicios</option>' + servicios.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("");
+}
+
+async function cargarDashboard(){
+  const cont = document.getElementById("dashboardContenido");
+  if(cont) cont.innerHTML = '<div class="card dashboard-vacio">⏳ Cargando información...</div>';
+  try{
+    const desde = document.getElementById("dashboardDesde")?.value || "";
+    const hasta = document.getElementById("dashboardHasta")?.value || "";
+    const marca = document.getElementById("dashboardMarca")?.value || "";
+    const servicio = document.getElementById("dashboardServicio")?.value || "";
+    let url = SUPABASE_URL + "/rest/v1/vehiculos_wankamotors?select=id,created_at,hora_inicio_lavado,hora_salida,ot,placa,vin,marca,servicio,precio_sin_igv,igv,precio_con_igv,facturado,fecha_facturacion,estado&order=created_at.desc";
+    const resp = await fetch(url,{headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY},cache:"no-store"});
+    if(!resp.ok) throw new Error(await resp.text());
+    registrosDashboard = await resp.json();
+    poblarFiltrosDashboard(registrosDashboard);
+    document.getElementById("dashboardMarca").value = marca;
+    document.getElementById("dashboardServicio").value = servicio;
+    const filtrados = registrosDashboard.filter(r=>{
+      const fecha = fechaLocalDashboard(r.created_at || r.hora_inicio_lavado);
+      return (!desde || fecha >= desde) && (!hasta || fecha <= hasta) && (!marca || String(r.marca||"").trim()===marca) && (!servicio || String(r.servicio||"").trim()===servicio);
+    });
+    renderDashboard(filtrados);
+  }catch(e){
+    console.error(e);
+    if(cont) cont.innerHTML = '<div class="card dashboard-vacio">❌ No se pudo cargar el Dashboard: '+esc(e.message||e)+'</div>';
+  }
+}
+
+function renderDashboard(lista){
+  const cont = document.getElementById("dashboardContenido");
+  if(!cont) return;
+  const total = lista.length;
+  const facturados = lista.filter(r=>r.facturado===true).length;
+  const pendientes = total - facturados;
+  const subtotal = lista.reduce((a,r)=>a + Number(r.precio_sin_igv||0),0);
+  const igv = subtotal * IGV_WANKAMOTORS;
+  const totalConIgv = subtotal + igv;
+  const porMarca = {};
+  const porServicio = {};
+  lista.forEach(r=>{
+    const m=String(r.marca||"Sin marca").trim()||"Sin marca";
+    const sv=String(r.servicio||"Sin servicio").trim()||"Sin servicio";
+    porMarca[m]=(porMarca[m]||0)+1;
+    porServicio[sv]=(porServicio[sv]||0)+1;
+  });
+  const barras = obj=>{const arr=Object.entries(obj).sort((a,b)=>b[1]-a[1]);const max=arr.length?arr[0][1]:1;return arr.slice(0,10).map(([k,v])=>`<div class="dashboard-bar-row"><span>${esc(k)}</span><div class="dashboard-bar"><span style="width:${(v/max*100).toFixed(1)}%"></span></div><strong>${v}</strong></div>`).join("") || '<div class="dashboard-vacio">Sin datos</div>';};
+  cont.innerHTML = `
+  <div class="dashboard-resumen">
+    <div class="dashboard-card"><span class="dashboard-label">Vehículos</span><strong>${total}</strong></div>
+    <div class="dashboard-card"><span class="dashboard-label">Facturados</span><strong>${facturados}</strong></div>
+    <div class="dashboard-card"><span class="dashboard-label">Pendientes</span><strong>${pendientes}</strong></div>
+    <div class="dashboard-card"><span class="dashboard-label">Subtotal sin IGV</span><strong>S/ ${subtotal.toFixed(2)}</strong></div>
+    <div class="dashboard-card"><span class="dashboard-label">Total con IGV</span><strong>S/ ${totalConIgv.toFixed(2)}</strong></div>
+  </div>
+  <div class="dashboard-grid">
+    <div class="dashboard-panel"><h3>🚗 Servicios por marca</h3>${barras(porMarca)}</div>
+    <div class="dashboard-panel"><h3>🔧 Servicios realizados</h3>${barras(porServicio)}</div>
+  </div>
+  <div class="card"><h3>📋 Detalle</h3><div class="table-container"><table class="dashboard-table"><thead><tr><th>Fecha</th><th>OT</th><th>Placa</th><th>Marca</th><th>Servicio</th><th>Sin IGV</th><th>Total</th><th>Estado</th></tr></thead><tbody>${lista.slice(0,100).map(r=>{const p=Number(r.precio_sin_igv||0);return `<tr><td>${esc(fechaLocalDashboard(r.created_at||r.hora_inicio_lavado))}</td><td>${esc(r.ot||"")}</td><td>${esc(r.placa||"")}</td><td>${esc(r.marca||"")}</td><td>${esc(r.servicio||"")}</td><td>S/ ${p.toFixed(2)}</td><td>S/ ${(p*1.18).toFixed(2)}</td><td>${r.facturado?'Facturado':'Pendiente'}</td></tr>`}).join("") || '<tr><td colspan="8" class="dashboard-vacio">Sin registros</td></tr>'}</tbody></table></div>${lista.length>100?'<p>Mostrando los primeros 100 registros del detalle.</p>':''}</div>`;
+}
+
+function limpiarDashboard(){
+  document.getElementById("dashboardDesde").value="";
+  document.getElementById("dashboardHasta").value="";
+  document.getElementById("dashboardMarca").value="";
+  document.getElementById("dashboardServicio").value="";
+  if(registrosDashboard.length) renderDashboard(registrosDashboard);
+}
+
+/* =====================================================
    INICIO
 ===================================================== */
 
@@ -5455,6 +5564,26 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V3.6</div>
+<div class="version-app">V4.0 Dashboard</div>
 </body>
-</html>
+</html><section id="dashboard" class="section">
+<div class="card">
+<h2>📈 Dashboard</h2>
+<p>Resumen de vehículos, servicios y facturación según el periodo seleccionado.</p>
+<div class="dashboard-filtros">
+<div class="form-group"><label>Desde</label><input id="dashboardDesde" type="date"></div>
+<div class="form-group"><label>Hasta</label><input id="dashboardHasta" type="date"></div>
+<div class="form-group"><label>Marca</label><select id="dashboardMarca"><option value="">Todas las marcas</option></select></div>
+<div class="form-group"><label>Servicio</label><select id="dashboardServicio"><option value="">Todos los servicios</option></select></div>
+</div>
+<div class="actions">
+<button class="btn btn-primary" onclick="cargarDashboard()">🔎 Actualizar dashboard</button>
+<button class="btn btn-secondary" onclick="limpiarDashboard()">🧹 Limpiar filtros</button>
+</div>
+</div>
+<div id="dashboardContenido">
+<div class="card dashboard-vacio">Seleccione un periodo y presione <strong>Actualizar dashboard</strong>.</div>
+</div>
+</section>
+
+
