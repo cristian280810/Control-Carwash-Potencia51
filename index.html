@@ -3533,6 +3533,39 @@ function renderFotosRegistroPasado(r){
     </div>`;
 }
 
+function combinarFechaLimaConHoraExistente(fecha, fechaHoraExistente){
+  if(!fecha) return null;
+
+  // Si no existe una hora previa, se usa 11:00 como hora de regularización.
+  if(!fechaHoraExistente){
+    return new Date(fecha + "T11:00:00-05:00").toISOString();
+  }
+
+  const d = new Date(fechaHoraExistente);
+  if(isNaN(d.getTime())){
+    return new Date(fecha + "T11:00:00-05:00").toISOString();
+  }
+
+  const partes = new Intl.DateTimeFormat("es-PE", {
+    timeZone:"America/Lima",
+    hour:"2-digit",
+    minute:"2-digit",
+    second:"2-digit",
+    hour12:false
+  }).formatToParts(d);
+
+  const valores = {};
+  partes.forEach(function(p){ valores[p.type] = p.value; });
+
+  const hora = valores.hour || "11";
+  const minuto = valores.minute || "00";
+  const segundo = valores.second || "00";
+
+  return new Date(
+    fecha + "T" + hora + ":" + minuto + ":" + segundo + "-05:00"
+  ).toISOString();
+}
+
 function convertirFechaLimaAISO(fecha){
   if(!fecha) return null;
   return new Date(fecha + "T00:00:00-05:00").toISOString();
@@ -3653,8 +3686,16 @@ async function guardarRegistroPasado(){
           ? registroOriginal.hora_salida
           : "";
 
-      const horaInicioRegularizada = horaInicioExistente || fechaLavado;
-      const horaSalidaRegularizada = horaSalidaExistente || horaInicioRegularizada;
+      // Si el usuario cambia la fecha al regularizar, se cambia la fecha
+      // pero se conserva la hora real que ya tenía el registro.
+      const horaInicioRegularizada = combinarFechaLimaConHoraExistente(
+        fecha,
+        horaInicioExistente
+      );
+
+      const horaSalidaRegularizada = horaSalidaExistente
+        ? combinarFechaLimaConHoraExistente(fecha, horaSalidaExistente)
+        : horaInicioRegularizada;
 
       const cambios = {
         tipo:tipo,
@@ -5323,6 +5364,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V3.5</div>
+<div class="version-app">V2.8</div>
 </body>
 </html>
