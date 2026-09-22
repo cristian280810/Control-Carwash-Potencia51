@@ -5450,10 +5450,19 @@ function renderFacturacion(){
   const inicio=(facturacionPaginaActual-1)*FACTURACION_POR_PAGINA;
   const pagina=lista.slice(inicio,inicio+FACTURACION_POR_PAGINA);
   tbody.innerHTML="";
-  let sumaSin=0,sumaIgv=0,sumaTotal=0;
+
+  // Los totales de Facturación deben corresponder a TODOS los registros
+  // que cumplen los filtros, no solamente a los 40 visibles de la página.
+  const resumenFacturacion = lista.reduce(function(acumulado,r){
+    const x=calcularImportesFacturacion(r.precio_sin_igv);
+    acumulado.sinIgv += x.sinIgv;
+    acumulado.igv += x.igv;
+    acumulado.total += x.total;
+    return acumulado;
+  },{sinIgv:0,igv:0,total:0});
+
   pagina.forEach(function(r){
     const x=calcularImportesFacturacion(r.precio_sin_igv);
-    sumaSin+=x.sinIgv;sumaIgv+=x.igv;sumaTotal+=x.total;
     const facturado=!!r.facturado;
     tbody.innerHTML+=`<tr>
       <td><input type="checkbox" class="facturacion-check fila-facturacion" value="${esc(r.id)}" ${facturado?"disabled":""}></td>
@@ -5466,10 +5475,12 @@ function renderFacturacion(){
     </tr>`;
   });
   if(!lista.length) tbody.innerHTML='<tr><td colspan="13" class="empty">No hay servicios para los filtros seleccionados.</td></tr>';
+  // Cantidad y montos representan el total filtrado, aunque la tabla
+  // muestre solo 40 registros por página.
   document.getElementById("facturacionCantidad").textContent=lista.length;
-  document.getElementById("facturacionSinIgv").textContent="S/ "+sumaSin.toFixed(2);
-  document.getElementById("facturacionIgv").textContent="S/ "+sumaIgv.toFixed(2);
-  document.getElementById("facturacionTotal").textContent="S/ "+sumaTotal.toFixed(2);
+  document.getElementById("facturacionSinIgv").textContent="S/ "+resumenFacturacion.sinIgv.toFixed(2);
+  document.getElementById("facturacionIgv").textContent="S/ "+resumenFacturacion.igv.toFixed(2);
+  document.getElementById("facturacionTotal").textContent="S/ "+resumenFacturacion.total.toFixed(2);
   document.getElementById("facturacionTodos").checked=false;
   renderPaginacionFacturacion(lista.length);
 }
@@ -5684,7 +5695,7 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V4.0 Dashboard</div>
+<div class="version-app">V4.1 Dashboard</div>
 </body>
 </html>
 
