@@ -828,6 +828,11 @@ th.col-vin {
 .facturacion-estado.pendiente{background:#fef3c7;color:#92400e;}
 .facturacion-estado.facturado{background:#dcfce7;color:#166534;}
 .facturacion-check{width:18px;height:18px;}
+.factura-pago-estado{display:inline-block;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:700;}
+.factura-pago-estado.pendiente{background:#fef3c7;color:#92400e;}
+.factura-pago-estado.pagada{background:#dcfce7;color:#166534;}
+.factura-pago-estado.anulada{background:#fee2e2;color:#991b1b;}
+.factura-acciones{display:flex;gap:6px;flex-wrap:wrap;}
 @media(max-width:900px){.facturacion-filtros,.facturacion-resumen{grid-template-columns:1fr 1fr;}}
 @media(max-width:600px){.facturacion-filtros,.facturacion-resumen{grid-template-columns:1fr;}}
 
@@ -1325,7 +1330,7 @@ onclick="limpiarFormulario()">
 <div class="actions">
 <button class="btn btn-primary" onclick="buscarFacturacion()">🔎 Buscar</button>
 <button class="btn btn-secondary" onclick="limpiarFiltrosFacturacion()">🧹 Limpiar</button>
-<button class="btn btn-success" onclick="marcarSeleccionadosFacturados()">✅ Marcar seleccionados como facturados</button>
+<button class="btn btn-success" onclick="abrirModalNuevaFactura()">🧾 Generar factura</button>
 <button class="btn btn-secondary" onclick="exportarFacturacionExcel()">📥 Excel</button>
 </div>
 <div class="facturacion-resumen">
@@ -1339,8 +1344,52 @@ onclick="limpiarFormulario()">
 <th class="numero-registro">N°</th><th>Fecha</th><th>OT</th><th>Placa</th><th>VIN</th><th>Marca</th><th>Servicio</th><th>Sin IGV</th><th>IGV</th><th>Total</th><th>Estado</th><th>Fecha facturación</th>
 </tr></thead><tbody id="tablaFacturacion"><tr><td colspan="12" class="empty">Cargando facturación...</td></tr></tbody></table></div>
 <div id="paginacionFacturacion" class="paginacion-modulo"></div>
+
+<div class="card" style="margin-top:20px;">
+  <h3>🧾 Facturas emitidas</h3>
+  <p>Consulta las facturas generadas y controla su estado de pago.</p>
+  <div class="table-container"><table>
+    <thead><tr>
+      <th>N°</th><th>Factura</th><th>Fecha emisión</th><th>Vencimiento</th><th>Cliente</th><th>Subtotal</th><th>IGV</th><th>Total</th><th>Estado de pago</th><th>Fecha pago</th><th>Acción</th>
+    </tr></thead>
+    <tbody id="tablaFacturasEmitidas"><tr><td colspan="11" class="empty">Cargando facturas...</td></tr></tbody>
+  </table></div>
+  <div id="paginacionFacturasEmitidas" class="paginacion-modulo"></div>
+</div>
 </div>
 </section>
+
+<!-- =====================================================
+     MODAL NUEVA FACTURA
+===================================================== -->
+<div id="modalNuevaFactura" class="modal">
+  <div class="modal-content" style="max-width:700px;">
+    <div class="modal-header">
+      <h2>🧾 Generar factura</h2>
+      <button type="button" class="close" onclick="cerrarModalNuevaFactura()">&times;</button>
+    </div>
+    <p>Los registros seleccionados quedarán asociados a esta factura.</p>
+    <div class="facturacion-filtros" style="grid-template-columns:repeat(2,1fr);">
+      <div class="form-group"><label>Número de factura *</label><input id="nuevaFacturaNumero" type="text" placeholder="F001-00001258"></div>
+      <div class="form-group"><label>Cliente *</label><input id="nuevaFacturaCliente" type="text" placeholder="Nombre del cliente"></div>
+      <div class="form-group"><label>Fecha de emisión *</label><input id="nuevaFacturaEmision" type="date"></div>
+      <div class="form-group"><label>Fecha de vencimiento</label><input id="nuevaFacturaVencimiento" type="date"></div>
+      <div class="form-group"><label>Estado de pago</label><select id="nuevaFacturaEstadoPago"><option value="Pendiente">Pendiente</option><option value="Pagada">Pagada</option></select></div>
+      <div class="form-group"><label>Observaciones</label><input id="nuevaFacturaObservaciones" type="text" placeholder="Opcional"></div>
+    </div>
+    <div class="facturacion-resumen" style="margin-top:15px;">
+      <div class="facturacion-card">Servicios<strong id="nuevaFacturaCantidad">0</strong></div>
+      <div class="facturacion-card">Sin IGV<strong id="nuevaFacturaSinIgv">S/ 0.00</strong></div>
+      <div class="facturacion-card">IGV<strong id="nuevaFacturaIgv">S/ 0.00</strong></div>
+      <div class="facturacion-card">Total<strong id="nuevaFacturaTotal">S/ 0.00</strong></div>
+    </div>
+    <div class="actions" style="justify-content:flex-end;margin-top:18px;">
+      <button type="button" class="btn btn-secondary" onclick="cerrarModalNuevaFactura()">Cancelar</button>
+      <button type="button" class="btn btn-success" onclick="guardarNuevaFactura()">💾 Guardar factura</button>
+    </div>
+    <div id="nuevaFacturaMensaje" class="empty" style="display:none;"></div>
+  </div>
+</div>
 
 <!-- =====================================================
      AGREGAR REGISTROS PASADOS
@@ -2377,6 +2426,7 @@ if(nombre === "historial"){
 
 if(nombre === "facturacion"){
     inicializarFacturacion();
+    cargarFacturasEmitidas().catch(function(error){ console.error(error); mostrarAlerta("No se pudieron cargar las facturas emitidas: "+error.message,"error"); });
 }
 
 if(nombre === "dashboard") {
@@ -5516,23 +5566,242 @@ function limpiarFiltrosFacturacion(){
 }
 function seleccionarTodosFacturacion(caja){document.querySelectorAll(".fila-facturacion:not(:disabled)").forEach(function(el){el.checked=caja.checked;});}
 
-async function marcarSeleccionadosFacturados(){
+function obtenerSeleccionadosFacturacion(){
   const ids=Array.from(document.querySelectorAll(".fila-facturacion:checked:not(:disabled)")).map(function(el){return el.value;});
-  if(!ids.length){mostrarAlerta("Selecciona al menos un servicio pendiente de facturación.","error");return;}
-  if(!confirm("¿Marcar "+ids.length+" servicio(s) como facturado(s)?")) return;
+  return ids.map(function(id){
+    return registrosFacturacion.find(function(r){return String(r.id)===String(id);});
+  }).filter(Boolean);
+}
+
+function abrirModalNuevaFactura(){
+  const seleccionados=obtenerSeleccionadosFacturacion();
+  if(!seleccionados.length){
+    mostrarAlerta("Selecciona al menos un servicio pendiente para generar la factura.","error");
+    return;
+  }
+
+  const resumen=seleccionados.reduce(function(acumulado,r){
+    const x=calcularImportesFacturacion(r.precio_sin_igv);
+    acumulado.sinIgv+=x.sinIgv;
+    acumulado.igv+=x.igv;
+    acumulado.total+=x.total;
+    return acumulado;
+  },{sinIgv:0,igv:0,total:0});
+
+  const hoy=new Date();
+  const fechaHoy=new Intl.DateTimeFormat("en-CA",{timeZone:"America/Lima",year:"numeric",month:"2-digit",day:"2-digit"}).format(hoy);
+  document.getElementById("nuevaFacturaNumero").value="";
+  document.getElementById("nuevaFacturaCliente").value="";
+  document.getElementById("nuevaFacturaEmision").value=fechaHoy;
+  document.getElementById("nuevaFacturaVencimiento").value="";
+  document.getElementById("nuevaFacturaEstadoPago").value="Pendiente";
+  document.getElementById("nuevaFacturaObservaciones").value="";
+  document.getElementById("nuevaFacturaCantidad").textContent=seleccionados.length;
+  document.getElementById("nuevaFacturaSinIgv").textContent="S/ "+resumen.sinIgv.toFixed(2);
+  document.getElementById("nuevaFacturaIgv").textContent="S/ "+resumen.igv.toFixed(2);
+  document.getElementById("nuevaFacturaTotal").textContent="S/ "+resumen.total.toFixed(2);
+  document.getElementById("nuevaFacturaMensaje").style.display="none";
+  document.getElementById("modalNuevaFactura").classList.add("active");
+  setTimeout(function(){document.getElementById("nuevaFacturaNumero").focus();},100);
+}
+
+function cerrarModalNuevaFactura(){
+  const modal=document.getElementById("modalNuevaFactura");
+  if(modal) modal.classList.remove("active");
+}
+
+async function guardarNuevaFactura(){
+  const seleccionados=obtenerSeleccionadosFacturacion();
+  if(!seleccionados.length){
+    cerrarModalNuevaFactura();
+    mostrarAlerta("La selección quedó vacía. Vuelve a seleccionar los servicios.","error");
+    return;
+  }
+
+  const numero=document.getElementById("nuevaFacturaNumero").value.trim();
+  const cliente=document.getElementById("nuevaFacturaCliente").value.trim();
+  const fechaEmision=document.getElementById("nuevaFacturaEmision").value;
+  const fechaVencimiento=document.getElementById("nuevaFacturaVencimiento").value || null;
+  const estadoPago=document.getElementById("nuevaFacturaEstadoPago").value || "Pendiente";
+  const observaciones=document.getElementById("nuevaFacturaObservaciones").value.trim();
+
+  if(!numero || !cliente || !fechaEmision){
+    mostrarAlerta("Completa número de factura, cliente y fecha de emisión.","error");
+    return;
+  }
+
+  const resumen=seleccionados.reduce(function(acumulado,r){
+    const x=calcularImportesFacturacion(r.precio_sin_igv);
+    acumulado.sinIgv+=x.sinIgv;
+    acumulado.igv+=x.igv;
+    acumulado.total+=x.total;
+    return acumulado;
+  },{sinIgv:0,igv:0,total:0});
+
+  const boton=document.querySelector('#modalNuevaFactura button.btn-success');
+  if(boton){boton.disabled=true;boton.textContent="⏳ Guardando...";}
+
+  let facturaId=null;
   try{
-    const fecha=new Date().toISOString();
-    for(const id of ids){
-      const respuesta=await fetch(SUPABASE_URL+"/rest/v1/vehiculos_wankamotors?id=eq."+encodeURIComponent(id),{
-        method:"PATCH",
-        headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},
-        body:JSON.stringify({facturado:true,fecha_facturacion:fecha})
-      });
-      if(!respuesta.ok) throw new Error(await respuesta.text());
-    }
-    mostrarAlerta("Servicios marcados como facturados correctamente.","success");
+    // 1. Crear cabecera de factura.
+    const respuestaFactura=await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors",{
+      method:"POST",
+      headers:{
+        "apikey":SUPABASE_KEY,
+        "Authorization":"Bearer "+SUPABASE_KEY,
+        "Content-Type":"application/json",
+        "Prefer":"return=representation"
+      },
+      body:JSON.stringify({
+        numero_factura:numero,
+        fecha_emision:fechaEmision,
+        fecha_vencimiento:fechaVencimiento,
+        cliente:cliente,
+        subtotal_sin_igv:Number(resumen.sinIgv.toFixed(2)),
+        igv:Number(resumen.igv.toFixed(2)),
+        total_con_igv:Number(resumen.total.toFixed(2)),
+        estado_pago:estadoPago,
+        fecha_pago:estadoPago==="Pagada" ? fechaEmision : null,
+        observaciones:observaciones || null
+      })
+    });
+    if(!respuestaFactura.ok) throw new Error("No se pudo crear la factura: "+await respuestaFactura.text());
+    const facturasCreadas=await respuestaFactura.json();
+    facturaId=Array.isArray(facturasCreadas) && facturasCreadas[0] ? facturasCreadas[0].id : null;
+    if(!facturaId) throw new Error("Supabase creó la factura pero no devolvió su ID.");
+
+    // 2. Crear todos los detalles de la factura en una sola operación.
+    const detalles=seleccionados.map(function(r){
+      const x=calcularImportesFacturacion(r.precio_sin_igv);
+      return {
+        factura_id:facturaId,
+        vehiculo_id:r.id,
+        servicio_id:r.servicio_id || null,
+        servicio:r.servicio || "",
+        precio_sin_igv:Number(x.sinIgv.toFixed(2)),
+        igv:Number(x.igv.toFixed(2)),
+        precio_con_igv:Number(x.total.toFixed(2))
+      };
+    });
+
+    const respuestaDetalle=await fetch(SUPABASE_URL+"/rest/v1/factura_detalle_wankamotors",{
+      method:"POST",
+      headers:{
+        "apikey":SUPABASE_KEY,
+        "Authorization":"Bearer "+SUPABASE_KEY,
+        "Content-Type":"application/json",
+        "Prefer":"return=minimal"
+      },
+      body:JSON.stringify(detalles)
+    });
+    if(!respuestaDetalle.ok) throw new Error("No se pudo crear el detalle de la factura: "+await respuestaDetalle.text());
+
+    // 3. Marcar los vehículos asociados como facturados.
+    const idsFiltro=seleccionados.map(function(r){return String(r.id);}).join(",");
+    const respuestaVehiculos=await fetch(SUPABASE_URL+"/rest/v1/vehiculos_wankamotors?id=in.("+encodeURIComponent(idsFiltro)+")",{
+      method:"PATCH",
+      headers:{
+        "apikey":SUPABASE_KEY,
+        "Authorization":"Bearer "+SUPABASE_KEY,
+        "Content-Type":"application/json",
+        "Prefer":"return=minimal"
+      },
+      body:JSON.stringify({facturado:true,fecha_facturacion:fechaEmision})
+    });
+    if(!respuestaVehiculos.ok) throw new Error("La factura se creó, pero no se pudieron marcar los vehículos como facturados: "+await respuestaVehiculos.text());
+
+    cerrarModalNuevaFactura();
+    mostrarAlerta("Factura "+numero+" creada correctamente con "+seleccionados.length+" servicio(s).","success");
     await inicializarFacturacion();
-  }catch(error){console.error(error);mostrarAlerta("No se pudo actualizar la facturación: "+error.message,"error");}
+    await cargarFacturasEmitidas();
+  }catch(error){
+    console.error(error);
+
+    // Si falló después de crear la cabecera, intentamos eliminarla para no dejar una factura incompleta.
+    if(facturaId){
+      try{
+        await fetch(SUPABASE_URL+"/rest/v1/factura_detalle_wankamotors?factura_id=eq."+encodeURIComponent(facturaId),{
+          method:"DELETE",
+          headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY}
+        });
+      }catch(e){}
+      try{
+        await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors?id=eq."+encodeURIComponent(facturaId),{
+          method:"DELETE",
+          headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY}
+        });
+      }catch(e){}
+    }
+
+    mostrarAlerta(error.message || "No se pudo generar la factura.","error");
+  }finally{
+    if(boton){boton.disabled=false;boton.textContent="💾 Guardar factura";}
+  }
+}
+
+let facturasEmitidas=[];
+let facturasEmitidasPaginaActual=1;
+const FACTURAS_EMITIDAS_POR_PAGINA=40;
+
+async function cargarFacturasEmitidas(){
+  const respuesta=await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors?select=id,numero_factura,fecha_emision,fecha_vencimiento,cliente,subtotal_sin_igv,igv,total_con_igv,estado_pago,fecha_pago,observaciones,created_at&order=fecha_emision.desc,created_at.desc",{
+    method:"GET",
+    headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY},
+    cache:"no-store"
+  });
+  if(!respuesta.ok) throw new Error("No se pudieron cargar las facturas: "+await respuesta.text());
+  facturasEmitidas=await respuesta.json();
+  renderFacturasEmitidas();
+}
+
+function renderFacturasEmitidas(){
+  const tbody=document.getElementById("tablaFacturasEmitidas");
+  if(!tbody) return;
+  const total=facturasEmitidas.length;
+  const paginas=Math.max(1,Math.ceil(total/FACTURAS_EMITIDAS_POR_PAGINA));
+  if(facturasEmitidasPaginaActual>paginas) facturasEmitidasPaginaActual=paginas;
+  const inicio=(facturasEmitidasPaginaActual-1)*FACTURAS_EMITIDAS_POR_PAGINA;
+  const pagina=facturasEmitidas.slice(inicio,inicio+FACTURAS_EMITIDAS_POR_PAGINA);
+  if(!pagina.length){tbody.innerHTML='<tr><td colspan="11" class="empty">No hay facturas emitidas.</td></tr>';}
+  else tbody.innerHTML=pagina.map(function(f,i){
+    const estado=String(f.estado_pago||"Pendiente");
+    const clase=estado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+    const accion=estado==="Pendiente" ? `<button type="button" class="btn btn-success" onclick="marcarFacturaPagada('${esc(f.id)}')">💵 Marcar pagada</button>` : "—";
+    return `<tr><td>${inicio+i+1}</td><td><strong>${esc(f.numero_factura||"")}</strong></td><td>${esc(f.fecha_emision||"")}</td><td>${esc(f.fecha_vencimiento||"—")}</td><td>${esc(f.cliente||"")}</td><td>S/ ${Number(f.subtotal_sin_igv||0).toFixed(2)}</td><td>S/ ${Number(f.igv||0).toFixed(2)}</td><td><strong>S/ ${Number(f.total_con_igv||0).toFixed(2)}</strong></td><td><span class="factura-pago-estado ${clase}">${esc(estado)}</span></td><td>${esc(f.fecha_pago||"—")}</td><td><div class="factura-acciones">${accion}</div></td></tr>`;
+  }).join("");
+  renderPaginacionFacturasEmitidas(total);
+}
+
+function renderPaginacionFacturasEmitidas(total){
+  const c=document.getElementById("paginacionFacturasEmitidas"); if(!c) return;
+  const paginas=Math.max(1,Math.ceil(total/FACTURAS_EMITIDAS_POR_PAGINA));
+  if(paginas<=1){c.innerHTML="";return;}
+  let h=`<button type="button" onclick="irPaginaFacturasEmitidas(${facturasEmitidasPaginaActual-1})" ${facturasEmitidasPaginaActual===1?"disabled":""}>‹</button>`;
+  const ini=Math.max(1,facturasEmitidasPaginaActual-2), fin=Math.min(paginas,facturasEmitidasPaginaActual+2);
+  if(ini>1){h+=`<button type="button" onclick="irPaginaFacturasEmitidas(1)">1</button>`;if(ini>2)h+='<span>…</span>';}
+  for(let i=ini;i<=fin;i++) h+=`<button type="button" class="${i===facturasEmitidasPaginaActual?"activa":""}" onclick="irPaginaFacturasEmitidas(${i})">${i}</button>`;
+  if(fin<paginas){if(fin<paginas-1)h+='<span>…</span>';h+=`<button type="button" onclick="irPaginaFacturasEmitidas(${paginas})">${paginas}</button>`;}
+  h+=`<button type="button" onclick="irPaginaFacturasEmitidas(${facturasEmitidasPaginaActual+1})" ${facturasEmitidasPaginaActual===paginas?"disabled":""}>›</button>`;
+  h+=`<span class="info">Página ${facturasEmitidasPaginaActual} de ${paginas}</span>`;
+  c.innerHTML=h;
+}
+function irPaginaFacturasEmitidas(p){facturasEmitidasPaginaActual=Math.max(1,p);renderFacturasEmitidas();}
+
+async function marcarFacturaPagada(id){
+  const factura=facturasEmitidas.find(function(f){return String(f.id)===String(id);});
+  if(!factura) return;
+  if(!confirm("¿Marcar la factura "+factura.numero_factura+" como pagada?")) return;
+  const hoy=new Intl.DateTimeFormat("en-CA",{timeZone:"America/Lima",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+  try{
+    const respuesta=await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors?id=eq."+encodeURIComponent(id),{
+      method:"PATCH",
+      headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},
+      body:JSON.stringify({estado_pago:"Pagada",fecha_pago:hoy})
+    });
+    if(!respuesta.ok) throw new Error(await respuesta.text());
+    mostrarAlerta("Factura "+factura.numero_factura+" marcada como pagada.","success");
+    await cargarFacturasEmitidas();
+  }catch(error){mostrarAlerta("No se pudo registrar el pago: "+error.message,"error");}
 }
 
 function exportarFacturacionExcel(){
@@ -5695,7 +5964,7 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V4.1 Dashboard</div>
+<div class="version-app">V5.0 Facturación</div>
 </body>
 </html>
 
