@@ -1125,155 +1125,7 @@ Servicio *
 </label>
 
 <select id="servicio">
-
-<option
-value="Lavado básico"
-selected>
-
-Lavado básico
-
-</option>
-
-<option
-value="Adicional por encerado">
-
-Adicional por encerado
-
-</option>
-
-<option
-value="Pulido de cromos">
-
-Pulido de cromos
-
-</option>
-
-<option
-value="Tratamiento de pintura Premium (Auto)">
-
-Tratamiento de pintura Premium (Auto)
-
-</option>
-
-<option
-value="Tratamiento de pintura Premium (Camioneta)">
-
-Tratamiento de pintura Premium (Camioneta)
-
-</option>
-
-<option
-value="Tratamiento de pintura Premium (Pick Up)">
-
-Tratamiento de pintura Premium (Pick Up)
-
-</option>
-
-<option
-value="Lavado de salón (Auto)">
-
-Lavado de salón (Auto)
-
-</option>
-
-<option
-value="Lavado de salón (Camioneta)">
-
-Lavado de salón (Camioneta)
-
-</option>
-
-<option
-value="Lavado de salón (Pick Up / 3 filas)">
-
-Lavado de salón (Pick Up / 3 filas)
-
-</option>
-
-<option
-value="Sellador cerámico">
-
-Sellador cerámico
-
-</option>
-
-<option
-value="Tratamiento de cueros">
-
-Tratamiento de cueros
-
-</option>
-
-<option
-value="Undercoating nacional">
-
-Undercoating nacional
-
-</option>
-
-<option
-value="Undercoating importado">
-
-Undercoating importado
-
-</option>
-
-<option
-value="Zincado de tubo de escape">
-
-Zincado de tubo de escape
-
-</option>
-
-<option
-value="Zincado de tubo de escape (Pick Up)">
-
-Zincado de tubo de escape (Pick Up)
-
-</option>
-
-<option
-value="Tratamiento cerámico 3 años (Auto)">
-
-Tratamiento cerámico 3 años (Auto)
-
-</option>
-
-<option
-value="Tratamiento cerámico 3 años (Camioneta)">
-
-Tratamiento cerámico 3 años (Camioneta)
-
-</option>
-
-<option
-value="Tratamiento cerámico 1 año">
-
-Tratamiento cerámico 1 año
-
-</option>
-
-<option
-value="Pintado de calipers x4">
-
-Pintado de calipers x4
-
-</option>
-
-<option
-value="Pintado de calipers (Personalizado)">
-
-Pintado de calipers (Personalizado)
-
-</option>
-
-<option
-value="Shampoo x 2 (no es el proveedor, es stock)">
-
-Shampoo x 2 (no es el proveedor, es stock)
-
-</option>
-
+  <option value="">⏳ Cargando servicios...</option>
 </select>
 
 </div>
@@ -1543,157 +1395,7 @@ onclick="buscarRegistroPasado()">
 <div class="form-group">
 <label>Servicio *</label>
 <select id="pasadoServicio">
-
-
-<option
-value="Lavado básico"
-selected>
-
-Lavado básico
-
-</option>
-
-<option
-value="Adicional por encerado">
-
-Adicional por encerado
-
-</option>
-
-<option
-value="Pulido de cromos">
-
-Pulido de cromos
-
-</option>
-
-<option
-value="Tratamiento de pintura Premium (Auto)">
-
-Tratamiento de pintura Premium (Auto)
-
-</option>
-
-<option
-value="Tratamiento de pintura Premium (Camioneta)">
-
-Tratamiento de pintura Premium (Camioneta)
-
-</option>
-
-<option
-value="Tratamiento de pintura Premium (Pick Up)">
-
-Tratamiento de pintura Premium (Pick Up)
-
-</option>
-
-<option
-value="Lavado de salón (Auto)">
-
-Lavado de salón (Auto)
-
-</option>
-
-<option
-value="Lavado de salón (Camioneta)">
-
-Lavado de salón (Camioneta)
-
-</option>
-
-<option
-value="Lavado de salón (Pick Up / 3 filas)">
-
-Lavado de salón (Pick Up / 3 filas)
-
-</option>
-
-<option
-value="Sellador cerámico">
-
-Sellador cerámico
-
-</option>
-
-<option
-value="Tratamiento de cueros">
-
-Tratamiento de cueros
-
-</option>
-
-<option
-value="Undercoating nacional">
-
-Undercoating nacional
-
-</option>
-
-<option
-value="Undercoating importado">
-
-Undercoating importado
-
-</option>
-
-<option
-value="Zincado de tubo de escape">
-
-Zincado de tubo de escape
-
-</option>
-
-<option
-value="Zincado de tubo de escape (Pick Up)">
-
-Zincado de tubo de escape (Pick Up)
-
-</option>
-
-<option
-value="Tratamiento cerámico 3 años (Auto)">
-
-Tratamiento cerámico 3 años (Auto)
-
-</option>
-
-<option
-value="Tratamiento cerámico 3 años (Camioneta)">
-
-Tratamiento cerámico 3 años (Camioneta)
-
-</option>
-
-<option
-value="Tratamiento cerámico 1 año">
-
-Tratamiento cerámico 1 año
-
-</option>
-
-<option
-value="Pintado de calipers x4">
-
-Pintado de calipers x4
-
-</option>
-
-<option
-value="Pintado de calipers (Personalizado)">
-
-Pintado de calipers (Personalizado)
-
-</option>
-
-<option
-value="Shampoo x 2 (no es el proveedor, es stock)">
-
-Shampoo x 2 (no es el proveedor, es stock)
-
-</option>
-
-
+  <option value="">⏳ Cargando servicios...</option>
 </select>
 </div>
 
@@ -2334,6 +2036,140 @@ const SUPABASE_KEY =
 
 let supabaseClient = null;
 
+/* =====================================================
+   CATÁLOGO DE SERVICIOS WANKAMOTORS
+   Los servicios y precios se cargan desde Supabase.
+   El precio almacenado en la tabla es SIN IGV.
+===================================================== */
+
+let serviciosWankamotors = [];
+const IGV_WANKAMOTORS = 0.18;
+
+async function cargarServiciosWankamotors(){
+
+  const selects = [
+    document.getElementById("servicio"),
+    document.getElementById("pasadoServicio")
+  ].filter(Boolean);
+
+  selects.forEach(function(select){
+    select.innerHTML = '<option value="">⏳ Cargando servicios...</option>';
+    select.disabled = true;
+  });
+
+  try{
+
+    const respuesta = await fetch(
+      SUPABASE_URL +
+      "/rest/v1/servicios_wankamotors?select=id,nombre_servicio,precio_sin_igv,activo&activo=eq.true&order=id.asc",
+      {
+        method:"GET",
+        headers:{
+          "apikey":SUPABASE_KEY,
+          "Authorization":"Bearer " + SUPABASE_KEY
+        },
+        cache:"no-store"
+      }
+    );
+
+    if(!respuesta.ok){
+      const texto = await respuesta.text();
+      throw new Error("Supabase HTTP " + respuesta.status + (texto ? ": " + texto : ""));
+    }
+
+    serviciosWankamotors = await respuesta.json();
+
+    if(!Array.isArray(serviciosWankamotors) || !serviciosWankamotors.length){
+      throw new Error("No hay servicios activos en servicios_wankamotors.");
+    }
+
+    selects.forEach(function(select){
+      select.innerHTML = '<option value="">Seleccione el servicio</option>';
+
+      serviciosWankamotors.forEach(function(servicio){
+        const option = document.createElement("option");
+        option.value = String(servicio.id);
+        option.textContent = servicio.nombre_servicio;
+        option.dataset.precioSinIgv = Number(servicio.precio_sin_igv || 0).toFixed(2);
+        select.appendChild(option);
+      });
+
+      select.disabled = false;
+    });
+
+    // Mantener Lavado básico como opción inicial si existe en el catálogo.
+    seleccionarServicioPorNombre("servicio", "Lavado básico (incluye lavado de motor)");
+    seleccionarServicioPorNombre("pasadoServicio", "Lavado básico (incluye lavado de motor)");
+
+  }catch(error){
+
+    console.error("Error cargando servicios:", error);
+
+    selects.forEach(function(select){
+      select.innerHTML = '<option value="">❌ No se pudieron cargar los servicios</option>';
+      select.disabled = true;
+    });
+
+    mostrarAlerta("No se pudieron cargar los servicios: " + error.message,"error");
+    throw error;
+  }
+}
+
+function seleccionarServicioPorNombre(selectId, nombre){
+  const select = document.getElementById(selectId);
+  if(!select) return false;
+
+  const servicio = serviciosWankamotors.find(function(s){
+    return String(s.nombre_servicio || "").trim().toLowerCase() === String(nombre || "").trim().toLowerCase();
+  });
+
+  if(!servicio) return false;
+
+  select.value = String(servicio.id);
+  return true;
+}
+
+function seleccionarServicioPorIdONombre(selectId, id, nombre){
+  const select = document.getElementById(selectId);
+  if(!select) return false;
+
+  if(id !== null && id !== undefined && id !== ""){
+    select.value = String(id);
+    if(select.value === String(id)) return true;
+  }
+
+  return seleccionarServicioPorNombre(selectId, nombre);
+}
+
+function obtenerServicioSeleccionado(selectId){
+  const select = document.getElementById(selectId);
+  if(!select || !select.value) return null;
+
+  const servicio = serviciosWankamotors.find(function(s){
+    return String(s.id) === String(select.value);
+  });
+
+  if(!servicio) return null;
+
+  const precioSinIgv = Number(servicio.precio_sin_igv || 0);
+  const igv = Number((precioSinIgv * IGV_WANKAMOTORS).toFixed(2));
+  const precioConIgv = Number((precioSinIgv + igv).toFixed(2));
+
+  return {
+    id: servicio.id,
+    nombre: servicio.nombre_servicio,
+    precioSinIgv: precioSinIgv,
+    igv: igv,
+    precioConIgv: precioConIgv
+  };
+}
+
+function servicioActualPorNombre(nombre){
+  return serviciosWankamotors.find(function(s){
+    return String(s.nombre_servicio || "").trim().toLowerCase() === String(nombre || "").trim().toLowerCase();
+  }) || null;
+}
+
 
 /* =====================================================
    VARIABLES
@@ -2774,7 +2610,8 @@ const placa = normalizarValorInterno(placaIngresada);
 const vin = normalizarValorInterno(vinIngresado);
 const marca = document.getElementById("marca").value;
 const modelo = "";
-const servicio = document.getElementById("servicio").value.trim();
+const servicioSeleccionado = obtenerServicioSeleccionado("servicio");
+const servicio = servicioSeleccionado ? servicioSeleccionado.nombre : "";
 const observaciones = document.getElementById("observaciones").value.trim();
 
 const archivoIngreso = document.getElementById("fotoIngreso").files[0];
@@ -2786,8 +2623,8 @@ if(tipo === "Servicio" && !placa){
   return;
 }
 
-if(!marca || !servicio){
-  mostrarAlerta("Complete todos los campos obligatorios.","error");
+if(!marca || !servicioSeleccionado){
+  mostrarAlerta("Seleccione un servicio válido del catálogo.","error");
   return;
 }
 
@@ -2857,6 +2694,12 @@ const filaSupabase = {
   marca:marca,
   modelo:modelo,
   servicio:servicio,
+  servicio_id:servicioSeleccionado.id,
+  precio_sin_igv:servicioSeleccionado.precioSinIgv,
+  igv:servicioSeleccionado.igv,
+  precio_con_igv:servicioSeleccionado.precioConIgv,
+  facturado:false,
+  fecha_facturacion:null,
   estado:"Lavando",
   hora_inicio_lavado:ahora,
   hora_salida:null,
@@ -3466,7 +3309,7 @@ function seleccionarRegistroPasado(id){
   document.getElementById("pasadoPlaca").value = String(registro.placa || "").toUpperCase();
   document.getElementById("pasadoVIN").value = String(registro.vin || "").toUpperCase();
   document.getElementById("pasadoMarca").value = registro.marca || "";
-  document.getElementById("pasadoServicio").value = registro.servicio || "Lavado básico";
+  seleccionarServicioPorIdONombre("pasadoServicio", registro.servicio_id, registro.servicio || "Lavado básico (incluye lavado de motor)");
   document.getElementById("pasadoFecha").value = obtenerFechaHistorial(registro.hora_inicio_lavado) || "";
 
   document.getElementById("pasadoFotoIngreso").value = "";
@@ -3611,7 +3454,8 @@ async function guardarRegistroPasado(){
     const vin = normalizarValorInterno(vinIngresadoPasado);
 
     const marca = document.getElementById("pasadoMarca").value;
-    const servicio = document.getElementById("pasadoServicio").value;
+    const servicioSeleccionado = obtenerServicioSeleccionado("pasadoServicio");
+    const servicio = servicioSeleccionado ? servicioSeleccionado.nombre : "";
     const fecha = document.getElementById("pasadoFecha").value;
     const observaciones = document.getElementById("pasadoObservaciones").value.trim();
 
@@ -3619,7 +3463,7 @@ async function guardarRegistroPasado(){
     const archivoOT = document.getElementById("pasadoFotoOT").files[0];
     const archivoVIN = document.getElementById("pasadoFotoVIN").files[0];
 
-    if(!marca || !servicio || !fecha){
+    if(!marca || !servicioSeleccionado || !fecha){
       mostrarAlerta("Complete marca, servicio y fecha de ingreso / lavado.","error");
       return;
     }
@@ -3717,6 +3561,8 @@ async function guardarRegistroPasado(){
         ? combinarFechaLimaConHoraExistente(fecha, horaSalidaExistente)
         : horaInicioRegularizada;
 
+      const registroYaFacturado = !!(registroOriginal && registroOriginal.facturado);
+
       const cambios = {
         tipo:tipo,
         ot:tipo === "Servicio" ? ot : "",
@@ -3730,6 +3576,14 @@ async function guardarRegistroPasado(){
         observaciones:observaciones,
         observaciones_finales: observacionFinalExistente || "Registro regularizado"
       };
+
+      /* Si el registro ya fue facturado, sus precios históricos no se modifican. */
+      if(!registroYaFacturado){
+        cambios.servicio_id = servicioSeleccionado.id;
+        cambios.precio_sin_igv = servicioSeleccionado.precioSinIgv;
+        cambios.igv = servicioSeleccionado.igv;
+        cambios.precio_con_igv = servicioSeleccionado.precioConIgv;
+      }
 
       if(fotos.fotoIngreso) cambios.foto_ingreso = fotos.fotoIngreso;
       if(fotos.fotoOT) cambios.foto_ot = fotos.fotoOT;
@@ -3803,6 +3657,12 @@ async function guardarRegistroPasado(){
         marca:marca,
         modelo:"",
         servicio:servicio,
+        servicio_id:servicioSeleccionado.id,
+        precio_sin_igv:servicioSeleccionado.precioSinIgv,
+        igv:servicioSeleccionado.igv,
+        precio_con_igv:servicioSeleccionado.precioConIgv,
+        facturado:false,
+        fecha_facturacion:null,
         estado:"Finalizado",
         hora_inicio_lavado:horaRegularizacionNueva,
         hora_salida:horaRegularizacionNueva,
@@ -3886,8 +3746,7 @@ function limpiarCamposFormularioPasadoSinResultados(){
     else el.value = "";
   });
 
-  const servicio = document.getElementById("pasadoServicio");
-  if(servicio) servicio.value = "Lavado básico";
+  seleccionarServicioPorNombre("pasadoServicio", "Lavado básico (incluye lavado de motor)");
 
   const opcionServicio = document.querySelector('input[name="tipoPasado"][value="Servicio"]');
   if(opcionServicio) opcionServicio.checked = true;
@@ -3931,7 +3790,7 @@ function limpiarRegistroPasado(){
   document.getElementById("pasadoPlaca").value = "";
   document.getElementById("pasadoVIN").value = "";
   document.getElementById("pasadoMarca").value = "";
-  document.getElementById("pasadoServicio").value = "Lavado básico";
+  seleccionarServicioPorNombre("pasadoServicio", "Lavado básico (incluye lavado de motor)");
   document.getElementById("pasadoFecha").value = "";
   document.getElementById("pasadoObservaciones").value = "";
   document.getElementById("pasadoFotoIngreso").value = "";
@@ -4020,6 +3879,19 @@ function iniciarRealtimeSupabase(){
         },
         function(){
           cargarDatos();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event:"*",
+          schema:"public",
+          table:"servicios_wankamotors"
+        },
+        function(){
+          cargarServiciosWankamotors().catch(function(error){
+            console.warn("No se pudo actualizar el catálogo de servicios:", error);
+          });
         }
       )
       .subscribe(function(status){
@@ -5128,8 +5000,7 @@ document.getElementById("observaciones").value = "";
 
 document.getElementById("marca").value = "";
 
-document.getElementById("servicio").value =
-"Lavado básico";
+seleccionarServicioPorNombre("servicio", "Lavado básico (incluye lavado de motor)");
 
 
 /* LIMPIAR FOTOS */
@@ -5363,9 +5234,15 @@ return "pendiente";
 
 document.addEventListener(
 "DOMContentLoaded",
-function(){
+async function(){
 
   cambiarTipo("Servicio");
+
+  try{
+    await cargarServiciosWankamotors();
+  }catch(error){
+    console.warn("El catálogo de servicios no pudo cargarse al iniciar:", error);
+  }
 
   [
     "ot", "placa", "vin",
@@ -5392,6 +5269,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V3.0</div>
+<div class="version-app">V2.8</div>
 </body>
 </html>
