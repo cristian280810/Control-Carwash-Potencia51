@@ -3546,9 +3546,17 @@ async function guardarRegistroPasado(){
   try{
 
     const tipo = document.querySelector('input[name="tipoPasado"]:checked').value;
-    const ot = document.getElementById("pasadoOT").value.trim().toUpperCase();
-    const placa = document.getElementById("pasadoPlaca").value.trim().toUpperCase();
-    const vin = document.getElementById("pasadoVIN").value.trim().toUpperCase();
+
+    const otIngresadaPasado = document.getElementById("pasadoOT").value.trim().toUpperCase();
+    const placaIngresadaPasado = document.getElementById("pasadoPlaca").value.trim().toUpperCase();
+    const vinIngresadoPasado = document.getElementById("pasadoVIN").value.trim().toUpperCase();
+
+    // En Regularizar también se permiten espacios y guiones al escribir.
+    // Al guardar se eliminan espacios y guiones; la "/" de la OT se conserva.
+    const ot = normalizarValorInterno(otIngresadaPasado);
+    const placa = normalizarValorInterno(placaIngresadaPasado);
+    const vin = normalizarValorInterno(vinIngresadoPasado);
+
     const marca = document.getElementById("pasadoMarca").value;
     const servicio = document.getElementById("pasadoServicio").value;
     const fecha = document.getElementById("pasadoFecha").value;
@@ -5315,6 +5323,6 @@ iniciarRealtimeSupabase();
 </script>
 
 
-<div class="version-app">V2.8</div>
+<div class="version-app">V3.5</div>
 </body>
 </html>
