@@ -3050,7 +3050,7 @@ async function verificarDuplicadosAntesDeRegistrar(datos){
         "• Placa: " + (r.placa || "—") + "\n" +
         "• VIN: " + (r.vin || "—") + "\n" +
         "• Estado: " + (r.estado || "—") + "\n" +
-        "• Fecha: " + (formatearFechaRegularizacion(r.hora_inicio_lavado) || "—") + "\n" +
+        "• Fecha y hora de lavado: " + (formatearFechaHoraRegularizacion(r.hora_inicio_lavado) || "—") + "\n" +
         "• Motivo: " + (x.motivos.join(", ") || "coincidencia") + "\n\n";
     });
 
@@ -3113,6 +3113,28 @@ let registrosPasadosEncontrados = [];
 const REGISTROS_PASADOS_POR_PAGINA = 20;
 let paginaRegistrosPasados = 1;
 
+function formatearFechaHoraRegularizacion(fecha){
+  if(!fecha) return "";
+  const fechaObj = new Date(String(fecha).trim());
+  if(isNaN(fechaObj.getTime())) return "";
+
+  const partes = new Intl.DateTimeFormat("es-PE", {
+    timeZone: "America/Lima",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).formatToParts(fechaObj);
+
+  const valores = {};
+  partes.forEach(function(p){ valores[p.type] = p.value; });
+
+  return valores.day + "-" + valores.month + "-" + valores.year +
+         " " + valores.hour + ":" + valores.minute;
+}
+
 function formatearFechaRegularizacion(fecha){
   if(!fecha) return "";
   const fechaObj = new Date(String(fecha).trim());
@@ -3145,7 +3167,7 @@ function renderizarRegistrosPasadosPaginados(){
       <div><strong>Placa:</strong> ${esc(r.placa||"—")}</div>
       <div><strong>VIN:</strong> ${esc(r.vin||"—")}</div>
       <div><strong>Estado:</strong> ${esc(r.estado||"—")}</div>
-      <div><strong>Fecha ingreso / lavado:</strong> ${esc(formatearFechaRegularizacion(r.hora_inicio_lavado)||"—")}</div>
+      <div><strong>Fecha ingreso / lavado:</strong> ${esc(formatearFechaHoraRegularizacion(r.hora_inicio_lavado)||"—")}</div>
       <div><strong>Servicio:</strong> ${esc(r.servicio||"—")}</div>
       <div><strong>Marca:</strong> ${esc(r.marca||"—")}</div>
       ${renderFotosRegistroPasado(r)}
@@ -3597,6 +3619,21 @@ async function guardarRegistroPasado(){
       });
       const observacionFinalExistente = registroOriginal && String(registroOriginal.observaciones_finales || "").trim();
 
+      // Conservar las horas existentes al regularizar.
+      // Si no existe hora de salida, usar la misma hora de ingreso.
+      const horaInicioExistente =
+        registroOriginal && registroOriginal.hora_inicio_lavado
+          ? registroOriginal.hora_inicio_lavado
+          : "";
+
+      const horaSalidaExistente =
+        registroOriginal && registroOriginal.hora_salida
+          ? registroOriginal.hora_salida
+          : "";
+
+      const horaInicioRegularizada = horaInicioExistente || fechaLavado;
+      const horaSalidaRegularizada = horaSalidaExistente || horaInicioRegularizada;
+
       const cambios = {
         tipo:tipo,
         ot:tipo === "Servicio" ? ot : "",
@@ -3605,7 +3642,8 @@ async function guardarRegistroPasado(){
         marca:marca,
         servicio:servicio,
         estado:"Finalizado",
-        hora_inicio_lavado:fechaLavado,
+        hora_inicio_lavado:horaInicioRegularizada,
+        hora_salida:horaSalidaRegularizada,
         observaciones:observaciones,
         observaciones_finales: observacionFinalExistente || "Registro regularizado"
       };
@@ -3667,6 +3705,12 @@ async function guardarRegistroPasado(){
 
     }else{
 
+      // Los registros pasados nuevos se regularizan a las 11:00,
+      // tanto para ingreso como para salida.
+      const horaRegularizacionNueva = new Date(
+        fecha + "T11:00:00-05:00"
+      ).toISOString();
+
       const fila = {
         id:id,
         tipo:tipo,
@@ -3677,8 +3721,8 @@ async function guardarRegistroPasado(){
         modelo:"",
         servicio:servicio,
         estado:"Finalizado",
-        hora_inicio_lavado:fechaLavado,
-        hora_salida:null,
+        hora_inicio_lavado:horaRegularizacionNueva,
+        hora_salida:horaRegularizacionNueva,
         observaciones:observaciones,
         observaciones_finales:"Registro regularizado",
         foto_ingreso:fotos.fotoIngreso,
