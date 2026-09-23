@@ -1003,14 +1003,6 @@ onclick="mostrarSeccion('historial',this)">
 </button>
 
 <button
-onclick="mostrarSeccion('dashboard',this)">
-
-📈 Dashboard
-
-</button>
-
-
-<button
 onclick="mostrarSeccion('administracion',this)">
 
 🔐 Administración
@@ -1413,6 +1405,12 @@ onclick="limpiarFormulario()">
     <p>Acceso a módulos administrativos protegidos por contraseña.</p>
 
     <div class="administracion-grid">
+      <button type="button" class="admin-opcion" onclick="mostrarModuloAdministracion('dashboard')">
+        <span class="admin-opcion-icon">📈</span>
+        <span>Dashboard</span>
+        <small>Indicadores, gráficas y comparativos</small>
+      </button>
+
       <button type="button" class="admin-opcion" onclick="mostrarModuloAdministracion('facturacion')">
         <span class="admin-opcion-icon">🧾</span>
         <span>Facturación</span>
@@ -2090,7 +2088,7 @@ id="tablaHistorial">
     </div>
 
     <p style="margin-top:15px;">
-      Esta sección contiene Facturación y Regularizar registros. Ingrese la contraseña para continuar.
+      Esta sección contiene Dashboard, Facturación y Regularizar registros. Ingrese la contraseña para continuar.
     </p>
 
     <div class="form-group" style="margin-top:15px;">
@@ -2504,6 +2502,7 @@ let registros = [];
 ===================================================== */
 
 let botonAdministracionPendiente = null;
+let administracionAutorizada = false;
 
 // Se conserva la contraseña que anteriormente protegía Regularizar registros.
 const PASSWORD_ADMINISTRACION = "Cristian100512**";
@@ -2541,8 +2540,11 @@ function mostrarSeccion(nombre, boton){
     limpiarHistorial();
   }
 
+  // Dashboard es un módulo de Administración y no debe abrirse
+  // directamente desde el menú principal.
   if(nombre === "dashboard") {
-    cargarDashboard();
+    mostrarSeccionSinPassword("administracion", boton);
+    return;
   }
 }
 
@@ -2584,6 +2586,7 @@ function validarPasswordAdministracion(){
     input.value = "";
     if(error) error.style.display = "none";
     botonAdministracionPendiente = null;
+    administracionAutorizada = true;
     mostrarSeccionSinPassword("administracion", boton);
     return;
   }
@@ -2608,6 +2611,11 @@ function mostrarSeccionSinPassword(nombre, boton){
 }
 
 function mostrarModuloAdministracion(nombre){
+  if(!administracionAutorizada){
+    mostrarSeccion("administracion", null);
+    return;
+  }
+
   document.querySelectorAll(".section").forEach(function(x){
     x.classList.remove("active");
   });
@@ -2623,6 +2631,10 @@ function mostrarModuloAdministracion(nombre){
     return btn.textContent.includes("Administración");
   });
   if(botonAdmin) botonAdmin.classList.add("active");
+
+  if(nombre === "dashboard"){
+    cargarDashboard();
+  }
 
   if(nombre === "facturacion"){
     inicializarFacturacion();
@@ -6344,7 +6356,7 @@ document.addEventListener("click", cerrarFiltrosDashboard);
 </script>
 
 
-<div class="version-app">V5.6 Dashboard</div>
+<div class="version-app">V5.1 Dashboard</div>
 </body>
 </html>
 
