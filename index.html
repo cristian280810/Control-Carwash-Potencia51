@@ -1103,7 +1103,7 @@ type="text"
 placeholder="Ingrese Nro. de OT"
 autocomplete="off"
 style="text-transform:uppercase"
-oninput="this.value=this.value.toUpperCase()">
+oninput="const inicio=this.selectionStart; const fin=this.selectionEnd; this.value=this.value.toUpperCase(); try{this.setSelectionRange(inicio,fin);}catch(e){}">
 
 </div>
 
@@ -1147,7 +1147,7 @@ type="text"
 placeholder="Ingrese Nro. de Placa"
 autocomplete="off"
 style="text-transform:uppercase"
-oninput="this.value=this.value.toUpperCase()">
+oninput="const inicio=this.selectionStart; const fin=this.selectionEnd; this.value=this.value.toUpperCase(); try{this.setSelectionRange(inicio,fin);}catch(e){}">
 
 </div>
 
@@ -1171,7 +1171,7 @@ type="text"
 placeholder="Ingrese Nro. de VIN"
 autocomplete="off"
 style="text-transform:uppercase"
-oninput="this.value=this.value.toUpperCase()">
+oninput="const inicio=this.selectionStart; const fin=this.selectionEnd; this.value=this.value.toUpperCase(); try{this.setSelectionRange(inicio,fin);}catch(e){}">
 
 </div>
 
@@ -1674,17 +1674,17 @@ onclick="buscarRegistroPasado()">
 
 <div id="pasadoCampoOT" class="form-group">
 <label>Número de OT</label>
-<input id="pasadoOT" type="text" placeholder="Ingrese número de OT" autocomplete="off" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+<input id="pasadoOT" type="text" placeholder="Ingrese número de OT" autocomplete="off" style="text-transform:uppercase" oninput="const inicio=this.selectionStart; const fin=this.selectionEnd; this.value=this.value.toUpperCase(); try{this.setSelectionRange(inicio,fin);}catch(e){}">
 </div>
 
 <div id="pasadoCampoPlaca" class="form-group">
 <label>Placa *</label>
-<input id="pasadoPlaca" type="text" placeholder="Ingrese placa" autocomplete="off" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+<input id="pasadoPlaca" type="text" placeholder="Ingrese placa" autocomplete="off" style="text-transform:uppercase" oninput="const inicio=this.selectionStart; const fin=this.selectionEnd; this.value=this.value.toUpperCase(); try{this.setSelectionRange(inicio,fin);}catch(e){}">
 </div>
 
 <div id="pasadoCampoVIN" class="form-group" style="display:none">
 <label>VIN *</label>
-<input id="pasadoVIN" type="text" placeholder="Ingrese VIN" autocomplete="off" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+<input id="pasadoVIN" type="text" placeholder="Ingrese VIN" autocomplete="off" style="text-transform:uppercase" oninput="const inicio=this.selectionStart; const fin=this.selectionEnd; this.value=this.value.toUpperCase(); try{this.setSelectionRange(inicio,fin);}catch(e){}">
 </div>
 
 <div class="form-group">
@@ -2163,15 +2163,15 @@ id="tablaHistorial">
     <div class="form-grid">
       <div class="form-group">
         <label>OT</label>
-        <input id="editarOT" type="text" autocomplete="off" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+        <input id="editarOT" type="text" autocomplete="off" style="text-transform:uppercase" oninput="const inicio=this.selectionStart; const fin=this.selectionEnd; this.value=this.value.toUpperCase(); try{this.setSelectionRange(inicio,fin);}catch(e){}">
       </div>
       <div class="form-group">
         <label>Placa</label>
-        <input id="editarPlaca" type="text" autocomplete="off" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+        <input id="editarPlaca" type="text" autocomplete="off" style="text-transform:uppercase" oninput="const inicio=this.selectionStart; const fin=this.selectionEnd; this.value=this.value.toUpperCase(); try{this.setSelectionRange(inicio,fin);}catch(e){}">
       </div>
       <div class="form-group">
         <label>Número de VIN</label>
-        <input id="editarVIN" type="text" autocomplete="off" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+        <input id="editarVIN" type="text" autocomplete="off" style="text-transform:uppercase" oninput="const inicio=this.selectionStart; const fin=this.selectionEnd; this.value=this.value.toUpperCase(); try{this.setSelectionRange(inicio,fin);}catch(e){}">
       </div>
       <div class="form-group">
         <label>Marca</label>
