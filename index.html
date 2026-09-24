@@ -4375,6 +4375,92 @@ function iniciarRealtimeSupabase(){
 }
 
 
+
+/* =====================================================
+   FINALIZACIÓN AUTOMÁTICA DE LAVADOS DEL DÍA ANTERIOR
+===================================================== */
+
+function fechaLimaSeguimiento(valor){
+  if(!valor) return "";
+  const d = new Date(valor);
+  if(Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone:"America/Lima",
+    year:"numeric",
+    month:"2-digit",
+    day:"2-digit"
+  }).format(d);
+}
+
+function horaSalidaAutomaticaLima(fecha){
+  return fecha ? fecha + "T17:30:00-05:00" : "";
+}
+
+async function finalizarLavadosDelDiaAnterior(registrosActuales){
+  if(!Array.isArray(registrosActuales) || !registrosActuales.length){
+    return 0;
+  }
+
+  const hoy = fechaLimaSeguimiento(new Date().toISOString());
+  if(!hoy) return 0;
+
+  const pendientes = registrosActuales.filter(function(r){
+    if(String(r.estado || "").trim().toLowerCase() !== "lavando"){
+      return false;
+    }
+
+    const fechaLavado = fechaLimaSeguimiento(r.horaInicio);
+    return fechaLavado && fechaLavado < hoy;
+  });
+
+  if(!pendientes.length) return 0;
+
+  let actualizados = 0;
+
+  for(const r of pendientes){
+    try{
+      const fechaLavado = fechaLimaSeguimiento(r.horaInicio);
+      const horaSalida = horaSalidaAutomaticaLima(fechaLavado);
+
+      const respuesta = await fetch(
+        SUPABASE_URL +
+        "/rest/v1/vehiculos_wankamotors?id=eq." +
+        encodeURIComponent(r.id),
+        {
+          method:"PATCH",
+          headers:{
+            "apikey":SUPABASE_KEY,
+            "Authorization":"Bearer " + SUPABASE_KEY,
+            "Content-Type":"application/json",
+            "Prefer":"return=minimal"
+          },
+          body:JSON.stringify({
+            estado:"Finalizado",
+            hora_salida:horaSalida
+          })
+        }
+      );
+
+      if(!respuesta.ok){
+        console.error(
+          "No se pudo finalizar automáticamente el vehículo " + r.id,
+          await respuesta.text()
+        );
+        continue;
+      }
+
+      actualizados++;
+    }catch(error){
+      console.error(
+        "Error en finalización automática del vehículo " + r.id,
+        error
+      );
+    }
+  }
+
+  return actualizados;
+}
+
 async function cargarDatos(){
 
 try{
@@ -4390,6 +4476,20 @@ if(!registros.length){
 }
 
 registros = await cargarSeguimientoSupabase();
+
+/*
+  Si estamos en un nuevo día y algún vehículo sigue en "Lavando",
+  se finaliza automáticamente con:
+  - fecha = fecha original de inicio del lavado
+  - hora_salida = 17:30 de esa fecha
+*/
+const cantidadAutoFinalizados = await finalizarLavadosDelDiaAnterior(registros);
+
+if(cantidadAutoFinalizados > 0){
+  // Volver a consultar para que los finalizados desaparezcan de Seguimiento.
+  registros = await cargarSeguimientoSupabase();
+}
+
 renderSeguimiento();
 
 }catch(error){
@@ -7187,9 +7287,57 @@ iniciarRealtimeSupabase();
 document.addEventListener("click", cerrarFiltroServiciosFacturacion);
 document.addEventListener("click", cerrarFiltrosDashboard);
 
+
+/* REVISION_AUTOMATICA_LAVADOS
+   Ejecuta el cierre automático una vez al día a las 19:30.
+   La hora registrada de salida del vehículo será 17:30 del mismo día.
+*/
+let temporizadorCierreAutomatico = null;
+
+function programarCierreAutomatico1930(){
+  if(temporizadorCierreAutomatico){
+    clearTimeout(temporizadorCierreAutomatico);
+  }
+
+  const ahora = new Date();
+  const siguiente = new Date(ahora);
+  siguiente.setHours(19,30,0,0);
+
+  // Si ya pasó las 19:30, se programa para el día siguiente.
+  if(siguiente.getTime() <= ahora.getTime()){
+    siguiente.setDate(siguiente.getDate() + 1);
+  }
+
+  const milisegundos = siguiente.getTime() - ahora.getTime();
+
+  temporizadorCierreAutomatico = setTimeout(async function(){
+    try{
+      const registrosActuales = await cargarSeguimientoSupabase();
+      const cantidad = await finalizarLavadosDelDiaAnterior(registrosActuales);
+
+      if(cantidad > 0){
+        console.log(
+          "Cierre automático de las 19:30: " +
+          cantidad +
+          " vehículo(s) finalizado(s)."
+        );
+      }
+
+      programarCierreAutomatico1930();
+      cargarDatos();
+
+    }catch(error){
+      console.error("Error en cierre automático de las 19:30:", error);
+      programarCierreAutomatico1930();
+    }
+  }, milisegundos);
+}
+
+programarCierreAutomatico1930();
+
 </script>
 
 
-<div class="version-app">V5.2 Dashboard</div>
+<div class="version-app">V5.5 Dashboard</div>
 </body>
 </html>
