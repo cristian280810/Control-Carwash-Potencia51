@@ -1588,33 +1588,40 @@ onclick="limpiarFormulario()">
 <div id="modalPagosFactura" class="modal">
   <div class="modal-content" style="max-width:700px;">
     <div class="modal-header">
-      <h2>💰 Registrar pagos</h2>
+      <h2>💰 Registrar pago</h2>
       <button type="button" class="close" onclick="cerrarModalPagosFactura()">&times;</button>
     </div>
     <input type="hidden" id="pagoFacturaId">
     <h3 id="pagoFacturaNumero" style="margin-top:0;"></h3>
     <div class="facturacion-resumen">
       <div class="facturacion-card">Total factura<strong id="pagoFacturaTotal">S/ 0.00</strong></div>
-      <div class="facturacion-card">Detracción<strong id="pagoFacturaDetraccion">S/ 0.00</strong></div>
+      <div class="facturacion-card">Detracción<strong id="pagoFacturaDetraccion">No aplica</strong></div>
       <div class="facturacion-card">Pago directo<strong id="pagoFacturaDirecto">S/ 0.00</strong></div>
       <div class="facturacion-card">Pendiente<strong id="pagoFacturaPendiente">S/ 0.00</strong></div>
     </div>
     <div class="form-grid">
       <div class="form-group">
-        <label>Pago directo recibido</label>
-        <input id="pagoDirectoMonto" type="number" min="0" step="0.01" placeholder="0.00">
+        <label>¿Factura pagada?</label>
+        <select id="pagoFacturaPagada" onchange="actualizarFormularioPagoFactura()">
+          <option value="no">No</option>
+          <option value="si">Sí</option>
+        </select>
       </div>
       <div class="form-group">
-        <label>Fecha pago directo</label>
-        <input id="pagoDirectoFecha" type="date">
+        <label>Fecha de pago</label>
+        <input id="pagoFacturaFecha" type="date" disabled>
       </div>
-      <div class="form-group">
-        <label>Detracción depositada</label>
-        <input id="pagoDetraccionMonto" type="number" min="0" step="0.01" placeholder="0.00">
+      <div id="grupoDetraccionPago" class="form-group full" style="display:none;">
+        <label>¿Detracción depositada?</label>
+        <select id="pagoDetraccionDepositada" onchange="actualizarFormularioPagoFactura()">
+          <option value="no">No</option>
+          <option value="si">Sí</option>
+        </select>
+        <small style="display:block;margin-top:5px;color:#6b7280;">Monto de detracción: <strong id="pagoDetraccionMontoTexto">S/ 0.00</strong></small>
       </div>
-      <div class="form-group">
-        <label>Fecha detracción</label>
-        <input id="pagoDetraccionFecha" type="date">
+      <div id="grupoFechaDetraccionPago" class="form-group" style="display:none;">
+        <label>Fecha de depósito de detracción</label>
+        <input id="pagoDetraccionFecha" type="date" disabled>
       </div>
       <div class="form-group full">
         <label>Observaciones del pago</label>
@@ -1624,7 +1631,7 @@ onclick="limpiarFormulario()">
     <div id="pagoFacturaMensaje" class="facturacion-pagos-box" style="display:none;"></div>
     <div class="actions" style="justify-content:flex-end;">
       <button type="button" class="btn btn-secondary" onclick="cerrarModalPagosFactura()">Cancelar</button>
-      <button type="button" class="btn btn-success" onclick="guardarPagosFactura()">💾 Guardar pagos</button>
+      <button type="button" class="btn btn-success" onclick="guardarPagosFactura()">💾 Guardar</button>
     </div>
   </div>
 </div>
@@ -6172,13 +6179,11 @@ async function cargarFacturasEmitidas(){
 
 function obtenerEstadoPagoFactura(f){
   const total=Number(f.total_con_igv||0);
-  const directo=String(f.fecha_pago_directo||'').trim() ? Math.max(0,Number(f.monto_pago_directo||0)) : 0;
-  const detraccion=!!f.aplica_detraccion && String(f.fecha_detraccion||'').trim()
-    ? Math.max(0,Number(f.monto_detraccion||0))
-    : 0;
-  const recibido=Math.min(total,directo+detraccion);
-  if(total<=0 || recibido<=0) return "Pendiente";
-  if(recibido+0.01<total) return "Pago parcial";
+  const pagada=String(f.fecha_pago||'').trim() !== '' || String(f.fecha_pago_directo||'').trim() !== '';
+  const detAplica=!!f.aplica_detraccion;
+  const detDepositada=detAplica && String(f.fecha_detraccion||'').trim() !== '';
+  if(total<=0 || !pagada) return "Pendiente";
+  if(detAplica && !detDepositada) return "Pago parcial";
   return "Pagada";
 }
 
@@ -6223,27 +6228,61 @@ function abrirModalPagosFactura(id){
   const factura=facturasEmitidas.find(function(f){return String(f.id)===String(id);});
   if(!factura) return;
   const total=Number(factura.total_con_igv||0);
-  const det=!!factura.aplica_detraccion?Number(factura.monto_detraccion||0):0;
-  const directo=String(factura.fecha_pago_directo||'').trim() ? Number(factura.monto_pago_directo||0) : 0;
-  const detDepositada=!!factura.aplica_detraccion && String(factura.fecha_detraccion||'').trim();
+  const detAplica=!!factura.aplica_detraccion;
+  const det=detAplica?Number(factura.monto_detraccion||0):0;
+  const pagada=String(factura.fecha_pago||factura.fecha_pago_directo||'').trim() !== '';
+  const detDepositada=detAplica && String(factura.fecha_detraccion||'').trim() !== '';
+  const directo=pagada ? Math.max(0,total-(detAplica?det:0)) : 0;
   const recibido=Math.min(total,directo+(detDepositada?det:0));
   const pendiente=Math.max(0,total-recibido);
+
   document.getElementById("pagoFacturaId").value=factura.id;
   document.getElementById("pagoFacturaNumero").textContent="Factura "+(factura.numero_factura||"");
   document.getElementById("pagoFacturaTotal").textContent="S/ "+total.toFixed(2);
-  document.getElementById("pagoFacturaDetraccion").textContent=factura.aplica_detraccion?"S/ "+det.toFixed(2):"No aplica";
+  document.getElementById("pagoFacturaDetraccion").textContent=detAplica?"S/ "+det.toFixed(2):"No aplica";
   document.getElementById("pagoFacturaDirecto").textContent="S/ "+directo.toFixed(2);
   document.getElementById("pagoFacturaPendiente").textContent="S/ "+pendiente.toFixed(2);
-  document.getElementById("pagoDirectoMonto").value=directo.toFixed(2);
-  document.getElementById("pagoDirectoFecha").value=factura.fecha_pago_directo||"";
-  document.getElementById("pagoDetraccionMonto").value=factura.aplica_detraccion?det.toFixed(2):"0.00";
+  document.getElementById("pagoFacturaPagada").value=pagada?"si":"no";
+  document.getElementById("pagoFacturaFecha").value=factura.fecha_pago||factura.fecha_pago_directo||"";
+  document.getElementById("pagoDetraccionDepositada").value=detDepositada?"si":"no";
   document.getElementById("pagoDetraccionFecha").value=factura.fecha_detraccion||"";
+  document.getElementById("pagoDetraccionMontoTexto").textContent="S/ "+det.toFixed(2);
   document.getElementById("pagoFacturaObservaciones").value=factura.observaciones||"";
+
+  const grupoDet=document.getElementById("grupoDetraccionPago");
+  const grupoFechaDet=document.getElementById("grupoFechaDetraccionPago");
+  if(grupoDet) grupoDet.style.display=detAplica?"block":"none";
+  if(grupoFechaDet) grupoFechaDet.style.display=(detAplica && detDepositada)?"block":"none";
+
   const mensaje=document.getElementById("pagoFacturaMensaje");
   mensaje.style.display="block";
-  mensaje.innerHTML=factura.aplica_detraccion ? "<strong>Control de dos pagos:</strong> el pago directo y la detracción pueden registrarse en fechas diferentes." : "Esta factura no tiene detracción configurada.";
+  mensaje.innerHTML=detAplica
+    ? "<strong>Control de pago:</strong> registra si la factura fue pagada y, por separado, si la detracción ya fue depositada."
+    : "Esta factura no tiene detracción. Solo registra si fue pagada y la fecha de pago.";
+
+  actualizarFormularioPagoFactura();
   document.getElementById("modalPagosFactura").classList.add("active");
 }
+
+function actualizarFormularioPagoFactura(){
+  const pagada=document.getElementById("pagoFacturaPagada")?.value === "si";
+  const fechaPago=document.getElementById("pagoFacturaFecha");
+  if(fechaPago){
+    fechaPago.disabled=!pagada;
+    if(!pagada) fechaPago.value="";
+  }
+
+  const detVisible=document.getElementById("grupoDetraccionPago")?.style.display !== "none";
+  const detDepositada=document.getElementById("pagoDetraccionDepositada")?.value === "si";
+  const grupoFecha=document.getElementById("grupoFechaDetraccionPago");
+  const fechaDet=document.getElementById("pagoDetraccionFecha");
+  if(grupoFecha) grupoFecha.style.display=(detVisible && detDepositada)?"block":"none";
+  if(fechaDet){
+    fechaDet.disabled=!(detVisible && detDepositada);
+    if(!(detVisible && detDepositada)) fechaDet.value="";
+  }
+}
+
 
 function cerrarModalPagosFactura(){
   const modal=document.getElementById("modalPagosFactura");
@@ -6254,32 +6293,28 @@ async function guardarPagosFactura(){
   const id=document.getElementById("pagoFacturaId").value;
   const factura=facturasEmitidas.find(function(f){return String(f.id)===String(id);});
   if(!factura) return;
+
   const total=Number(factura.total_con_igv||0);
-  const detPermitida=!!factura.aplica_detraccion;
-  const montoDirecto=Math.max(0,Number(document.getElementById("pagoDirectoMonto").value||0));
-  const fechaDirecto=document.getElementById("pagoDirectoFecha").value||null;
-  const montoDet=detPermitida?Math.max(0,Number(document.getElementById("pagoDetraccionMonto").value||0)):0;
-  const fechaDet=detPermitida?(document.getElementById("pagoDetraccionFecha").value||null):null;
+  const detAplica=!!factura.aplica_detraccion;
+  const pagada=document.getElementById("pagoFacturaPagada").value === "si";
+  const fechaPago=pagada ? (document.getElementById("pagoFacturaFecha").value||null) : null;
+  const detDepositada=detAplica && document.getElementById("pagoDetraccionDepositada").value === "si";
+  const fechaDet=detDepositada ? (document.getElementById("pagoDetraccionFecha").value||null) : null;
+  const montoDet=detAplica?Number(factura.monto_detraccion||0):0;
+  const montoDirecto=pagada ? Math.max(0,total-montoDet) : 0;
   const observaciones=document.getElementById("pagoFacturaObservaciones").value.trim();
 
-  if(montoDirecto>0 && !fechaDirecto){mostrarAlerta("Indica la fecha del pago directo.","error");return;}
-  if(montoDet>0 && !fechaDet){mostrarAlerta("Indica la fecha de la detracción.","error");return;}
-  if(montoDirecto+montoDet>total+0.01){mostrarAlerta("Los pagos registrados no pueden superar el total de la factura.","error");return;}
-  if(detPermitida && Math.abs(montoDet-Number(factura.monto_detraccion||0))>0.01){mostrarAlerta("El monto de la detracción debe ser S/ "+Number(factura.monto_detraccion||0).toFixed(2)+".","error");return;}
+  if(pagada && !fechaPago){mostrarAlerta("Indica la fecha de pago.","error");return;}
+  if(detAplica && detDepositada && !fechaDet){mostrarAlerta("Indica la fecha de depósito de la detracción.","error");return;}
 
-  const nuevoEstado=obtenerEstadoPagoFactura(Object.assign({},factura,{
-    monto_pago_directo:montoDirecto,
-    fecha_pago_directo:fechaDirecto,
-    monto_detraccion:montoDet,
-    fecha_detraccion:fechaDet
-  }));
+  const nuevoEstado=!pagada ? "Pendiente" : (detAplica && !detDepositada ? "Pago parcial" : "Pagada");
   const body={
     monto_pago_directo:Number(montoDirecto.toFixed(2)),
-    fecha_pago_directo:fechaDirecto,
+    fecha_pago_directo:fechaPago,
     fecha_detraccion:fechaDet,
-    estado_detraccion:detPermitida?(fechaDet ? "Depositada" : "Pendiente"):"No aplica",
+    estado_detraccion:detAplica?(detDepositada?"Depositada":"Pendiente"):"No aplica",
     estado_pago:nuevoEstado,
-    fecha_pago:nuevoEstado==="Pagada" ? (fechaDet||fechaDirecto||obtenerFechaHoyLima()) : null,
+    fecha_pago:pagada?fechaPago:null,
     observaciones:observaciones||null
   };
 
@@ -6289,9 +6324,9 @@ async function guardarPagosFactura(){
     });
     if(!respuesta.ok) throw new Error(await respuesta.text());
     cerrarModalPagosFactura();
-    mostrarAlerta("Pagos de la factura "+factura.numero_factura+" actualizados correctamente.","success");
+    mostrarAlerta("Pago de la factura "+factura.numero_factura+" actualizado correctamente.","success");
     await cargarFacturasEmitidas();
-  }catch(error){mostrarAlerta("No se pudieron registrar los pagos: "+error.message,"error");}
+  }catch(error){mostrarAlerta("No se pudo actualizar el pago: "+error.message,"error");}
 }
 
 async function marcarFacturaPagada(id){
@@ -6783,6 +6818,6 @@ document.addEventListener("click", cerrarFiltrosDashboard);
 </script>
 
 
-<div class="version-app">V5.5 Dashboard</div>
+<div class="version-app">V5.9 Dashboard</div>
 </body>
 </html>
