@@ -912,6 +912,8 @@ th.col-vin {
 .facturacion-estado.pendiente{background:#fef3c7;color:#92400e;}
 .facturacion-estado.facturado{background:#dcfce7;color:#166534;}
 .facturacion-check{width:18px;height:18px;}
+.facturacion-seleccion-global{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0 12px;padding:10px 12px;border:1px solid #dbe2ea;border-radius:9px;background:#f8fafc;}
+.facturacion-seleccion-global span{font-size:13px;font-weight:600;color:#374151;margin-left:auto;}
 
 .servicios-multiselect{position:relative;width:100%;}
 .servicios-multiselect-btn{width:100%;min-height:38px;padding:9px 12px;border:1px solid #d1d5db;border-radius:7px;background:#fff;text-align:left;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
@@ -1482,8 +1484,13 @@ onclick="limpiarFormulario()">
 <div class="facturacion-card">IGV<strong id="facturacionIgv">S/ 0.00</strong></div>
 <div class="facturacion-card">Total con IGV<strong id="facturacionTotal">S/ 0.00</strong></div>
 </div>
+<div class="facturacion-seleccion-global">
+  <button type="button" class="btn btn-secondary" onclick="seleccionarTodosFacturacionGlobal()">☑️ Seleccionar todos los registros</button>
+  <button type="button" class="btn btn-secondary" onclick="limpiarSeleccionFacturacion()">🧹 Limpiar selección</button>
+  <span id="facturacionSeleccionResumen">0 registros seleccionados</span>
+</div>
 <div class="table-container"><table><thead><tr>
-<th><input type="checkbox" class="facturacion-check" id="facturacionTodos" onchange="seleccionarTodosFacturacion(this)"></th>
+<th><input type="checkbox" class="facturacion-check" id="facturacionTodos" onchange="seleccionarTodosFacturacion(this)" title="Seleccionar los registros de esta página"></th>
 <th class="numero-registro">N°</th><th>Fecha</th><th>OT</th><th>Placa</th><th>VIN</th><th>Marca</th><th>Servicio</th><th>Sin IGV</th><th>IGV</th><th>Total</th><th>Estado</th><th>Fecha facturación</th>
 </tr></thead><tbody id="tablaFacturacion"><tr><td colspan="12" class="empty">Cargando facturación...</td></tr></tbody></table></div>
 <div id="paginacionFacturacion" class="paginacion-modulo"></div>
@@ -5686,6 +5693,8 @@ function obtenerFechaServicioFacturacion(r){return r.hora_inicio_lavado || r.cre
 
 let facturacionPaginaActual = 1;
 const FACTURACION_POR_PAGINA = 40;
+// La selección se conserva entre páginas.
+const facturacionSeleccionadosIds = new Set();
 
 function ordenarPorFechaModulo(lista, orden, getter){
   return lista.slice().sort(function(a,b){
@@ -5740,7 +5749,7 @@ function renderFacturacion(){
     const x=calcularImportesFacturacion(r.precio_sin_igv);
     const facturado=!!r.facturado;
     tbody.innerHTML+=`<tr>
-      <td><input type="checkbox" class="facturacion-check fila-facturacion" value="${esc(r.id)}" ${facturado?"disabled":""}></td>
+      <td><input type="checkbox" class="facturacion-check fila-facturacion" value="${esc(r.id)}" ${facturado?"disabled":""} ${facturacionSeleccionadosIds.has(String(r.id))?"checked":""} onchange="cambiarSeleccionFacturacion('${esc(r.id)}',this.checked)"></td>
       <td class="numero-registro">${inicio + pagina.indexOf(r) + 1}</td><td>${esc(fechaCortaFacturacion(obtenerFechaServicioFacturacion(r)))}</td>
       <td>${esc(r.ot||"")}</td><td>${esc(r.placa||"")}</td><td>${esc(r.vin||"")}</td>
       <td>${esc(r.marca||"")}</td><td>${esc(r.servicio||"")}</td>
@@ -5756,7 +5765,11 @@ function renderFacturacion(){
   document.getElementById("facturacionSinIgv").textContent="S/ "+resumenFacturacion.sinIgv.toFixed(2);
   document.getElementById("facturacionIgv").textContent="S/ "+resumenFacturacion.igv.toFixed(2);
   document.getElementById("facturacionTotal").textContent="S/ "+resumenFacturacion.total.toFixed(2);
-  document.getElementById("facturacionTodos").checked=false;
+  const checksPagina = pagina.filter(function(r){ return !r.facturado; }).map(function(r){ return String(r.id); });
+  const todosPaginaMarcados = checksPagina.length > 0 && checksPagina.every(function(id){ return facturacionSeleccionadosIds.has(id); });
+  const checkCabecera = document.getElementById("facturacionTodos");
+  if(checkCabecera) checkCabecera.checked = todosPaginaMarcados;
+  actualizarResumenSeleccionFacturacion();
   renderPaginacionFacturacion(lista.length);
 }
 
@@ -5867,6 +5880,7 @@ async function inicializarFacturacion(){
 function buscarFacturacion(){facturacionPaginaActual=1;renderFacturacion();}
 function limpiarFiltrosFacturacion(){
   facturacionPaginaActual=1;
+  facturacionSeleccionadosIds.clear();
   document.getElementById("facturacionDesde").value="";
   document.getElementById("facturacionHasta").value="";
   if(document.getElementById("facturacionTipo")) document.getElementById("facturacionTipo").value="";
@@ -5878,13 +5892,58 @@ function limpiarFiltrosFacturacion(){
   document.getElementById("facturacionBuscar").value="";
   renderFacturacion();
 }
-function seleccionarTodosFacturacion(caja){document.querySelectorAll(".fila-facturacion:not(:disabled)").forEach(function(el){el.checked=caja.checked;});}
+function cambiarSeleccionFacturacion(id, seleccionado){
+  const clave = String(id);
+  if(seleccionado){
+    facturacionSeleccionadosIds.add(clave);
+  }else{
+    facturacionSeleccionadosIds.delete(clave);
+  }
+  actualizarResumenSeleccionFacturacion();
+  const lista = filtrarFacturacion();
+  const pagina = lista.slice((facturacionPaginaActual-1)*FACTURACION_POR_PAGINA, facturacionPaginaActual*FACTURACION_POR_PAGINA);
+  const pendientesPagina = pagina.filter(function(r){return !r.facturado;}).map(function(r){return String(r.id);});
+  const todosPagina = pendientesPagina.length>0 && pendientesPagina.every(function(x){return facturacionSeleccionadosIds.has(x);});
+  const cabecera=document.getElementById("facturacionTodos");
+  if(cabecera) cabecera.checked=todosPagina;
+}
+
+function seleccionarTodosFacturacion(caja){
+  const lista=filtrarFacturacion();
+  const inicio=(facturacionPaginaActual-1)*FACTURACION_POR_PAGINA;
+  const pagina=lista.slice(inicio,inicio+FACTURACION_POR_PAGINA);
+  pagina.forEach(function(r){
+    if(r.facturado) return;
+    const id=String(r.id);
+    if(caja.checked) facturacionSeleccionadosIds.add(id);
+    else facturacionSeleccionadosIds.delete(id);
+  });
+  renderFacturacion();
+}
+
+function seleccionarTodosFacturacionGlobal(){
+  const lista=filtrarFacturacion();
+  lista.forEach(function(r){
+    if(!r.facturado) facturacionSeleccionadosIds.add(String(r.id));
+  });
+  renderFacturacion();
+  mostrarAlerta("Se seleccionaron todos los registros pendientes de todas las páginas del filtro actual.","success",false);
+}
+
+function limpiarSeleccionFacturacion(){
+  facturacionSeleccionadosIds.clear();
+  renderFacturacion();
+}
+
+function actualizarResumenSeleccionFacturacion(){
+  const el=document.getElementById("facturacionSeleccionResumen");
+  if(el) el.textContent=facturacionSeleccionadosIds.size+" registros seleccionados";
+}
 
 function obtenerSeleccionadosFacturacion(){
-  const ids=Array.from(document.querySelectorAll(".fila-facturacion:checked:not(:disabled)")).map(function(el){return el.value;});
-  return ids.map(function(id){
+  return Array.from(facturacionSeleccionadosIds).map(function(id){
     return registrosFacturacion.find(function(r){return String(r.id)===String(id);});
-  }).filter(Boolean);
+  }).filter(function(r){return r && !r.facturado;});
 }
 
 function abrirModalNuevaFactura(){
