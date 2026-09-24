@@ -6442,8 +6442,15 @@ function seleccionarTodasFacturasReporte(marcar){
 }
 
 async function generarReporteClienteExcel(){
-  const checks = Array.from(document.querySelectorAll('input[name="reporteFacturaCheck"]:checked'));
+  const checks = Array.from(document.querySelectorAll('#reporteClienteLista input[type="checkbox"]:checked'));
   const ids = checks.map(function(el){ return String(el.value || ""); }).filter(Boolean);
+
+  // La selección visual y la selección interna usan el mismo conjunto.
+  // Esto evita que el reporte indique "Selecciona al menos una factura"
+  // cuando las casillas sí aparecen marcadas.
+  if(!ids.length && facturasReporteClienteSeleccionadas && facturasReporteClienteSeleccionadas.size){
+    ids.push(...Array.from(facturasReporteClienteSeleccionadas).map(String));
+  }
 
   if(!ids.length){
     mostrarAlerta("Selecciona al menos una factura.", "error");
@@ -7183,6 +7190,6 @@ document.addEventListener("click", cerrarFiltrosDashboard);
 </script>
 
 
-<div class="version-app">V5.5 Dashboard</div>
+<div class="version-app">V5.2 Dashboard</div>
 </body>
 </html>
