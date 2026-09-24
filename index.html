@@ -975,6 +975,12 @@ th.col-vin {
 @media(max-width:600px){.facturacion-pagos-grid{grid-template-columns:1fr;}}
 
 </style>
+<style>
+.facturacion-estado.facturado-pagado{background:#dcfce7;color:#166534;}
+.facturacion-estado.facturado-pendiente{background:#fef3c7;color:#92400e;}
+.facturacion-estado.facturado-parcial{background:#dbeafe;color:#1e40af;}
+</style>
+
 
 </head>
 
@@ -6484,15 +6490,39 @@ function poblarFiltrosDashboard(registros){
 let dashboardPaginaActual = 1;
 const DASHBOARD_POR_PAGINA = 40;
 let facturasDashboard = [];
+let detallesFacturasDashboard = [];
 
 async function cargarFacturasDashboard(){
+  const headers={"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY};
   const respuesta = await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors?select=id,numero_factura,fecha_emision,total_con_igv,estado_pago,fecha_pago,aplica_detraccion,monto_detraccion,monto_pago_directo,fecha_pago_directo,fecha_detraccion,estado_detraccion&order=fecha_emision.asc,created_at.asc",{
-    method:"GET",
-    headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY},
-    cache:"no-store"
+    method:"GET",headers:headers,cache:"no-store"
   });
   if(!respuesta.ok) throw new Error("No se pudieron cargar las facturas del Dashboard: "+await respuesta.text());
   facturasDashboard = await respuesta.json();
+
+  // Relación factura -> vehículo para poder mostrar el estado real de pago
+  // en cada registro del detalle del Dashboard.
+  const respuestaDetalle = await fetch(SUPABASE_URL+"/rest/v1/factura_detalle_wankamotors?select=factura_id,vehiculo_id",{
+    method:"GET",headers:headers,cache:"no-store"
+  });
+  if(!respuestaDetalle.ok) throw new Error("No se pudieron cargar los detalles de las facturas: "+await respuestaDetalle.text());
+  detallesFacturasDashboard = await respuestaDetalle.json();
+}
+
+function obtenerFacturaDashboardPorVehiculo(vehiculoId){
+  const detalle=(detallesFacturasDashboard||[]).find(function(d){return String(d.vehiculo_id)===String(vehiculoId);});
+  if(!detalle) return null;
+  return (facturasDashboard||[]).find(function(f){return String(f.id)===String(detalle.factura_id);}) || null;
+}
+
+function estadoDashboardVehiculo(r){
+  if(!r.facturado) return {texto:"No facturado",clase:"pendiente"};
+  const factura=obtenerFacturaDashboardPorVehiculo(r.id);
+  if(!factura) return {texto:"Facturado",clase:"facturado"};
+  const estado=String(factura.estado_pago||"").trim().toLowerCase();
+  if(estado==="pagada" || estado==="pagado") return {texto:"Facturado - Pagado",clase:"facturado-pagado"};
+  if(estado==="pago parcial" || estado==="parcial") return {texto:"Facturado - Pago parcial",clase:"facturado-parcial"};
+  return {texto:"Facturado - Pendiente de pago",clase:"facturado-pendiente"};
 }
 
 function filtrarFacturasDashboard(desde,hasta){
@@ -6608,8 +6638,14 @@ function renderGraficasDashboard(lista){
   const maxFact=Math.max(1,...clavesFact.map(k=>porMesFacturacion[k]));
   const barrasFact=clavesFact.map(function(k){
     const totalMes=porMesFacturacion[k];
-    const pct=Math.min(100,totalMes/maxFact*100);
-    return `<div class="dashboard-monto-mes-row"><strong>${esc(nombreMesDashboard(k))}</strong><div class="dashboard-monto-mes-bar"><span style="width:${pct.toFixed(1)}%"></span><small>${dineroDashboard(totalMes)}</small></div></div>`;
+    const altura=Math.max(12,totalMes/maxFact*180);
+    return `<div class="dashboard-fact-col" style="min-width:105px;flex:1;max-width:180px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:235px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:7px;white-space:nowrap">${dineroDashboard(totalMes)}</div>
+      <div style="height:180px;width:54px;display:flex;align-items:flex-end;justify-content:center">
+        <div style="height:${altura.toFixed(1)}px;width:54px;border-radius:7px 7px 2px 2px;background:#1d4ed8;box-shadow:0 2px 5px rgba(0,0,0,.12)"></div>
+      </div>
+      <div style="font-size:12px;font-weight:700;margin-top:8px;text-align:center">${esc(nombreMesDashboard(k))}</div>
+    </div>`;
   }).join('');
 
   return `<div class="dashboard-graficas">
@@ -6634,7 +6670,7 @@ function renderGraficasDashboard(lista){
   <div class="dashboard-grafica-panel" style="margin-top:20px">
     <h3>💵 Facturación total por mes</h3>
     <div class="dashboard-grafica-subtitulo">Total facturado por fecha de emisión.</div>
-    ${clavesFact.length ? `<div class="dashboard-monto-mes">${barrasFact}</div>` : '<div class="dashboard-vacio">No hay facturas emitidas en el periodo seleccionado.</div>'}
+    ${clavesFact.length ? `<div class="dashboard-monto-mes" style="display:flex;align-items:flex-end;gap:18px;min-height:250px;padding:12px 10px 4px;overflow-x:auto">${barrasFact}</div>` : '<div class="dashboard-vacio">No hay facturas emitidas en el periodo seleccionado.</div>'}
   </div>`;
 }
 function renderDashboard(lista){
@@ -6696,7 +6732,7 @@ function renderDashboard(lista){
 
   ${renderGraficasDashboard(lista)}
 
-  <div class="card"><h3>📋 Detalle</h3><div class="table-container"><table class="dashboard-table"><thead><tr><th class="numero-registro">N°</th><th>Fecha</th><th>OT</th><th>Placa</th><th>Marca</th><th>Servicio</th><th>Sin IGV</th><th>Total</th><th>Estado</th></tr></thead><tbody>${lista.slice((dashboardPaginaActual-1)*DASHBOARD_POR_PAGINA,dashboardPaginaActual*DASHBOARD_POR_PAGINA).map((r,i)=>{const p=Number(r.precio_sin_igv||0);return `<tr><td class="numero-registro">${(dashboardPaginaActual-1)*DASHBOARD_POR_PAGINA+i+1}</td><td>${esc(formatearFechaDashboard(r.hora_inicio_lavado||r.created_at))}</td><td>${esc(r.ot||"")}</td><td>${esc(r.placa||"")}</td><td>${esc(r.marca||"")}</td><td>${esc(r.servicio||"")}</td><td>S/ ${p.toFixed(2)}</td><td>S/ ${(p*1.18).toFixed(2)}</td><td><span class="facturacion-estado ${r.facturado?'facturado':'pendiente'}">${r.facturado?'Facturado':'Pendiente'}</span></td></tr>`}).join("") || '<tr><td colspan="9" class="dashboard-vacio">Sin registros</td></tr>'}</tbody></table></div>${renderPaginacionDashboardHtml(lista.length)}</div>`;
+  <div class="card"><h3>📋 Detalle</h3><div class="table-container"><table class="dashboard-table"><thead><tr><th class="numero-registro">N°</th><th>Fecha</th><th>OT</th><th>Placa</th><th>Marca</th><th>Servicio</th><th>Sin IGV</th><th>Total</th><th>Estado</th></tr></thead><tbody>${lista.slice((dashboardPaginaActual-1)*DASHBOARD_POR_PAGINA,dashboardPaginaActual*DASHBOARD_POR_PAGINA).map((r,i)=>{const p=Number(r.precio_sin_igv||0);const est=estadoDashboardVehiculo(r);return `<tr><td class="numero-registro">${(dashboardPaginaActual-1)*DASHBOARD_POR_PAGINA+i+1}</td><td>${esc(formatearFechaDashboard(r.hora_inicio_lavado||r.created_at))}</td><td>${esc(r.ot||"")}</td><td>${esc(r.placa||"")}</td><td>${esc(r.marca||"")}</td><td>${esc(r.servicio||"")}</td><td>S/ ${p.toFixed(2)}</td><td>S/ ${(p*1.18).toFixed(2)}</td><td><span class="facturacion-estado ${est.clase}">${esc(est.texto)}</span></td></tr>`}).join("") || '<tr><td colspan="9" class="dashboard-vacio">Sin registros</td></tr>'}</tbody></table></div>${renderPaginacionDashboardHtml(lista.length)}</div>`;
   actualizarResumenFiltrosDashboard();
 }
 function renderPaginacionDashboardHtml(totalRegistros){
@@ -6818,6 +6854,6 @@ document.addEventListener("click", cerrarFiltrosDashboard);
 </script>
 
 
-<div class="version-app">V5.9 Dashboard</div>
+<div class="version-app">V5.5 Dashboard</div>
 </body>
 </html>
