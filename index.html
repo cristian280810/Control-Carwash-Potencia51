@@ -645,6 +645,7 @@ th{
 .dashboard-mes-bar{width:24px;border-radius:5px 5px 0 0;min-height:2px;background:#1d4ed8;position:relative;}
 .dashboard-mes-bar.servicio{background:#64748b;}
 .dashboard-mes-bar span{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;color:#374151;}
+.dashboard-mes-total{font-size:11px;color:#111827;font-weight:800;white-space:nowrap;margin-top:1px;}
 .dashboard-mes-label{font-size:11px;color:#374151;font-weight:700;white-space:nowrap;}
 .dashboard-grafica-leyenda-meses{display:flex;gap:18px;font-size:12px;color:#4b5563;margin-top:4px;}
 .dashboard-grafica-leyenda-meses span{display:flex;align-items:center;gap:6px;}
@@ -942,6 +943,22 @@ th.col-vin {
 .orden-fecha label{margin:0;font-size:13px;}
 .orden-fecha select{width:auto;min-width:190px;}
 .dashboard-resumen-filtros{margin-top:10px;padding:9px 12px;border:1px solid #dbe2ea;border-radius:8px;background:#f8fafc;color:#374151;font-size:13px;}
+.dashboard-finanzas{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0;}
+.dashboard-finanzas .dashboard-card{background:#fff;}
+.dashboard-indicadores-extra{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;}
+.dashboard-estado-lista{display:flex;flex-direction:column;gap:10px;margin-top:12px;}
+.dashboard-estado-row{display:grid;grid-template-columns:145px 1fr 45px;gap:10px;align-items:center;font-size:13px;}
+.dashboard-estado-bar{height:12px;background:#e5e7eb;border-radius:99px;overflow:hidden;}
+.dashboard-estado-bar span{display:block;height:100%;background:#1d4ed8;border-radius:99px;}
+.dashboard-monto-mes{display:flex;flex-direction:column;gap:5px;overflow-x:auto;margin-top:12px;}
+.dashboard-monto-mes-row{display:grid;grid-template-columns:95px 1fr 105px;gap:10px;align-items:center;font-size:12px;}
+.dashboard-monto-mes-bar{height:18px;background:#e5e7eb;border-radius:5px;overflow:hidden;position:relative;}
+.dashboard-monto-mes-bar span{display:block;height:100%;background:#1d4ed8;border-radius:5px;}
+.dashboard-monto-mes-bar small{position:absolute;right:5px;top:2px;font-weight:700;color:#111827;}
+.dashboard-monto-leyenda{font-size:12px;color:#6b7280;margin-top:10px;}
+@media(max-width:1000px){.dashboard-finanzas{grid-template-columns:repeat(2,1fr);}.dashboard-indicadores-extra{grid-template-columns:1fr;}}
+@media(max-width:700px){.dashboard-finanzas{grid-template-columns:1fr 1fr;}.dashboard-estado-row{grid-template-columns:105px 1fr 35px;}.dashboard-monto-mes-row{grid-template-columns:75px 1fr 90px;}}
+
 
 
 /* =====================================================
@@ -6423,6 +6440,42 @@ function poblarFiltrosDashboard(registros){
 
 let dashboardPaginaActual = 1;
 const DASHBOARD_POR_PAGINA = 40;
+let facturasDashboard = [];
+
+async function cargarFacturasDashboard(){
+  const respuesta = await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors?select=id,numero_factura,fecha_emision,total_con_igv,estado_pago,fecha_pago,aplica_detraccion,monto_detraccion,monto_pago_directo,fecha_pago_directo,fecha_detraccion,estado_detraccion&order=fecha_emision.asc,created_at.asc",{
+    method:"GET",
+    headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY},
+    cache:"no-store"
+  });
+  if(!respuesta.ok) throw new Error("No se pudieron cargar las facturas del Dashboard: "+await respuesta.text());
+  facturasDashboard = await respuesta.json();
+}
+
+function filtrarFacturasDashboard(desde,hasta){
+  return (facturasDashboard||[]).filter(function(f){
+    const fecha=String(f.fecha_emision||"").slice(0,10);
+    return (!desde || fecha>=desde) && (!hasta || fecha<=hasta);
+  });
+}
+
+function dineroDashboard(valor){
+  return "S/ "+Number(valor||0).toLocaleString("es-PE",{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function montoDirectoDashboard(f){
+  const total=Number(f.total_con_igv||0);
+  const directo=Number(f.monto_pago_directo||0);
+  if(directo>0) return directo;
+  // Compatibilidad con facturas antiguas que solo tenían estado_pago/fecha_pago.
+  if(!f.aplica_detraccion && String(f.estado_pago||"").toLowerCase()==="pagada") return total;
+  return 0;
+}
+
+function detraccionDepositadaDashboard(f){
+  return String(f.estado_detraccion||"").toLowerCase()==="depositada" ? Number(f.monto_detraccion||0) : 0;
+}
+
 
 async function cargarDashboard(){
   const cont = document.getElementById("dashboardContenido");
@@ -6437,6 +6490,7 @@ async function cargarDashboard(){
     const resp = await fetch(url,{headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY},cache:"no-store"});
     if(!resp.ok) throw new Error(await resp.text());
     registrosDashboard = await resp.json();
+    await cargarFacturasDashboard();
     poblarFiltrosDashboard(registrosDashboard);
     const filtrados = registrosDashboard.filter(r=>{
       const fecha = fechaLocalDashboard(r.hora_inicio_lavado || r.created_at);
@@ -6485,8 +6539,8 @@ function renderGraficasDashboard(lista){
   const totalTipos=nuevos+servicios+otros;
   const pctNuevo=totalTipos ? (nuevos/totalTipos*100) : 0;
   const pctServicio=totalTipos ? (servicios/totalTipos*100) : 0;
-  const gradosNuevo=pctNuevo*3.6;
-  const gradiente=totalTipos ? `conic-gradient(#1d4ed8 0deg ${gradosNuevo}deg,#64748b ${gradosNuevo}deg ${(gradosNuevo+pctServicio*3.6)}deg,#e5e7eb ${(gradosNuevo+pctServicio*3.6)}deg 360deg)` : 'conic-gradient(#e5e7eb 0deg 360deg)';
+  const g1=pctNuevo*3.6, g2=g1+pctServicio*3.6;
+  const gradiente=totalTipos ? `conic-gradient(#1d4ed8 0deg ${g1}deg,#64748b ${g1}deg ${g2}deg,#e5e7eb ${g2}deg 360deg)` : 'conic-gradient(#e5e7eb 0deg 360deg)';
   const claves=Object.keys(porMes).sort();
   const maxMes=Math.max(1,...claves.map(k=>Math.max(porMes[k].Nuevo,porMes[k].Servicio,porMes[k].Otro)));
   const barrasMes=claves.map(function(k){
@@ -6494,8 +6548,27 @@ function renderGraficasDashboard(lista){
     const hN=(d.Nuevo/maxMes*180).toFixed(1);
     const hS=(d.Servicio/maxMes*180).toFixed(1);
     const hO=(d.Otro/maxMes*180).toFixed(1);
-    return `<div class="dashboard-mes-col"><div class="dashboard-mes-valores"><div class="dashboard-mes-bar" style="height:${hN}px"><span>${d.Nuevo}</span></div><div class="dashboard-mes-bar servicio" style="height:${hS}px"><span>${d.Servicio}</span></div>${d.Otro ? `<div class="dashboard-mes-bar" style="height:${hO}px;opacity:.45"><span>${d.Otro}</span></div>` : ''}</div><div class="dashboard-mes-label">${esc(nombreMesDashboard(k))}</div></div>`;
+    return `<div class="dashboard-mes-col"><div class="dashboard-mes-valores"><div class="dashboard-mes-bar" style="height:${hN}px"><span>${d.Nuevo}</span></div><div class="dashboard-mes-bar servicio" style="height:${hS}px"><span>${d.Servicio}</span></div>${d.Otro ? `<div class="dashboard-mes-bar" style="height:${hO}px;opacity:.45"><span>${d.Otro}</span></div>` : ''}</div><div class="dashboard-mes-total">Total: ${d.Nuevo + d.Servicio}</div><div class="dashboard-mes-label">${esc(nombreMesDashboard(k))}</div></div>`;
   }).join('');
+
+  const desde=document.getElementById("dashboardDesde")?.value||"";
+  const hasta=document.getElementById("dashboardHasta")?.value||"";
+  const facturas=filtrarFacturasDashboard(desde,hasta);
+  const porMesFacturacion={};
+  facturas.forEach(function(f){
+    const clave=String(f.fecha_emision||"").slice(0,7);
+    if(!clave) return;
+    if(!porMesFacturacion[clave]) porMesFacturacion[clave]=0;
+    porMesFacturacion[clave]+=Number(f.total_con_igv||0);
+  });
+  const clavesFact=Object.keys(porMesFacturacion).sort();
+  const maxFact=Math.max(1,...clavesFact.map(k=>porMesFacturacion[k]));
+  const barrasFact=clavesFact.map(function(k){
+    const totalMes=porMesFacturacion[k];
+    const pct=Math.min(100,totalMes/maxFact*100);
+    return `<div class="dashboard-monto-mes-row"><strong>${esc(nombreMesDashboard(k))}</strong><div class="dashboard-monto-mes-bar"><span style="width:${pct.toFixed(1)}%"></span><small>${dineroDashboard(totalMes)}</small></div></div>`;
+  }).join('');
+
   return `<div class="dashboard-graficas">
     <div class="dashboard-grafica-panel">
       <h3>📊 Nuevos vs. Servicios</h3>
@@ -6514,9 +6587,13 @@ function renderGraficasDashboard(lista){
       <div class="dashboard-grafica-subtitulo">Cantidad de registros por mes, comparando Nuevos y Servicios.</div>
       ${claves.length ? `<div class="dashboard-meses">${barrasMes}</div><div class="dashboard-grafica-leyenda-meses"><span><i></i>Nuevos</span><span><i class="servicio"></i>Servicios</span></div>` : '<div class="dashboard-vacio">Sin datos para el comparativo mensual.</div>'}
     </div>
+  </div>
+  <div class="dashboard-grafica-panel" style="margin-top:20px">
+    <h3>💵 Facturación total por mes</h3>
+    <div class="dashboard-grafica-subtitulo">Total facturado por fecha de emisión.</div>
+    ${clavesFact.length ? `<div class="dashboard-monto-mes">${barrasFact}</div>` : '<div class="dashboard-vacio">No hay facturas emitidas en el periodo seleccionado.</div>'}
   </div>`;
 }
-
 function renderDashboard(lista){
   const cont = document.getElementById("dashboardContenido");
   if(!cont) return;
@@ -6526,6 +6603,28 @@ function renderDashboard(lista){
   const subtotal = lista.reduce((a,r)=>a + Number(r.precio_sin_igv||0),0);
   const igv = subtotal * IGV_WANKAMOTORS;
   const totalConIgv = subtotal + igv;
+
+  // Indicador 3: promedio de vehículos atendidos por día.
+  const fechasActividad=[...new Set(lista.map(r=>fechaLocalDashboard(r.hora_inicio_lavado||r.created_at)).filter(Boolean))];
+  const desde=document.getElementById("dashboardDesde")?.value||"";
+  const hasta=document.getElementById("dashboardHasta")?.value||"";
+  let diasPeriodo=fechasActividad.length;
+  if(desde && hasta){
+    const ini=new Date(desde+"T00:00:00");
+    const fin=new Date(hasta+"T00:00:00");
+    diasPeriodo=Math.max(1,Math.floor((fin-ini)/86400000)+1);
+  }else if(desde || hasta){
+    diasPeriodo=Math.max(1,fechasActividad.length);
+  }
+  const promedioDiario=total/diasPeriodo;
+
+  // Indicador: detracción total depositada en el periodo seleccionado.
+  const facturas=filtrarFacturasDashboard(desde,hasta);
+  let detraccionDepositada=0;
+  facturas.forEach(function(f){
+    detraccionDepositada+=detraccionDepositadaDashboard(f);
+  });
+
   const porMarca = {};
   const porServicio = {};
   lista.forEach(r=>{
@@ -6535,23 +6634,28 @@ function renderDashboard(lista){
     porServicio[sv]=(porServicio[sv]||0)+1;
   });
   const barras = obj=>{const arr=Object.entries(obj).sort((a,b)=>b[1]-a[1]);const max=arr.length?arr[0][1]:1;return arr.slice(0,10).map(([k,v])=>`<div class="dashboard-bar-row"><span>${esc(k)}</span><div class="dashboard-bar"><span style="width:${(v/max*100).toFixed(1)}%"></span></div><strong>${v}</strong></div>`).join("") || '<div class="dashboard-vacio">Sin datos</div>';};
+
   cont.innerHTML = `
   <div class="dashboard-resumen">
     <div class="dashboard-card"><span class="dashboard-label">Vehículos</span><strong>${total}</strong></div>
     <div class="dashboard-card"><span class="dashboard-label">Facturados</span><strong>${facturados}</strong></div>
     <div class="dashboard-card"><span class="dashboard-label">Pendientes</span><strong>${pendientes}</strong></div>
-    <div class="dashboard-card"><span class="dashboard-label">Subtotal sin IGV</span><strong>S/ ${subtotal.toFixed(2)}</strong></div>
-    <div class="dashboard-card"><span class="dashboard-label">Total con IGV</span><strong>S/ ${totalConIgv.toFixed(2)}</strong></div>
+    <div class="dashboard-card"><span class="dashboard-label">Subtotal sin IGV</span><strong>${dineroDashboard(subtotal)}</strong></div>
+    <div class="dashboard-card"><span class="dashboard-label">Total con IGV</span><strong>${dineroDashboard(totalConIgv)}</strong></div>
+    <div class="dashboard-card"><span class="dashboard-label">Promedio vehículos/día</span><strong>${promedioDiario.toFixed(1)}</strong><small>${diasPeriodo} día(s) considerado(s)</small></div>
+    <div class="dashboard-card"><span class="dashboard-label">Detracción total</span><strong>${dineroDashboard(detraccionDepositada)}</strong></div>
   </div>
+
   <div class="dashboard-grid">
     <div class="dashboard-panel"><h3>🚗 Servicios por marca</h3>${barras(porMarca)}</div>
     <div class="dashboard-panel"><h3>🔧 Servicios realizados</h3>${barras(porServicio)}</div>
   </div>
+
   ${renderGraficasDashboard(lista)}
-  <div class="card"><h3>📋 Detalle</h3><div class="table-container"><table class="dashboard-table"><thead><tr><th class="numero-registro">N°</th><th>Fecha</th><th>OT</th><th>Placa</th><th>Marca</th><th>Servicio</th><th>Sin IGV</th><th>Total</th><th>Estado</th></tr></thead><tbody>${lista.slice((dashboardPaginaActual-1)*DASHBOARD_POR_PAGINA,dashboardPaginaActual*DASHBOARD_POR_PAGINA).map((r,i)=>{const p=Number(r.precio_sin_igv||0);return `<tr><td class="numero-registro">${(dashboardPaginaActual-1)*DASHBOARD_POR_PAGINA+i+1}</td><td>${esc(formatearFechaDashboard(r.hora_inicio_lavado||r.created_at))}</td><td>${esc(r.ot||"")}</td><td>${esc(r.placa||"")}</td><td>${esc(r.marca||"")}</td><td>${esc(r.servicio||"")}</td><td>S/ ${p.toFixed(2)}</td><td>S/ ${(p*1.18).toFixed(2)}</td><td>${r.facturado?'Facturado':'Pendiente'}</td></tr>`}).join("") || '<tr><td colspan="9" class="dashboard-vacio">Sin registros</td></tr>'}</tbody></table></div>${renderPaginacionDashboardHtml(lista.length)}</div>`;
+
+  <div class="card"><h3>📋 Detalle</h3><div class="table-container"><table class="dashboard-table"><thead><tr><th class="numero-registro">N°</th><th>Fecha</th><th>OT</th><th>Placa</th><th>Marca</th><th>Servicio</th><th>Sin IGV</th><th>Total</th><th>Estado</th></tr></thead><tbody>${lista.slice((dashboardPaginaActual-1)*DASHBOARD_POR_PAGINA,dashboardPaginaActual*DASHBOARD_POR_PAGINA).map((r,i)=>{const p=Number(r.precio_sin_igv||0);return `<tr><td class="numero-registro">${(dashboardPaginaActual-1)*DASHBOARD_POR_PAGINA+i+1}</td><td>${esc(formatearFechaDashboard(r.hora_inicio_lavado||r.created_at))}</td><td>${esc(r.ot||"")}</td><td>${esc(r.placa||"")}</td><td>${esc(r.marca||"")}</td><td>${esc(r.servicio||"")}</td><td>S/ ${p.toFixed(2)}</td><td>S/ ${(p*1.18).toFixed(2)}</td><td><span class="facturacion-estado ${r.facturado?'facturado':'pendiente'}">${r.facturado?'Facturado':'Pendiente'}</span></td></tr>`}).join("") || '<tr><td colspan="9" class="dashboard-vacio">Sin registros</td></tr>'}</tbody></table></div>${renderPaginacionDashboardHtml(lista.length)}</div>`;
   actualizarResumenFiltrosDashboard();
 }
-
 function renderPaginacionDashboardHtml(totalRegistros){
   const totalPaginas=Math.max(1,Math.ceil(totalRegistros/DASHBOARD_POR_PAGINA));
   if(totalRegistros<=DASHBOARD_POR_PAGINA) return '';
@@ -6671,6 +6775,6 @@ document.addEventListener("click", cerrarFiltrosDashboard);
 </script>
 
 
-<div class="version-app">V5.6 Dashboard</div>
+<div class="version-app">V5.5 Dashboard</div>
 </body>
 </html>
