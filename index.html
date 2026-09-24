@@ -994,6 +994,39 @@ th.col-vin {
 </style>
 
 
+
+<style>
+#facturacionFacturaMenu{position:relative;}
+#facturacionFacturaMenu .servicios-multiselect-btn{
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  box-sizing:border-box;
+}
+#facturacionFacturaDropdown{
+  max-height:280px;
+  overflow-y:auto;
+  min-width:240px;
+  z-index:1000;
+}
+#facturacionFacturaDropdown.show{display:block;}
+#facturacionFacturaOpciones{
+  max-height:220px;
+  overflow-y:auto;
+}
+#facturacionFacturaDropdown .servicios-check-item{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 8px;
+  cursor:pointer;
+}
+#facturacionFacturaDropdown .servicios-check-item:hover{
+  background:#f3f4f6;
+}
+</style>
+
 </head>
 
 <body>
@@ -1498,7 +1531,26 @@ onclick="limpiarFormulario()">
 <div id="facturacionServicioMenu" class="servicios-multiselect-menu"></div>
 </div></div>
 <div class="form-group"><label>Estado</label><select id="facturacionEstado"><option value="">Todos</option><option value="pendiente">Pendiente</option><option value="facturado">Facturado</option></select></div>
-<div class="form-group"><label>Buscar</label><input id="facturacionBuscar" type="text" placeholder="OT, placa, VIN o marca"></div>
+<div class="form-group">
+  <label>Buscar</label>
+  <input id="facturacionBuscar" type="text" placeholder="OT, placa, VIN, marca o modelo">
+</div>
+<div class="form-group">
+  <label>Factura</label>
+  <div id="facturacionFacturaMenu" class="servicios-multiselect">
+    <button type="button" class="servicios-multiselect-btn" onclick="toggleMenuFacturasFacturacion(event)">
+      <span id="facturacionFacturaTexto">Todas las facturas</span>
+      <span>▾</span>
+    </button>
+    <div id="facturacionFacturaDropdown" class="servicios-multiselect-menu">
+      <label class="servicios-check-item">
+        <input type="checkbox" id="facturacionFacturasTodas" onchange="seleccionarTodasFacturasFiltro(this.checked)">
+        <span>Todas las facturas</span>
+      </label>
+      <div id="facturacionFacturaOpciones"></div>
+    </div>
+  </div>
+</div>
 </div>
 <div class="orden-fecha">
 <label for="facturacionOrdenFecha">Ordenar por fecha:</label>
@@ -5873,6 +5925,123 @@ function ordenarPorFechaModulo(lista, orden, getter){
   });
 }
 
+
+let facturasFiltroFacturacionSeleccionadas = new Set();
+
+function toggleMenuFacturasFacturacion(event){
+  if(event) event.stopPropagation();
+  const menu=document.getElementById("facturacionFacturaDropdown");
+  if(menu) menu.classList.toggle("show");
+}
+
+function cerrarMenuFacturasFacturacion(){
+  const menu=document.getElementById("facturacionFacturaDropdown");
+  if(menu) menu.classList.remove("show");
+}
+
+function cargarOpcionesFiltroFacturaFacturacion(){
+  const cont=document.getElementById("facturacionFacturaOpciones");
+  if(!cont) return;
+
+  const facturas=(facturasDashboard||[])
+    .filter(function(f){ return String(f.numero_factura||"").trim()!==""; })
+    .slice()
+    .sort(function(a,b){
+      return String(a.numero_factura||"").localeCompare(
+        String(b.numero_factura||""),
+        "es",
+        {numeric:true,sensitivity:"base"}
+      );
+    });
+
+  cont.innerHTML=facturas.map(function(f){
+    const id=String(f.id);
+    const numero=String(f.numero_factura||"").trim();
+    const marcada=facturasFiltroFacturacionSeleccionadas.has(id);
+    return `<label class="servicios-check-item">
+      <input type="checkbox"
+             value="${esc(id)}"
+             ${marcada?"checked":""}
+             onchange="cambiarFacturaFiltroFacturacion('${esc(id)}',this.checked)">
+      <span>${esc(numero)}</span>
+    </label>`;
+  }).join("");
+
+  actualizarTextoFiltroFacturasFacturacion();
+}
+
+function cambiarFacturaFiltroFacturacion(id, marcada){
+  id=String(id);
+  if(marcada) facturasFiltroFacturacionSeleccionadas.add(id);
+  else facturasFiltroFacturacionSeleccionadas.delete(id);
+
+  const total=document.querySelectorAll("#facturacionFacturaOpciones input[type='checkbox']").length;
+  const seleccionadas=document.querySelectorAll("#facturacionFacturaOpciones input[type='checkbox']:checked").length;
+  const todas=document.getElementById("facturacionFacturasTodas");
+  if(todas) todas.checked=(total>0 && total===seleccionadas);
+
+  actualizarTextoFiltroFacturasFacturacion();
+  facturacionPaginaActual=1;
+  renderFacturacion();
+}
+
+function seleccionarTodasFacturasFiltro(marcada){
+  facturasFiltroFacturacionSeleccionadas.clear();
+
+  if(marcada){
+    document.querySelectorAll("#facturacionFacturaOpciones input[type='checkbox']").forEach(function(el){
+      el.checked=true;
+      facturasFiltroFacturacionSeleccionadas.add(String(el.value));
+    });
+  }else{
+    document.querySelectorAll("#facturacionFacturaOpciones input[type='checkbox']").forEach(function(el){
+      el.checked=false;
+    });
+  }
+
+  actualizarTextoFiltroFacturasFacturacion();
+  facturacionPaginaActual=1;
+  renderFacturacion();
+}
+
+function actualizarTextoFiltroFacturasFacturacion(){
+  const texto=document.getElementById("facturacionFacturaTexto");
+  if(!texto) return;
+
+  const seleccionadas=Array.from(facturasFiltroFacturacionSeleccionadas);
+
+  if(!seleccionadas.length){
+    texto.textContent="Todas las facturas";
+    return;
+  }
+
+  const nombres=seleccionadas.map(function(id){
+    const f=(facturasDashboard||[]).find(function(x){return String(x.id)===String(id);});
+    return f ? String(f.numero_factura||"") : "";
+  }).filter(Boolean);
+
+  if(nombres.length===1) texto.textContent=nombres[0];
+  else texto.textContent=nombres.length+" facturas seleccionadas";
+}
+
+function obtenerIdsVehiculosDeFacturasSeleccionadas(){
+  const idsFacturas=Array.from(facturasFiltroFacturacionSeleccionadas);
+  if(!idsFacturas.length) return null;
+
+  const idsVehiculos=new Set();
+  (detallesFacturasDashboard||[]).forEach(function(d){
+    if(idsFacturas.includes(String(d.factura_id))){
+      idsVehiculos.add(String(d.vehiculo_id));
+    }
+  });
+  return idsVehiculos;
+}
+
+document.addEventListener("click",function(event){
+  const cont=document.getElementById("facturacionFacturaMenu");
+  if(cont && !cont.contains(event.target)) cerrarMenuFacturasFacturacion();
+});
+
 function filtrarFacturacion(){
   const desde=document.getElementById("facturacionDesde").value;
   const hasta=document.getElementById("facturacionHasta").value;
@@ -5888,7 +6057,11 @@ function filtrarFacturacion(){
     const coincideServicio=!servicioFiltro.length || servicioFiltro.includes(nombreServicio);
     const coincideEstado=!estado || (estado==="facturado" ? !!r.facturado : !r.facturado);
     const texto=[r.ot,r.placa,r.vin,r.marca,r.modelo].join(" ").toLowerCase();
-    return coincideFecha&&coincideTipo&&coincideServicio&&coincideEstado&&(!buscar||texto.includes(buscar));
+
+    const idsVehiculosFactura=obtenerIdsVehiculosDeFacturasSeleccionadas();
+    const coincideFactura=!idsVehiculosFactura || idsVehiculosFactura.has(String(r.id));
+
+    return coincideFecha&&coincideTipo&&coincideServicio&&coincideEstado&&coincideFactura&&(!buscar||texto.includes(buscar));
   });
   const orden=document.getElementById("facturacionOrdenFecha")?.value || "desc";
   return ordenarPorFechaModulo(lista,orden,obtenerFechaServicioFacturacion);
@@ -6042,6 +6215,7 @@ async function inicializarFacturacion(){
     registrosFacturacion=await cargarRegistrosFacturacion();
     await cargarFacturasDashboard();
     cargarOpcionesFiltroServicioFacturacion();
+    cargarOpcionesFiltroFacturaFacturacion();
     renderFacturacion();
   }catch(error){
     console.error(error);
@@ -6061,6 +6235,13 @@ function limpiarFiltrosFacturacion(){
   actualizarTextoServiciosFacturacion();
   document.getElementById("facturacionEstado").value="";
   document.getElementById("facturacionBuscar").value="";
+
+  facturasFiltroFacturacionSeleccionadas.clear();
+  const todasFacturas=document.getElementById("facturacionFacturasTodas");
+  if(todasFacturas) todasFacturas.checked=false;
+  document.querySelectorAll("#facturacionFacturaOpciones input[type='checkbox']").forEach(function(el){el.checked=false;});
+  actualizarTextoFiltroFacturasFacturacion();
+
   renderFacturacion();
 }
 function cambiarSeleccionFacturacion(id, seleccionado){
@@ -7341,6 +7522,6 @@ programarCierreAutomatico1930();
 </script>
 
 
-<div class="version-app">V5.1 Dashboard</div>
+<div class="version-app">V5.9 Dashboard</div>
 </body>
 </html>
