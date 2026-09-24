@@ -2902,6 +2902,8 @@ Cancelar
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
 <script>
 
 /* =====================================================
@@ -5934,12 +5936,90 @@ function escaparHtmlExportacion(valor){
 }
 
 function abrirVentanaPDF(titulo, tablaHtml){
-  const w=window.open('','_blank');
-  if(!w){mostrarAlerta('El navegador bloqueó la ventana de PDF. Permite ventanas emergentes para este sitio.','error');return;}
-  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escaparHtmlExportacion(titulo)}</title>
-  <style>body{font-family:Arial,sans-serif;padding:24px;color:#111}h1{font-size:20px;margin:0 0 16px}table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #ccc;padding:6px;text-align:left}th{background:#eef2f7;font-weight:700}@media print{body{padding:0}@page{size:A4 landscape;margin:10mm}}</style>
-  </head><body><h1>${escaparHtmlExportacion(titulo)}</h1>${tablaHtml}<script>window.onload=function(){setTimeout(function(){window.print();},250);};<\/script></body></html>`);
-  w.document.close();
+  // Genera y descarga el PDF directamente, sin abrir la ventana de impresión.
+  try{
+    const jsPDFRef = window.jspdf && window.jspdf.jsPDF;
+    if(!jsPDFRef){
+      mostrarAlerta('No se pudo cargar el generador de PDF. Verifica tu conexión a internet y vuelve a intentarlo.','error');
+      return;
+    }
+
+    const doc = new jsPDFRef({
+      orientation:'landscape',
+      unit:'mm',
+      format:'a4'
+    });
+
+    // Convertimos la tabla HTML a datos para jsPDF-AutoTable.
+    const parser = new DOMParser();
+    const parsed = parser.parseFromString(tablaHtml, 'text/html');
+    const tabla = parsed.querySelector('table');
+    if(!tabla){
+      mostrarAlerta('No se encontró información para generar el PDF.','error');
+      return;
+    }
+
+    const encabezados = Array.from(tabla.querySelectorAll('thead th')).map(th => th.textContent.trim());
+    const filas = Array.from(tabla.querySelectorAll('tbody tr')).map(tr =>
+      Array.from(tr.querySelectorAll('td')).map(td => td.textContent.trim())
+    );
+
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(15);
+    doc.text(String(titulo || 'Reporte Wankamotors'), 14, 14);
+
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(8);
+    doc.text('Generado: ' + new Date().toLocaleString('es-PE'), 14, 20);
+
+    doc.autoTable({
+      head:[encabezados],
+      body:filas,
+      startY:25,
+      theme:'grid',
+      styles:{
+        font:'helvetica',
+        fontSize:7,
+        cellPadding:2.2,
+        overflow:'linebreak',
+        valign:'middle'
+      },
+      headStyles:{
+        fontStyle:'bold',
+        fillColor:[238,242,247],
+        textColor:[31,41,55],
+        lineColor:[180,185,192],
+        lineWidth:0.2
+      },
+      bodyStyles:{
+        textColor:[31,41,55],
+        lineColor:[205,209,214],
+        lineWidth:0.15
+      },
+      alternateRowStyles:{
+        fillColor:[248,250,252]
+      },
+      margin:{top:25,right:10,bottom:12,left:10},
+      tableWidth:'auto',
+      didDrawPage:function(data){
+        const pageCount = doc.internal.getNumberOfPages();
+        doc.setFontSize(7);
+        doc.setTextColor(100);
+        doc.text('Wankamotors', 10, 202);
+        doc.text('Página ' + data.pageNumber + ' de ' + pageCount, 285, 202, {align:'right'});
+      }
+    });
+
+    const nombre = String(titulo || 'Reporte Wankamotors')
+      .normalize('NFD').replace(/[\\u0300-\\u036f]/g,'')
+      .replace(/[^a-zA-Z0-9_-]+/g,'_')
+      .replace(/^_+|_+$/g,'') || 'Reporte_Wankamotors';
+
+    doc.save(nombre + '.pdf');
+  }catch(error){
+    console.error('Error al generar PDF:', error);
+    mostrarAlerta('No se pudo generar el PDF. Revisa la consola para más detalles.','error');
+  }
 }
 
 function exportarContextoPDF(contexto){
@@ -6701,26 +6781,73 @@ function actualizarBloqueoFacetasSinResultadosFacturacion(){
   const marcaBtn=document.querySelector("#facturacionMarca .servicios-multiselect-btn");
   const facturaBtn=document.querySelector("#facturacionFacturaMenu .servicios-multiselect-btn");
 
-  // Cuando una combinación no devuelve registros, bloqueamos las demás
-  // facetas para evitar mostrar "Todos" como si existieran opciones válidas.
-  if(tipo) tipo.disabled=sinResultados;
-  if(estado) estado.disabled=sinResultados || estado.disabled;
-  if(servicioBtn) servicioBtn.disabled=false; // debe poder abrirse para quitar la selección
+  // Primero restauramos el estado base de los controles.
+  // Esto evita que un filtro que dejó 0 resultados quede bloqueado
+  // permanentemente después de pulsar "Limpiar filtros".
+  if(tipo) tipo.disabled=false;
+  if(estado) estado.disabled=false;
+  if(servicioBtn) {
+    servicioBtn.disabled=false;
+    servicioBtn.style.opacity="1";
+    servicioBtn.style.cursor="pointer";
+  }
   if(marcaBtn) {
-    marcaBtn.disabled=sinResultados;
-    marcaBtn.style.opacity=sinResultados ? "0.55" : "1";
-    marcaBtn.style.cursor=sinResultados ? "not-allowed" : "pointer";
+    marcaBtn.disabled=false;
+    marcaBtn.style.opacity="1";
+    marcaBtn.style.cursor="pointer";
   }
   if(facturaBtn) {
-    facturaBtn.disabled=sinResultados || String(estado?.value||"").trim()!=="";
-    facturaBtn.style.opacity=facturaBtn.disabled ? "0.55" : "1";
-    facturaBtn.style.cursor=facturaBtn.disabled ? "not-allowed" : "pointer";
+    facturaBtn.disabled=false;
+    facturaBtn.style.opacity="1";
+    facturaBtn.style.cursor="pointer";
   }
 
   const marcaChecks=document.querySelectorAll("#facturacionMarcaMenu input[type=checkbox]");
-  marcaChecks.forEach(function(el){el.disabled=sinResultados;});
+  marcaChecks.forEach(function(el){el.disabled=false;});
   const facturaChecks=document.querySelectorAll("#facturacionFacturaOpciones input[type=checkbox]");
-  facturaChecks.forEach(function(el){el.disabled=sinResultados || String(estado?.value||"").trim()!=="";});
+  facturaChecks.forEach(function(el){el.disabled=false;});
+
+  // Si no existen registros para la combinación actual, se bloquean
+  // las demás facetas para no ofrecer opciones que no tienen resultados.
+  // El filtro que puede quedar seleccionado sigue disponible para poder
+  // quitarlo y recuperar el listado.
+  if(sinResultados){
+    if(tipo) tipo.disabled=true;
+    if(estado) estado.disabled=true;
+    if(marcaBtn) {
+      marcaBtn.disabled=true;
+      marcaBtn.style.opacity="0.55";
+      marcaBtn.style.cursor="not-allowed";
+    }
+    marcaChecks.forEach(function(el){el.disabled=true;});
+
+    const hayEstado=String(estado?.value||"").trim()!=="";
+    if(facturaBtn && !hayEstado){
+      facturaBtn.disabled=true;
+      facturaBtn.style.opacity="0.55";
+      facturaBtn.style.cursor="not-allowed";
+    }
+    facturaChecks.forEach(function(el){el.disabled=true;});
+  }
+
+  // Factura y Estado son filtros mutuamente excluyentes.
+  const hayEstado=String(estado?.value||"").trim()!=="";
+  if(facturaBtn && hayEstado){
+    facturaBtn.disabled=true;
+    facturaBtn.style.opacity="0.55";
+    facturaBtn.style.cursor="not-allowed";
+  }
+  if(facturaChecks.length && hayEstado){
+    facturaChecks.forEach(function(el){el.disabled=true;});
+  }
+
+  // Aunque no haya resultados, el menú de Servicio debe poder abrirse
+  // para quitar la selección que provocó el vacío.
+  if(servicioBtn){
+    servicioBtn.disabled=false;
+    servicioBtn.style.opacity="1";
+    servicioBtn.style.cursor="pointer";
+  }
 }
 
 function actualizarFiltrosFacturacionRelacionados(){
@@ -7078,7 +7205,6 @@ function limpiarFiltrosFacturacion(){
   document.getElementById("facturacionDesde").value="";
   document.getElementById("facturacionHasta").value="";
   if(document.getElementById("facturacionTipo")) document.getElementById("facturacionTipo").value="";
-  actualizarTiposAtencionFacturacion();
   marcasFiltroFacturacionSeleccionadas.clear();
   document.querySelectorAll('#facturacionMarcaMenu input[name="facturacionMarcaCheck"]').forEach(function(el){el.checked=false;});
   const todasMarcas=document.getElementById("facturacionMarcasTodas");
@@ -7099,9 +7225,36 @@ function limpiarFiltrosFacturacion(){
   if(todasFacturas) todasFacturas.checked=false;
   document.querySelectorAll("#facturacionFacturaOpciones input[type='checkbox']").forEach(function(el){el.checked=false;});
   actualizarTextoFiltroFacturasFacturacion();
-  actualizarEstadoFiltroFacturacion();
-  cargarServiciosFiltroFacturacionSegunFactura();
 
+  // Restaurar completamente el estado de los controles ANTES de reconstruir
+  // las facetas. Si una combinación anterior dejó 0 resultados, algunos
+  // controles pudieron quedar deshabilitados; al limpiar deben quedar todos
+  // disponibles nuevamente.
+  const tipo= document.getElementById("facturacionTipo");
+  const estado= document.getElementById("facturacionEstado");
+  const servicioBtn=document.querySelector("#facturacionServicio .servicios-multiselect-btn");
+  const marcaBtn=document.querySelector("#facturacionMarca .servicios-multiselect-btn");
+  const facturaBtn=document.querySelector("#facturacionFacturaMenu .servicios-multiselect-btn");
+  if(tipo) tipo.disabled=false;
+  if(estado) estado.disabled=false;
+  [servicioBtn,marcaBtn,facturaBtn].forEach(function(btn){
+    if(btn){
+      btn.disabled=false;
+      btn.style.opacity="1";
+      btn.style.cursor="pointer";
+    }
+  });
+  document.querySelectorAll("#facturacionMarcaMenu input[type=checkbox], #facturacionFacturaOpciones input[type=checkbox]").forEach(function(el){
+    el.disabled=false;
+  });
+  const facturaSearch=document.getElementById("buscarFacturaFacturacion");
+  const facturaTodas=document.getElementById("facturacionFacturasTodas");
+  if(facturaSearch){ facturaSearch.disabled=false; facturaSearch.style.background="#fff"; facturaSearch.style.cursor="text"; }
+  if(facturaTodas) facturaTodas.disabled=false;
+
+  // Con todos los valores ya limpios, recalcular una sola vez las opciones.
+  actualizarFiltrosFacturacionRelacionados();
+  facturacionPaginaActual=1;
   renderFacturacion();
 }
 function cambiarSeleccionFacturacion(id, seleccionado){
@@ -8676,6 +8829,6 @@ programarCierreAutomatico1930();
 </script>
 
 
-<div class="version-app">V6.0 Dashboard</div>
+<div class="version-app">V5.5 Dashboard</div>
 </body>
 </html>
