@@ -6,6 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Control de Vehículos - Wankamotors</title>
+<link rel="icon" type="image/png" href="https://drive.google.com/thumbnail?id=10o62RZyF0G4acGqWcJyfSAwCHBL44U-1&sz=w128">
+<link rel="shortcut icon" type="image/png" href="https://drive.google.com/thumbnail?id=10o62RZyF0G4acGqWcJyfSAwCHBL44U-1&sz=w128">
 
 <style>
 .numero-seguimiento { text-align:center; font-weight:700; }
@@ -618,7 +620,7 @@ th{
 ===================================================== */
 .dashboard-filtros{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
 .dashboard-resumen{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:15px 0;}
-.dashboard-card{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;}
+.dashboard-card{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;}
 .dashboard-card .dashboard-label{font-size:13px;color:#6b7280;font-weight:700;}
 .dashboard-card strong{display:block;font-size:25px;margin-top:6px;color:#111827;}
 .dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
@@ -907,7 +909,7 @@ th.col-vin {
 
 .facturacion-filtros{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
 .facturacion-resumen{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:15px 0;}
-.facturacion-card{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;}
+.facturacion-card{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;}
 .facturacion-card strong{display:block;font-size:20px;margin-top:5px;}
 .facturacion-estado{display:inline-block;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:700;}
 .facturacion-estado.pendiente{background:#fef3c7;color:#92400e;}
@@ -8164,7 +8166,7 @@ function renderDashboard(lista){
     <div class="dashboard-card"><span class="dashboard-label">Pendientes</span><strong>${pendientes}</strong></div>
     <div class="dashboard-card"><span class="dashboard-label">Subtotal sin IGV</span><strong>${dineroDashboard(subtotal)}</strong></div>
     <div class="dashboard-card"><span class="dashboard-label">Total con IGV</span><strong>${dineroDashboard(totalConIgv)}</strong></div>
-    <div class="dashboard-card"><span class="dashboard-label">Promedio vehículos/día</span><strong>${promedioDiario.toFixed(1)}</strong><small>${diasPeriodo} días considerados(s)</small></div>
+    <div class="dashboard-card"><span class="dashboard-label">Promedio vehículos/día</span><strong>${promedioDiario.toFixed(1)}</strong><small>${diasPeriodo} días considerados</small></div>
     <div class="dashboard-card"><span class="dashboard-label">Detracción total</span><strong>${dineroDashboard(detraccionDepositada)}</strong></div>
   </div>
 
@@ -8342,6 +8344,6 @@ programarCierreAutomatico1930();
 </script>
 
 
-<div class="version-app">V5.5 Dashboard</div>
+<div class="version-app">V5.8 Dashboard</div>
 </body>
 </html>
