@@ -6172,8 +6172,10 @@ async function cargarFacturasEmitidas(){
 
 function obtenerEstadoPagoFactura(f){
   const total=Number(f.total_con_igv||0);
-  const directo=Math.max(0,Number(f.monto_pago_directo||0));
-  const detraccion=!!f.aplica_detraccion ? Number(f.monto_detraccion||0) : 0;
+  const directo=String(f.fecha_pago_directo||'').trim() ? Math.max(0,Number(f.monto_pago_directo||0)) : 0;
+  const detraccion=!!f.aplica_detraccion && String(f.fecha_detraccion||'').trim()
+    ? Math.max(0,Number(f.monto_detraccion||0))
+    : 0;
   const recibido=Math.min(total,directo+detraccion);
   if(total<=0 || recibido<=0) return "Pendiente";
   if(recibido+0.01<total) return "Pago parcial";
@@ -6222,8 +6224,9 @@ function abrirModalPagosFactura(id){
   if(!factura) return;
   const total=Number(factura.total_con_igv||0);
   const det=!!factura.aplica_detraccion?Number(factura.monto_detraccion||0):0;
-  const directo=Number(factura.monto_pago_directo||0);
-  const recibido=Math.min(total,directo+det);
+  const directo=String(factura.fecha_pago_directo||'').trim() ? Number(factura.monto_pago_directo||0) : 0;
+  const detDepositada=!!factura.aplica_detraccion && String(factura.fecha_detraccion||'').trim();
+  const recibido=Math.min(total,directo+(detDepositada?det:0));
   const pendiente=Math.max(0,total-recibido);
   document.getElementById("pagoFacturaId").value=factura.id;
   document.getElementById("pagoFacturaNumero").textContent="Factura "+(factura.numero_factura||"");
@@ -6264,12 +6267,17 @@ async function guardarPagosFactura(){
   if(montoDirecto+montoDet>total+0.01){mostrarAlerta("Los pagos registrados no pueden superar el total de la factura.","error");return;}
   if(detPermitida && Math.abs(montoDet-Number(factura.monto_detraccion||0))>0.01){mostrarAlerta("El monto de la detracción debe ser S/ "+Number(factura.monto_detraccion||0).toFixed(2)+".","error");return;}
 
-  const nuevoEstado=obtenerEstadoPagoFactura(Object.assign({},factura,{monto_pago_directo:montoDirecto,monto_detraccion:montoDet}));
+  const nuevoEstado=obtenerEstadoPagoFactura(Object.assign({},factura,{
+    monto_pago_directo:montoDirecto,
+    fecha_pago_directo:fechaDirecto,
+    monto_detraccion:montoDet,
+    fecha_detraccion:fechaDet
+  }));
   const body={
     monto_pago_directo:Number(montoDirecto.toFixed(2)),
     fecha_pago_directo:fechaDirecto,
     fecha_detraccion:fechaDet,
-    estado_detraccion:detPermitida?(montoDet>=Number(factura.monto_detraccion||0)-0.01?"Depositada":"Pendiente"):"No aplica",
+    estado_detraccion:detPermitida?(fechaDet ? "Depositada" : "Pendiente"):"No aplica",
     estado_pago:nuevoEstado,
     fecha_pago:nuevoEstado==="Pagada" ? (fechaDet||fechaDirecto||obtenerFechaHoyLima()) : null,
     observaciones:observaciones||null
