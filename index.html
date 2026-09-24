@@ -941,8 +941,6 @@ th.col-vin {
 .orden-fecha select{width:auto;min-width:190px;}
 .dashboard-resumen-filtros{margin-top:10px;padding:9px 12px;border:1px solid #dbe2ea;border-radius:8px;background:#f8fafc;color:#374151;font-size:13px;}
 
-.dashboard-mes-bar.especial,.dashboard-leyenda-color.especial{background:#b45309;}
-.dashboard-grafica-leyenda-meses i.especial{background:#b45309;}
 </style>
 
 </head>
@@ -1067,21 +1065,6 @@ value="Nuevo"
 onchange="cambiarTipo('Nuevo')">
 
 🚘 Nuevo
-
-</label>
-
-
-<label
-id="opcionEspecial"
-class="tipo-option">
-
-<input
-type="radio"
-name="tipo"
-value="Especial"
-onchange="cambiarTipo('Especial')">
-
-⭐ Especial
 
 </label>
 
@@ -1455,7 +1438,7 @@ onclick="limpiarFormulario()">
 <div class="facturacion-filtros" style="grid-template-columns:repeat(3,minmax(180px,1fr));">
 <div class="form-group"><label>Desde</label><input id="facturacionDesde" type="date"></div>
 <div class="form-group"><label>Hasta</label><input id="facturacionHasta" type="date"></div>
-<div class="form-group"><label>Tipo de atención</label><select id="facturacionTipo"><option value="">Todos</option><option value="Servicio">🔧 Servicio</option><option value="Nuevo">🚘 Nuevo</option><option value="Especial">⭐ Especial</option></select></div>
+<div class="form-group"><label>Tipo de atención</label><select id="facturacionTipo"><option value="">Todos</option><option value="Servicio">🔧 Servicio</option><option value="Nuevo">🚘 Nuevo</option></select></div>
 <div class="form-group"><label>Servicio</label><div id="facturacionServicio" class="servicios-multiselect">
 <button type="button" class="servicios-multiselect-btn" onclick="toggleFiltroServiciosFacturacion(event)"><span id="facturacionServicioTexto">Todos los servicios</span><span>▾</span></button>
 <div id="facturacionServicioMenu" class="servicios-multiselect-menu"></div>
@@ -1514,7 +1497,18 @@ onclick="limpiarFormulario()">
     <p>Los registros seleccionados quedarán asociados a esta factura.</p>
     <div class="facturacion-filtros" style="grid-template-columns:repeat(2,1fr);">
       <div class="form-group"><label>Número de factura *</label><input id="nuevaFacturaNumero" type="text" placeholder="F001-00001258"></div>
-      <div class="form-group"><label>Cliente *</label><input id="nuevaFacturaCliente" type="text" placeholder="Nombre del cliente"></div>
+      <div class="form-group">
+        <label for="nuevaFacturaCliente">Cliente *</label>
+        <select id="nuevaFacturaCliente" onchange="actualizarRucClienteFactura()">
+          <option value="">Seleccione un cliente</option>
+          <option value="WankaMotors S.A.C" data-ruc="20536196901">WankaMotors S.A.C</option>
+          <option value="Multimarkas S.A.C" data-ruc="20401080920">Multimarkas S.A.C</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="nuevaFacturaRuc">RUC</label>
+        <input id="nuevaFacturaRuc" type="text" readonly placeholder="Se completa automáticamente" style="background:#f3f4f6;cursor:not-allowed;">
+      </div>
       <div class="form-group"><label>Fecha de emisión *</label><input id="nuevaFacturaEmision" type="date"></div>
       <div class="form-group"><label>Fecha de vencimiento</label><input id="nuevaFacturaVencimiento" type="date"></div>
       <div class="form-group"><label>Estado de pago</label><select id="nuevaFacturaEstadoPago"><option value="Pendiente">Pendiente</option><option value="Pagada">Pagada</option></select></div>
@@ -1645,7 +1639,7 @@ onclick="buscarRegistroPasado()">
         <option value="">Todos los tipos</option>
         <option value="Servicio">🔧 Servicio</option>
         <option value="Nuevo">🚘 Nuevo</option>
-        <option value="Especial">⭐ Especial</option>
+        
       </select>
     </div>
   </div>
@@ -1686,10 +1680,6 @@ onclick="buscarRegistroPasado()">
 🚘 Nuevo
 </label>
 
-<label id="opcionPasadoEspecial" class="tipo-option">
-<input type="radio" name="tipoPasado" value="Especial" onchange="cambiarTipoPasado('Especial')">
-⭐ Especial
-</label>
 
 </div>
 
@@ -1946,7 +1936,7 @@ Tipo
   <option value="">Todos</option>
   <option value="Servicio">🔧 Servicio</option>
   <option value="Nuevo">🚘 Nuevo</option>
-  <option value="Especial">⭐ Especial</option>
+  
 </select>
 
 </div>
@@ -2686,10 +2676,7 @@ const campoFotoVIN = document.getElementById("campoFotoVIN");
 
 const opcionServicio = document.getElementById("opcionServicio");
 const opcionNuevo = document.getElementById("opcionNuevo");
-const opcionEspecial = document.getElementById("opcionEspecial");
-
 const esNuevo = tipo === "Nuevo";
-const esEspecial = tipo === "Especial";
 
 if(esNuevo){
   campoOT.style.display = "none";
@@ -2698,7 +2685,7 @@ if(esNuevo){
   campoVIN.style.display = "flex";
   campoFotoVIN.style.display = "flex";
 }else{
-  // Servicio y Especial utilizan OT + Placa + Foto OT.
+  // Servicio utiliza OT + Placa + Foto OT.
   campoOT.style.display = "flex";
   campoFotoOT.style.display = "flex";
   campoPlaca.style.display = "flex";
@@ -2708,7 +2695,7 @@ if(esNuevo){
 
 if(opcionServicio) opcionServicio.classList.toggle("active", tipo === "Servicio");
 if(opcionNuevo) opcionNuevo.classList.toggle("active", esNuevo);
-if(opcionEspecial) opcionEspecial.classList.toggle("active", esEspecial);
+
 
 }
 
@@ -2914,7 +2901,7 @@ const archivoIngreso = document.getElementById("fotoIngreso").files[0];
 const archivoOT = document.getElementById("fotoOT").files[0];
 const archivoVIN = document.getElementById("fotoVIN").files[0];
 
-if((tipo === "Servicio" || tipo === "Especial") && !placa){
+if(tipo === "Servicio" && !placa){
   mostrarAlerta("Debe ingresar la placa.","error");
   return;
 }
@@ -2937,8 +2924,8 @@ if(tipo === "Nuevo" && !archivoVIN){
 
 /* Verificar posibles duplicados antes de subir fotografías. */
 const continuarDuplicado = await verificarDuplicadosAntesDeRegistrar({
-  ot: (tipo === "Servicio" || tipo === "Especial") ? ot : "",
-  placa: (tipo === "Servicio" || tipo === "Especial") ? placa : "",
+  ot: tipo === "Servicio" ? ot : "",
+  placa: tipo === "Servicio" ? placa : "",
   vin: tipo === "Nuevo" ? vin : ""
 });
 
@@ -2984,8 +2971,8 @@ const ahora = new Date().toISOString();
 const filaSupabase = {
   id:id,
   tipo:tipo,
-  ot:(tipo === "Servicio" || tipo === "Especial") ? ot : "",
-  placa:(tipo === "Servicio" || tipo === "Especial") ? placa : "",
+  ot:tipo === "Servicio" ? ot : "",
+  placa:tipo === "Servicio" ? placa : "",
   vin:tipo === "Nuevo" ? vin : "",
   marca:marca,
   modelo:modelo,
@@ -3258,7 +3245,6 @@ function cambiarTipoPasado(tipo){
   const campoFotoVIN = document.getElementById("pasadoCampoFotoVIN");
   const opcionServicio = document.getElementById("opcionPasadoServicio");
   const opcionNuevo = document.getElementById("opcionPasadoNuevo");
-  const opcionEspecial = document.getElementById("opcionPasadoEspecial");
 
   if(tipo === "Nuevo"){
     campoOT.style.display = "none";
@@ -3267,7 +3253,7 @@ function cambiarTipoPasado(tipo){
     campoFotoOT.style.display = "none";
     campoFotoVIN.style.display = "flex";
   }else{
-    // Servicio y Especial utilizan OT + Placa + Foto OT.
+    // Servicio utiliza OT + Placa + Foto OT.
     campoOT.style.display = "flex";
     campoPlaca.style.display = "flex";
     campoVIN.style.display = "none";
@@ -3277,7 +3263,7 @@ function cambiarTipoPasado(tipo){
 
   if(opcionServicio) opcionServicio.classList.toggle("active", tipo === "Servicio");
   if(opcionNuevo) opcionNuevo.classList.toggle("active", tipo === "Nuevo");
-  if(opcionEspecial) opcionEspecial.classList.toggle("active", tipo === "Especial");
+
 }
 
 
@@ -3596,7 +3582,7 @@ function seleccionarRegistroPasado(id){
   registroPasadoSeleccionadoId = registro.id;
 
   const tipoRegistro = String(registro.tipo || "").trim();
-  const tipo = tipoRegistro === "Nuevo" ? "Nuevo" : (tipoRegistro === "Especial" ? "Especial" : "Servicio");
+  const tipo = tipoRegistro === "Nuevo" ? "Nuevo" : "Servicio";
   const radio = document.querySelector('input[name="tipoPasado"][value="' + tipo + '"]');
   if(radio){
     radio.checked = true;
@@ -3770,8 +3756,8 @@ async function guardarRegistroPasado(){
        para que no se detecte a sí mismo como duplicado. Las coincidencias
        con OT/placa/VIN de OTROS registros sí seguirán generando alerta. */
     const continuar = await verificarDuplicadosAntesDeRegistrar({
-      ot:(tipo === "Servicio" || tipo === "Especial") ? ot : "",
-      placa:(tipo === "Servicio" || tipo === "Especial") ? placa : "",
+      ot:tipo === "Servicio" ? ot : "",
+      placa:tipo === "Servicio" ? placa : "",
       vin:tipo === "Nuevo" ? vin : "",
       idExcluir:registroPasadoSeleccionadoId
     });
@@ -3796,7 +3782,7 @@ async function guardarRegistroPasado(){
     if(archivoIngreso){
       datosFotos.fotoIngreso = await comprimirFoto(archivoIngreso);
     }
-    if(archivoOT && (tipo === "Servicio" || tipo === "Especial")){
+    if(archivoOT && tipo === "Servicio"){
       datosFotos.fotoOT = await comprimirFoto(archivoOT);
     }
     if(archivoVIN && tipo === "Nuevo"){
@@ -3863,8 +3849,8 @@ async function guardarRegistroPasado(){
 
       const cambios = {
         tipo:tipo,
-        ot:(tipo === "Servicio" || tipo === "Especial") ? ot : "",
-        placa:(tipo === "Servicio" || tipo === "Especial") ? placa : "",
+        ot:tipo === "Servicio" ? ot : "",
+        placa:tipo === "Servicio" ? placa : "",
         vin:tipo === "Nuevo" ? vin : "",
         marca:marca,
         servicio:servicio,
@@ -3949,8 +3935,8 @@ async function guardarRegistroPasado(){
       const fila = {
         id:id,
         tipo:tipo,
-        ot:(tipo === "Servicio" || tipo === "Especial") ? ot : "",
-        placa:(tipo === "Servicio" || tipo === "Especial") ? placa : "",
+        ot:tipo === "Servicio" ? ot : "",
+        placa:tipo === "Servicio" ? placa : "",
         vin:tipo === "Nuevo" ? vin : "",
         marca:marca,
         modelo:"",
@@ -5617,7 +5603,7 @@ function renderFacturacion(){
     const x=calcularImportesFacturacion(r.precio_sin_igv);
     const facturado=!!r.facturado;
     const tipoRegistro = String(r.tipo || "").trim();
-    let tipoMostrar = "⭐ Especial";
+    let tipoMostrar = "🔧 Servicio";
     if(tipoRegistro === "Servicio") tipoMostrar = "🔧 Servicio";
     else if(tipoRegistro === "Nuevo") tipoMostrar = "🚘 Nuevo";
 
@@ -5795,6 +5781,7 @@ function abrirModalNuevaFactura(){
   const fechaHoy=new Intl.DateTimeFormat("en-CA",{timeZone:"America/Lima",year:"numeric",month:"2-digit",day:"2-digit"}).format(hoy);
   document.getElementById("nuevaFacturaNumero").value="";
   document.getElementById("nuevaFacturaCliente").value="";
+  document.getElementById("nuevaFacturaRuc").value="";
   document.getElementById("nuevaFacturaEmision").value=fechaHoy;
   document.getElementById("nuevaFacturaVencimiento").value="";
   document.getElementById("nuevaFacturaEstadoPago").value="Pendiente";
@@ -5813,6 +5800,19 @@ function cerrarModalNuevaFactura(){
   if(modal) modal.classList.remove("active");
 }
 
+/* =====================================================
+   CLIENTES PREDEFINIDOS PARA FACTURACIÓN
+===================================================== */
+
+function actualizarRucClienteFactura(){
+  const cliente=document.getElementById("nuevaFacturaCliente");
+  const ruc=document.getElementById("nuevaFacturaRuc");
+  if(!cliente || !ruc) return;
+
+  const opcion=cliente.options[cliente.selectedIndex];
+  ruc.value=opcion ? (opcion.getAttribute("data-ruc") || "") : "";
+}
+
 async function guardarNuevaFactura(){
   const seleccionados=obtenerSeleccionadosFacturacion();
   if(!seleccionados.length){
@@ -5823,13 +5823,14 @@ async function guardarNuevaFactura(){
 
   const numero=document.getElementById("nuevaFacturaNumero").value.trim();
   const cliente=document.getElementById("nuevaFacturaCliente").value.trim();
+  const rucCliente=document.getElementById("nuevaFacturaRuc").value.trim();
   const fechaEmision=document.getElementById("nuevaFacturaEmision").value;
   const fechaVencimiento=document.getElementById("nuevaFacturaVencimiento").value || null;
   const estadoPago=document.getElementById("nuevaFacturaEstadoPago").value || "Pendiente";
   const observaciones=document.getElementById("nuevaFacturaObservaciones").value.trim();
 
-  if(!numero || !cliente || !fechaEmision){
-    mostrarAlerta("Completa número de factura, cliente y fecha de emisión.","error");
+  if(!numero || !cliente || !rucCliente || !fechaEmision){
+    mostrarAlerta("Completa número de factura, selecciona un cliente y verifica la fecha de emisión.","error");
     return;
   }
 
@@ -6191,7 +6192,7 @@ function normalizarTipoDashboard(valor){
   const t=String(valor||"").trim().toLowerCase();
   if(t==="nuevo" || t==="nuevos" || t==="new") return "Nuevo";
   if(t==="servicio" || t==="servicios") return "Servicio";
-  if(t==="especial" || t==="especiales") return "Especial";
+  if(t==="especial" || t==="especiales") return "Servicio";
   return "Otro";
 }
 
@@ -6202,61 +6203,59 @@ function nombreMesDashboard(clave){
 }
 
 function renderGraficasDashboard(lista){
-  let nuevos=0, servicios=0, especiales=0, otros=0;
+  let nuevos=0, servicios=0, otros=0;
   const porMes={};
   lista.forEach(function(r){
     const tipo=normalizarTipoDashboard(r.tipo);
     if(tipo==="Nuevo") nuevos++;
     else if(tipo==="Servicio") servicios++;
-    else if(tipo==="Especial") especiales++;
     else otros++;
     const fecha=r.hora_inicio_lavado || r.created_at;
     const clave=fechaLocalDashboard(fecha).slice(0,7);
     if(clave){
-      if(!porMes[clave]) porMes[clave]={Nuevo:0,Servicio:0,Especial:0,Otro:0};
+      if(!porMes[clave]) porMes[clave]={Nuevo:0,Servicio:0,Otro:0};
       porMes[clave][tipo]++;
     }
   });
-  const totalTipos=nuevos+servicios+especiales+otros;
+
+  const totalTipos=nuevos+servicios+otros;
   const pctNuevo=totalTipos ? (nuevos/totalTipos*100) : 0;
   const pctServicio=totalTipos ? (servicios/totalTipos*100) : 0;
-  const pctEspecial=totalTipos ? (especiales/totalTipos*100) : 0;
   const g1=pctNuevo*3.6;
   const g2=g1+pctServicio*3.6;
-  const g3=g2+pctEspecial*3.6;
-  const gradiente=totalTipos ? `conic-gradient(#1d4ed8 0deg ${g1}deg,#64748b ${g1}deg ${g2}deg,#b45309 ${g2}deg ${g3}deg,#e5e7eb ${g3}deg 360deg)` : "conic-gradient(#e5e7eb 0deg 360deg)";
+  const gradiente=totalTipos
+    ? `conic-gradient(#1d4ed8 0deg ${g1}deg,#64748b ${g1}deg ${g2}deg,#e5e7eb ${g2}deg 360deg)`
+    : "conic-gradient(#e5e7eb 0deg 360deg)";
+
   const claves=Object.keys(porMes).sort();
-  const maxMes=Math.max(1,...claves.map(k=>Math.max(porMes[k].Nuevo,porMes[k].Servicio,porMes[k].Especial,porMes[k].Otro)));
+  const maxMes=Math.max(1,...claves.map(k=>Math.max(porMes[k].Nuevo,porMes[k].Servicio,porMes[k].Otro)));
   const barrasMes=claves.map(function(k){
     const d=porMes[k];
     const hN=(d.Nuevo/maxMes*180).toFixed(1);
     const hS=(d.Servicio/maxMes*180).toFixed(1);
-    const hE=(d.Especial/maxMes*180).toFixed(1);
     const hO=(d.Otro/maxMes*180).toFixed(1);
-    return `<div class="dashboard-mes-col"><div class="dashboard-mes-valores"><div class="dashboard-mes-bar" style="height:${hN}px"><span>${d.Nuevo}</span></div><div class="dashboard-mes-bar servicio" style="height:${hS}px"><span>${d.Servicio}</span></div>${d.Especial ? `<div class="dashboard-mes-bar especial" style="height:${hE}px"><span>${d.Especial}</span></div>` : ""}${d.Otro ? `<div class="dashboard-mes-bar" style="height:${hO}px;opacity:.45"><span>${d.Otro}</span></div>` : ""}</div><div class="dashboard-mes-label">${esc(nombreMesDashboard(k))}</div></div>`;
+    return `<div class="dashboard-mes-col"><div class="dashboard-mes-valores"><div class="dashboard-mes-bar" style="height:${hN}px"><span>${d.Nuevo}</span></div><div class="dashboard-mes-bar servicio" style="height:${hS}px"><span>${d.Servicio}</span></div>${d.Otro ? `<div class="dashboard-mes-bar" style="height:${hO}px;opacity:.45"><span>${d.Otro}</span></div>` : ""}</div><div class="dashboard-mes-label">${esc(nombreMesDashboard(k))}</div></div>`;
   }).join("");
-  return `<div class="dashboard-graficas">
-    <div class="dashboard-grafica-panel">
-      <h3>📊 Nuevos, Servicios y Especiales</h3>
-      <div class="dashboard-grafica-subtitulo">Distribución porcentual de los registros del periodo seleccionado.</div>
-      <div class="dashboard-donut-wrap">
-        <div class="dashboard-donut" style="background:${gradiente}"><div class="dashboard-donut-centro">${totalTipos}<small>registros</small></div></div>
+
+  const dashboard= document.getElementById("dashboardGraficas");
+  if(!dashboard) return;
+  dashboard.innerHTML=`
+    <div class="dashboard-grafica-card">
+      <h3>📊 Nuevos y Servicios</h3>
+      <div class="dashboard-grafica-contenido">
+        <div class="dashboard-dona" style="background:${gradiente}">
+          <div class="dashboard-dona-centro"><strong>${totalTipos}</strong><span>Total</span></div>
+        </div>
         <div class="dashboard-leyenda">
-          <div class="dashboard-leyenda-item"><span class="dashboard-leyenda-color"></span><span>Nuevos</span><strong>${nuevos} (${pctNuevo.toFixed(1)}%)</strong></div>
+          <div class="dashboard-leyenda-item"><span class="dashboard-leyenda-color nuevo"></span><span>Nuevos</span><strong>${nuevos} (${pctNuevo.toFixed(1)}%)</strong></div>
           <div class="dashboard-leyenda-item"><span class="dashboard-leyenda-color servicio"></span><span>Servicios</span><strong>${servicios} (${pctServicio.toFixed(1)}%)</strong></div>
-          ${especiales ? `<div class="dashboard-leyenda-item"><span class="dashboard-leyenda-color especial"></span><span>Especiales</span><strong>${especiales} (${pctEspecial.toFixed(1)}%)</strong></div>` : ""}
-          ${otros ? `<div class="dashboard-leyenda-item"><span class="dashboard-leyenda-color" style="opacity:.45"></span><span>Otros</span><strong>${otros} (${(otros/totalTipos*100).toFixed(1)}%)</strong></div>` : ""}
+          ${otros ? `<div class="dashboard-leyenda-item"><span class="dashboard-leyenda-color"></span><span>Otros registros</span><strong>${otros}</strong></div>` : ""}
         </div>
       </div>
-    </div>
-    <div class="dashboard-grafica-panel">
-      <h3>📅 Comparativo mensual</h3>
-      <div class="dashboard-grafica-subtitulo">Cantidad de registros por mes, comparando Nuevos, Servicios y Especiales.</div>
-      ${claves.length ? `<div class="dashboard-meses">${barrasMes}</div><div class="dashboard-grafica-leyenda-meses"><span><i></i>Nuevos</span><span><i class="servicio"></i>Servicios</span><span><i class="especial"></i>Especiales</span></div>` : '<div class="dashboard-vacio">Sin datos para el comparativo mensual.</div>'}
-    </div>
-  </div>`;
+      <div class="dashboard-grafica-subtitulo">Cantidad de registros por mes, comparando Nuevos y Servicios.</div>
+      ${claves.length ? `<div class="dashboard-meses">${barrasMes}</div><div class="dashboard-grafica-leyenda-meses"><span><i></i>Nuevos</span><span><i class="servicio"></i>Servicios</span></div>` : '<div class="dashboard-vacio">Sin datos para el comparativo mensual.</div>'}
+    </div>`;
 }
-
 
 function renderDashboard(lista){
   const cont = document.getElementById("dashboardContenido");
