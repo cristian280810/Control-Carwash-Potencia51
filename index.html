@@ -641,7 +641,7 @@ th{
 .dashboard-leyenda-color{width:12px;height:12px;border-radius:3px;background:#1d4ed8;flex:0 0 auto;}
 .dashboard-leyenda-color.servicio{background:#64748b;}
 .dashboard-leyenda strong{margin-left:auto;}
-.dashboard-meses{display:flex;align-items:flex-end;gap:14px;overflow-x:auto;min-height:260px;padding:15px 5px 5px;}
+.dashboard-meses{display:flex;align-items:flex-end;justify-content:center;gap:14px;overflow-x:auto;min-height:260px;padding:15px 5px 5px;}
 .dashboard-mes-col{min-width:72px;display:flex;flex-direction:column;align-items:center;gap:6px;height:235px;justify-content:flex-end;}
 .dashboard-mes-valores{height:195px;display:flex;align-items:flex-end;gap:5px;}
 .dashboard-mes-bar{width:24px;border-radius:5px 5px 0 0;min-height:2px;background:#1d4ed8;position:relative;}
@@ -8289,8 +8289,29 @@ function cerrarFiltrosDashboard(event){
   });
 }
 
+function obtenerRegistrosBaseFiltrosDashboard(registros, excluir, opcionesOverride){
+  const desde=document.getElementById('dashboardDesde')?.value || '';
+  const hasta=document.getElementById('dashboardHasta')?.value || '';
+  const seleccion={
+    marca: opcionesOverride?.marca ?? obtenerSeleccionDashboard('marca'),
+    servicio: opcionesOverride?.servicio ?? obtenerSeleccionDashboard('servicio'),
+    tipo: opcionesOverride?.tipo ?? obtenerSeleccionDashboard('tipo')
+  };
+  return (registros||[]).filter(function(r){
+    const fecha=fechaLocalDashboard(r.hora_inicio_lavado || r.created_at);
+    if(desde && fecha<desde) return false;
+    if(hasta && fecha>hasta) return false;
+    const m=String(r.marca||'').trim();
+    const sv=String(r.servicio||'').trim();
+    const t=String(r.tipo||'').trim();
+    if(excluir!=='marca' && seleccion.marca.length && !seleccion.marca.includes(m)) return false;
+    if(excluir!=='servicio' && seleccion.servicio.length && !seleccion.servicio.includes(sv)) return false;
+    if(excluir!=='tipo' && seleccion.tipo.length && !seleccion.tipo.includes(t)) return false;
+    return true;
+  });
+}
+
 function cargarOpcionesFiltrosDashboard(registros){
-  // Conservar las palomitas actuales cuando se vuelve a cargar/actualizar el Dashboard.
   const seleccionesPrevias={
     marca: obtenerSeleccionDashboard('marca'),
     servicio: obtenerSeleccionDashboard('servicio'),
@@ -8298,50 +8319,57 @@ function cargarOpcionesFiltrosDashboard(registros){
   };
 
   const configuraciones=[
-    {nombre:'marca',menuId:'dashboardMarcaMenu',todosLabel:'Todas las marcas',valores:[...new Set((registros||[]).map(r=>String(r.marca||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'))},
-    {nombre:'servicio',menuId:'dashboardServicioMenu',todosLabel:'Todos los servicios',valores:[...new Set((registros||[]).map(r=>String(r.servicio||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'))},
-    {nombre:'tipo',menuId:'dashboardTipoMenu',todosLabel:'Todos',valores:[...new Set((registros||[]).map(r=>String(r.tipo||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'))}
+    {nombre:'marca',menuId:'dashboardMarcaMenu',todosLabel:'Todas las marcas',obtener:function(r){return String(r.marca||'').trim();}},
+    {nombre:'servicio',menuId:'dashboardServicioMenu',todosLabel:'Todos los servicios',obtener:function(r){return String(r.servicio||'').trim();}},
+    {nombre:'tipo',menuId:'dashboardTipoMenu',todosLabel:'Todos',obtener:function(r){return String(r.tipo||'').trim();}}
   ];
 
   configuraciones.forEach(function(cfg){
     const menu=document.getElementById(cfg.menuId);
     if(!menu) return;
-    menu.innerHTML='';
 
+    // Las opciones de cada filtro se calculan usando TODOS los demás filtros activos.
+    // Esto convierte el Dashboard en un sistema de filtros cruzados/facetas.
+    const base=obtenerRegistrosBaseFiltrosDashboard(registros,cfg.nombre);
+    const valores=[...new Set(base.map(cfg.obtener).filter(Boolean))].sort(function(a,b){return a.localeCompare(b,'es');});
+    const seleccionActual=seleccionesPrevias[cfg.nombre] || [];
+
+    menu.innerHTML='';
     const todos=document.createElement('label');
     todos.className='servicio-check-opcion servicios-multiselect-todos';
     todos.innerHTML='<input type="checkbox" data-dashboard-todos="'+cfg.nombre+'"> <span>'+cfg.todosLabel+'</span>';
     menu.appendChild(todos);
 
-    cfg.valores.forEach(function(valor){
+    // Si el filtro seleccionado dejó el conjunto en cero, no eliminamos la selección:
+    // la mostramos deshabilitada para que el usuario pueda abrir el filtro y quitarla.
+    const valoresVisibles=valores.length ? valores : seleccionActual;
+    valoresVisibles.forEach(function(valor){
       const label=document.createElement('label');
       label.className='servicio-check-opcion';
-      label.innerHTML='<input type="checkbox" data-dashboard-filter="'+cfg.nombre+'" value="'+esc(valor)+'"> <span>'+esc(valor)+'</span>';
+      const existeEnBase=valores.includes(valor);
+      const checked=seleccionActual.includes(valor);
+      label.innerHTML='<input type="checkbox" data-dashboard-filter="'+cfg.nombre+'" value="'+esc(valor)+'"'+(checked?' checked':'')+(existeEnBase?'':' disabled')+'> <span>'+esc(valor)+'</span>';
       menu.appendChild(label);
     });
 
     const checkTodos=menu.querySelector('input[data-dashboard-todos="'+cfg.nombre+'"]');
-    const seleccionPrevia=seleccionesPrevias[cfg.nombre] || [];
-
-    menu.querySelectorAll('input[data-dashboard-filter="'+cfg.nombre+'"]').forEach(function(el){
-      el.checked=seleccionPrevia.includes(String(el.value||'').trim());
-    });
-
+    const checks=Array.from(menu.querySelectorAll('input[data-dashboard-filter="'+cfg.nombre+'"]'));
+    const disponibles=checks.filter(function(x){return !x.disabled;});
     if(checkTodos){
-      const checksIniciales=Array.from(menu.querySelectorAll('input[data-dashboard-filter="'+cfg.nombre+'"]'));
-      checkTodos.checked=checksIniciales.length>0 && checksIniciales.every(function(x){return x.checked;});
+      checkTodos.checked=disponibles.length>0 && disponibles.every(function(x){return x.checked;});
+      checkTodos.disabled=disponibles.length===0;
       checkTodos.addEventListener('change',function(){
-        menu.querySelectorAll('input[data-dashboard-filter="'+cfg.nombre+'"]').forEach(function(el){el.checked=checkTodos.checked;});
+        menu.querySelectorAll('input[data-dashboard-filter="'+cfg.nombre+'"]:not(:disabled)').forEach(function(el){el.checked=checkTodos.checked;});
         actualizarTextoFiltroDashboard(cfg.nombre);
         actualizarResumenFiltrosDashboard();
         actualizarDashboardAutomaticamente();
       });
     }
 
-    menu.querySelectorAll('input[data-dashboard-filter="'+cfg.nombre+'"]').forEach(function(el){
+    checks.forEach(function(el){
       el.addEventListener('change',function(){
-        const checks=Array.from(menu.querySelectorAll('input[data-dashboard-filter="'+cfg.nombre+'"]'));
-        checkTodos.checked=checks.length>0 && checks.every(function(x){return x.checked;});
+        const activos=Array.from(menu.querySelectorAll('input[data-dashboard-filter="'+cfg.nombre+'"]:not(:disabled)'));
+        if(checkTodos) checkTodos.checked=activos.length>0 && activos.every(function(x){return x.checked;});
         actualizarTextoFiltroDashboard(cfg.nombre);
         actualizarResumenFiltrosDashboard();
         actualizarDashboardAutomaticamente();
@@ -8579,7 +8607,7 @@ function renderGraficasDashboard(lista){
   <div class="dashboard-grafica-panel" style="margin-top:20px">
     <h3>💵 Facturación total por mes</h3>
     <div class="dashboard-grafica-subtitulo">Total facturado por fecha de emisión.</div>
-    ${clavesFact.length ? `<div class="dashboard-monto-mes" style="display:flex;align-items:flex-end;gap:18px;min-height:250px;padding:12px 10px 4px;overflow-x:auto">${barrasFact}</div>` : '<div class="dashboard-vacio">No hay facturas emitidas en el periodo seleccionado.</div>'}
+    ${clavesFact.length ? `<div class="dashboard-monto-mes" style="display:flex;flex-direction:row;align-items:flex-end;justify-content:center;gap:18px;min-height:250px;padding:12px 10px 4px;overflow-x:auto">${barrasFact}</div>` : '<div class="dashboard-vacio">No hay facturas emitidas en el periodo seleccionado.</div>'}
   </div>`;
 }
 function renderDashboard(lista){
@@ -8666,7 +8694,7 @@ function renderDashboard(lista){
 
   ${renderGraficasDashboard(lista)}
 
-  <div class="card"><h3>📋 Detalle</h3><div class="table-container"><table class="dashboard-table"><thead><tr><th class="numero-registro">N°</th><th>Fecha</th><th>OT</th><th>Placa</th><th>Marca</th><th>Servicio</th><th>Sin IGV</th><th>Total</th><th>Estado</th></tr></thead><tbody>${lista.slice((dashboardPaginaActual-1)*DASHBOARD_POR_PAGINA,dashboardPaginaActual*DASHBOARD_POR_PAGINA).map((r,i)=>{const p=Number(r.precio_sin_igv||0);const est=estadoDashboardVehiculo(r);return `<tr><td class="numero-registro">${(dashboardPaginaActual-1)*DASHBOARD_POR_PAGINA+i+1}</td><td>${esc(formatearFechaDashboard(r.hora_inicio_lavado||r.created_at))}</td><td>${esc(r.ot||"")}</td><td>${esc(r.placa||"")}</td><td>${esc(r.marca||"")}</td><td>${esc(r.servicio||"")}</td><td>S/ ${p.toFixed(2)}</td><td>S/ ${(p*1.18).toFixed(2)}</td><td><span class="facturacion-estado ${est.clase}" title="${est.factura ? "Factura: "+esc(est.factura) : (est.texto==="No facturado" ? "Aún no tiene factura" : "No se encontró el número de factura")}">${esc(est.texto)}</span></td></tr>`}).join("") || '<tr><td colspan="9" class="dashboard-vacio">Sin registros</td></tr>'}</tbody></table></div>${renderPaginacionDashboardHtml(lista.length)}</div>`;
+  <div class="card"><h3>📋 Detalle</h3><div class="table-container"><table class="dashboard-table"><thead><tr><th class="numero-registro">N°</th><th>Fecha</th><th>OT</th><th>Placa</th><th>VIN</th><th>Marca</th><th>Servicio</th><th>Sin IGV</th><th>Total</th><th>Estado</th></tr></thead><tbody>${lista.slice((dashboardPaginaActual-1)*DASHBOARD_POR_PAGINA,dashboardPaginaActual*DASHBOARD_POR_PAGINA).map((r,i)=>{const p=Number(r.precio_sin_igv||0);const est=estadoDashboardVehiculo(r);return `<tr><td class="numero-registro">${(dashboardPaginaActual-1)*DASHBOARD_POR_PAGINA+i+1}</td><td>${esc(formatearFechaDashboard(r.hora_inicio_lavado||r.created_at))}</td><td>${esc(r.ot||"")}</td><td>${esc(r.placa||"")}</td><td>${esc(r.vin||"")}</td><td>${esc(r.marca||"")}</td><td>${esc(r.servicio||"")}</td><td>S/ ${p.toFixed(2)}</td><td>S/ ${(p*1.18).toFixed(2)}</td><td><span class="facturacion-estado ${est.clase}" title="${est.factura ? "Factura: "+esc(est.factura) : (est.texto==="No facturado" ? "Aún no tiene factura" : "No se encontró el número de factura")}">${esc(est.texto)}</span></td></tr>`}).join("") || '<tr><td colspan="10" class="dashboard-vacio">Sin registros</td></tr>'}</tbody></table></div>${renderPaginacionDashboardHtml(lista.length)}</div>`;
   actualizarResumenFiltrosDashboard();
 }
 function renderPaginacionDashboardHtml(totalRegistros){
@@ -8833,6 +8861,7 @@ programarCierreAutomatico1930();
 </script>
 
 
-<div class="version-app">V5.9 Dashboard</div>
+<div class="version-app">V5.1 Dashboard</div>
 </body>
 </html>
+
