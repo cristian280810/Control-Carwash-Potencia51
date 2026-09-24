@@ -950,7 +950,7 @@ th.col-vin {
 .dashboard-estado-row{display:grid;grid-template-columns:145px 1fr 45px;gap:10px;align-items:center;font-size:13px;}
 .dashboard-estado-bar{height:12px;background:#e5e7eb;border-radius:99px;overflow:hidden;}
 .dashboard-estado-bar span{display:block;height:100%;background:#1d4ed8;border-radius:99px;}
-.dashboard-monto-mes{display:flex;flex-direction:column;gap:5px;overflow-x:auto;margin-top:12px;}
+.dashboard-monto-mes{display:flex;flex-direction:row;gap:18px;overflow-x:auto;margin-top:12px;justify-content:center;align-items:flex-end;padding:0 10px;}
 .dashboard-monto-mes-row{display:grid;grid-template-columns:95px 1fr 105px;gap:10px;align-items:center;font-size:12px;}
 .dashboard-monto-mes-bar{height:18px;background:#e5e7eb;border-radius:5px;overflow:hidden;position:relative;}
 .dashboard-monto-mes-bar span{display:block;height:100%;background:#1d4ed8;border-radius:5px;}
@@ -974,6 +974,55 @@ th.col-vin {
 .facturacion-fechas-pago{font-size:12px;line-height:1.5;min-width:150px;}
 @media(max-width:600px){.facturacion-pagos-grid{grid-template-columns:1fr;}}
 
+
+/* Tooltip elegante para número de factura en Dashboard */
+.dashboard-factura-trigger{
+  position:relative;
+  cursor:help;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+}
+.dashboard-factura-trigger::after{
+  content:'🧾';
+  font-size:11px;
+  opacity:.7;
+}
+.dashboard-factura-tooltip{
+  position:fixed;
+  z-index:99999;
+  min-width:190px;
+  max-width:260px;
+  padding:11px 13px;
+  border-radius:10px;
+  background:#111827;
+  color:#fff;
+  box-shadow:0 10px 28px rgba(15,23,42,.22);
+  font-size:12px;
+  line-height:1.4;
+  pointer-events:none;
+  opacity:0;
+  transform:translateY(4px);
+  transition:opacity .12s ease,transform .12s ease;
+}
+.dashboard-factura-tooltip.visible{
+  opacity:1;
+  transform:translateY(0);
+}
+.dashboard-factura-tooltip .titulo{
+  color:#cbd5e1;
+  font-size:11px;
+  margin-bottom:3px;
+}
+.dashboard-factura-tooltip .numero{
+  font-size:15px;
+  font-weight:800;
+  color:#fff;
+}
+.dashboard-factura-tooltip .detalle{
+  margin-top:5px;
+  color:#cbd5e1;
+}
 </style>
 <style>
 .facturacion-estado.facturado-pagado{background:#dcfce7;color:#166534;}
@@ -6518,11 +6567,12 @@ function obtenerFacturaDashboardPorVehiculo(vehiculoId){
 function estadoDashboardVehiculo(r){
   if(!r.facturado) return {texto:"No facturado",clase:"pendiente"};
   const factura=obtenerFacturaDashboardPorVehiculo(r.id);
-  if(!factura) return {texto:"Facturado",clase:"facturado"};
+  if(!factura) return {texto:"Facturado",clase:"facturado",factura:""};
+  const numeroFactura=String(factura.numero_factura||"").trim();
   const estado=String(factura.estado_pago||"").trim().toLowerCase();
-  if(estado==="pagada" || estado==="pagado") return {texto:"Facturado - Pagado",clase:"facturado-pagado"};
-  if(estado==="pago parcial" || estado==="parcial") return {texto:"Facturado - Pago parcial",clase:"facturado-parcial"};
-  return {texto:"Facturado - Pendiente de pago",clase:"facturado-pendiente"};
+  if(estado==="pagada" || estado==="pagado") return {texto:"Facturado - Pagado",clase:"facturado-pagado",factura:numeroFactura};
+  if(estado==="pago parcial" || estado==="parcial") return {texto:"Facturado - Pago parcial",clase:"facturado-parcial",factura:numeroFactura};
+  return {texto:"Facturado - Pendiente de pago",clase:"facturado-pendiente",factura:numeroFactura};
 }
 
 function filtrarFacturasDashboard(desde,hasta){
@@ -6626,7 +6676,9 @@ function renderGraficasDashboard(lista){
 
   const desde=document.getElementById("dashboardDesde")?.value||"";
   const hasta=document.getElementById("dashboardHasta")?.value||"";
-  const facturas=filtrarFacturasDashboard(desde,hasta);
+  // La facturación mensual es un indicador global y NO depende de los filtros
+  // de vehículos (fecha, marca, servicio o tipo) del Dashboard.
+  const facturas=Array.isArray(facturasDashboard) ? facturasDashboard : [];
   const porMesFacturacion={};
   facturas.forEach(function(f){
     const clave=String(f.fecha_emision||"").slice(0,7);
@@ -6639,7 +6691,7 @@ function renderGraficasDashboard(lista){
   const barrasFact=clavesFact.map(function(k){
     const totalMes=porMesFacturacion[k];
     const altura=Math.max(12,totalMes/maxFact*180);
-    return `<div class="dashboard-fact-col" style="min-width:105px;flex:1;max-width:180px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:235px">
+    return `<div class="dashboard-fact-col" style="min-width:180px;flex:0 0 180px;max-width:180px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:235px">
       <div style="font-size:12px;font-weight:700;margin-bottom:7px;white-space:nowrap">${dineroDashboard(totalMes)}</div>
       <div style="height:180px;width:54px;display:flex;align-items:flex-end;justify-content:center">
         <div style="height:${altura.toFixed(1)}px;width:54px;border-radius:7px 7px 2px 2px;background:#1d4ed8;box-shadow:0 2px 5px rgba(0,0,0,.12)"></div>
@@ -6732,7 +6784,7 @@ function renderDashboard(lista){
 
   ${renderGraficasDashboard(lista)}
 
-  <div class="card"><h3>📋 Detalle</h3><div class="table-container"><table class="dashboard-table"><thead><tr><th class="numero-registro">N°</th><th>Fecha</th><th>OT</th><th>Placa</th><th>Marca</th><th>Servicio</th><th>Sin IGV</th><th>Total</th><th>Estado</th></tr></thead><tbody>${lista.slice((dashboardPaginaActual-1)*DASHBOARD_POR_PAGINA,dashboardPaginaActual*DASHBOARD_POR_PAGINA).map((r,i)=>{const p=Number(r.precio_sin_igv||0);const est=estadoDashboardVehiculo(r);return `<tr><td class="numero-registro">${(dashboardPaginaActual-1)*DASHBOARD_POR_PAGINA+i+1}</td><td>${esc(formatearFechaDashboard(r.hora_inicio_lavado||r.created_at))}</td><td>${esc(r.ot||"")}</td><td>${esc(r.placa||"")}</td><td>${esc(r.marca||"")}</td><td>${esc(r.servicio||"")}</td><td>S/ ${p.toFixed(2)}</td><td>S/ ${(p*1.18).toFixed(2)}</td><td><span class="facturacion-estado ${est.clase}">${esc(est.texto)}</span></td></tr>`}).join("") || '<tr><td colspan="9" class="dashboard-vacio">Sin registros</td></tr>'}</tbody></table></div>${renderPaginacionDashboardHtml(lista.length)}</div>`;
+  <div class="card"><h3>📋 Detalle</h3><div class="table-container"><table class="dashboard-table"><thead><tr><th class="numero-registro">N°</th><th>Fecha</th><th>OT</th><th>Placa</th><th>Marca</th><th>Servicio</th><th>Sin IGV</th><th>Total</th><th>Estado</th></tr></thead><tbody>${lista.slice((dashboardPaginaActual-1)*DASHBOARD_POR_PAGINA,dashboardPaginaActual*DASHBOARD_POR_PAGINA).map((r,i)=>{const p=Number(r.precio_sin_igv||0);const est=estadoDashboardVehiculo(r);return `<tr><td class="numero-registro">${(dashboardPaginaActual-1)*DASHBOARD_POR_PAGINA+i+1}</td><td>${esc(formatearFechaDashboard(r.hora_inicio_lavado||r.created_at))}</td><td>${esc(r.ot||"")}</td><td>${esc(r.placa||"")}</td><td>${esc(r.marca||"")}</td><td>${esc(r.servicio||"")}</td><td>S/ ${p.toFixed(2)}</td><td>S/ ${(p*1.18).toFixed(2)}</td><td><span class="facturacion-estado ${est.clase} ${est.factura ? 'dashboard-factura-trigger' : ''}" ${est.factura ? `data-factura="${esc(est.factura)}" data-estado-factura="${esc(est.texto)}"` : ''}>${esc(est.texto)}</span></td></tr>`}).join("") || '<tr><td colspan="9" class="dashboard-vacio">Sin registros</td></tr>'}</tbody></table></div>${renderPaginacionDashboardHtml(lista.length)}</div>`;
   actualizarResumenFiltrosDashboard();
 }
 function renderPaginacionDashboardHtml(totalRegistros){
@@ -6854,6 +6906,52 @@ document.addEventListener("click", cerrarFiltrosDashboard);
 </script>
 
 
-<div class="version-app">V5.5 Dashboard</div>
+<div class="version-app">V5.8 Dashboard</div>
+
+<script>
+(function(){
+  let tooltip=null;
+  function crearTooltip(){
+    if(tooltip) return tooltip;
+    tooltip=document.createElement('div');
+    tooltip.className='dashboard-factura-tooltip';
+    tooltip.innerHTML='<div class="titulo">Factura asociada</div><div class="numero"></div><div class="detalle"></div>';
+    document.body.appendChild(tooltip);
+    return tooltip;
+  }
+  function mostrar(el){
+    const t=crearTooltip();
+    t.querySelector('.numero').textContent=el.dataset.factura || '';
+    t.querySelector('.detalle').textContent=el.dataset.estadoFactura || '';
+    t.style.left='0px';
+    t.style.top='0px';
+    t.classList.add('visible');
+    const r=el.getBoundingClientRect();
+    const tw=t.offsetWidth;
+    const th=t.offsetHeight;
+    let left=r.left + r.width/2 - tw/2;
+    let top=r.top - th - 10;
+    if(top < 8) top=r.bottom + 10;
+    left=Math.max(8,Math.min(left,window.innerWidth-tw-8));
+    top=Math.max(8,Math.min(top,window.innerHeight-th-8));
+    t.style.left=left+'px';
+    t.style.top=top+'px';
+  }
+  function ocultar(){ if(tooltip) tooltip.classList.remove('visible'); }
+  document.addEventListener('mouseover',function(e){
+    const el=e.target.closest && e.target.closest('.dashboard-factura-trigger');
+    if(el) mostrar(el);
+  });
+  document.addEventListener('mouseout',function(e){
+    const el=e.target.closest && e.target.closest('.dashboard-factura-trigger');
+    if(!el) return;
+    const related=e.relatedTarget;
+    if(related && el.contains(related)) return;
+    ocultar();
+  });
+  window.addEventListener('scroll',ocultar,true);
+  window.addEventListener('resize',ocultar);
+})();
+</script>
 </body>
 </html>
