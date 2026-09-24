@@ -926,7 +926,7 @@ th.col-vin {
 .servicio-check-opcion input{width:17px;height:17px;cursor:pointer;}
 .servicios-multiselect-todos{border-bottom:1px solid #e5e7eb;margin-bottom:5px;padding-bottom:7px;font-weight:700;}
 .factura-pago-estado{display:inline-block;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:700;}
-.factura-pago-estado.pendiente{background:#fef3c7;color:#92400e;}
+.factura-pago-estado.pendiente{background:#fef3c7;color:#92400e;}.factura-pago-estado.pago-parcial{background:#fef3c7;color:#92400e;}
 .factura-pago-estado.pagada{background:#dcfce7;color:#166534;}
 .factura-pago-estado.anulada{background:#fee2e2;color:#991b1b;}
 .factura-acciones{display:flex;gap:6px;flex-wrap:wrap;}
@@ -990,7 +990,7 @@ th.col-vin {
 <style>
 .facturacion-estado.facturado-pagado{background:#dcfce7;color:#166534;}
 .facturacion-estado.facturado-pendiente{background:#fef3c7;color:#92400e;}
-.facturacion-estado.facturado-parcial{background:#dbeafe;color:#1e40af;}
+.facturacion-estado.facturado-parcial{background:#fef3c7;color:#92400e;}
 </style>
 
 
@@ -6351,7 +6351,10 @@ function renderFacturasEmitidas(){
     const directo=Number(f.monto_pago_directo||0);
     const fechas=(f.fecha_pago_directo?"Directo: "+esc(f.fecha_pago_directo):"Directo: —")+"<br>"+(f.aplica_detraccion?(f.fecha_detraccion?"Detracción: "+esc(f.fecha_detraccion):"Detracción: —"):"Detracción: No aplica");
     const archivo=f.archivo_factura ? `<a class="foto-link" href="${esc(f.archivo_factura)}" target="_blank" rel="noopener">📎 Ver factura</a>` : "—";
-    const accion=`<button type="button" class="btn btn-success" onclick="abrirModalPagosFactura('${esc(f.id)}')">💰 Registrar pagos</button>`;
+    const estadoPago=String(f.estado_pago||"").trim().toLowerCase();
+    const accion=(estadoPago==="pagada" || estadoPago==="pagado")
+      ? `<span class="factura-pago-estado pagada">Pagada</span>`
+      : `<button type="button" class="btn btn-success" onclick="abrirModalPagosFactura('${esc(f.id)}')">💰 Registrar pagos</button>`;
     return `<tr><td>${inicio+i+1}</td><td><strong>${esc(f.numero_factura||"")}</strong></td><td>${esc(f.fecha_emision||"")}</td><td>${esc(f.fecha_vencimiento||"—")}</td><td>${esc(f.cliente||"")}</td><td>S/ ${Number(f.subtotal_sin_igv||0).toFixed(2)}</td><td>S/ ${Number(f.igv||0).toFixed(2)}</td><td><strong>S/ ${totalFactura.toFixed(2)}</strong></td><td><div class="facturacion-detraccion">${f.aplica_detraccion?"Sí – "+Number(f.porcentaje_detraccion||12).toFixed(0)+"%<br><strong>S/ "+det.toFixed(2)+"</strong>":"No aplica"}</div></td><td>S/ ${directo.toFixed(2)}</td><td><span class="factura-pago-estado ${clase}">${esc(estado)}</span></td><td class="facturacion-fechas-pago">${fechas}</td><td>${archivo}</td><td><div class="factura-acciones">${accion}</div></td></tr>`;
   }).join("");
   renderPaginacionFacturasEmitidas(total);
@@ -7338,6 +7341,6 @@ programarCierreAutomatico1930();
 </script>
 
 
-<div class="version-app">V5.5 Dashboard</div>
+<div class="version-app">V5.1 Dashboard</div>
 </body>
 </html>
