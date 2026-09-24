@@ -994,6 +994,8 @@ th.col-vin {
 .btn-export:hover{background:#6d28d9 !important;border-color:#6d28d9 !important;}
 .exportar-modal-opciones{display:flex;gap:12px;justify-content:center;margin-top:20px;flex-wrap:wrap;}
 .exportar-modal-opciones .btn{min-width:140px;}
+
+.dashboard-card-detraccion .dashboard-detraccion-detalle{display:flex;flex-direction:column;gap:2px;margin-top:5px;font-size:11px;line-height:1.25}.dashboard-card-detraccion .dashboard-detraccion-detalle small{font-size:11px}.dashboard-card-detraccion .dashboard-detraccion-detalle b{font-weight:700}
 </style>
 <style>
 .facturacion-estado.facturado-pagado{background:#dcfce7;color:#166534;}
@@ -1884,7 +1886,7 @@ onclick="limpiarFormulario()">
       <p>Consulta las facturas generadas y controla su estado de pago.</p>
     </div>
     <button id="btnReporteCliente" class="btn btn-primary facturacion-reporte-btn" onclick="abrirModalReporteCliente()">
-      📊 Generar reporte para cliente
+      📊 Generar reporte para el cliente
     </button>
   </div>
 
@@ -1957,7 +1959,7 @@ onclick="limpiarFormulario()">
 <div id="modalReporteCliente" class="modal">
   <div class="modal-content" style="max-width:720px;">
     <div class="modal-header">
-      <h2>📊 Generar reporte para cliente</h2>
+      <h2>📊 Generar reporte para el cliente</h2>
       <button type="button" class="close" onclick="cerrarModalReporteCliente()">&times;</button>
     </div>
     <p>Selecciona una o varias facturas emitidas. El reporte incluirá todos los registros asociados a las facturas seleccionadas.</p><div style="margin:10px 0 14px;padding:10px 12px;border:1px solid #dbe4f0;border-radius:8px;background:#f7f9fc;color:#4b5563;font-size:13px;"><strong>📅 Fecha:</strong> corresponde a la <strong>fecha de lavado del registro</strong>, no a la fecha de emisión de la factura.</div>
@@ -6988,7 +6990,7 @@ function renderFacturacion(){
     tbody.innerHTML+=`<tr>
       <td><input type="checkbox" class="facturacion-check fila-facturacion" value="${esc(r.id)}" ${facturado?"disabled":""} ${facturacionSeleccionadosIds.has(String(r.id))?"checked":""} onchange="cambiarSeleccionFacturacion('${esc(r.id)}',this.checked)"></td>
       <td class="numero-registro">${inicio + pagina.indexOf(r) + 1}</td><td>${esc(fechaCortaFacturacion(obtenerFechaServicioFacturacion(r)))}</td>
-      <td>${esc(r.ot||"")}</td><td>${esc(r.placa||"")}</td><td>${esc(r.vin||"")}</td>
+      <td>${esc(r.tipo||"Servicio")}</td><td>${esc(r.ot||"")}</td><td>${esc(r.placa||"")}</td><td>${esc(r.vin||"")}</td>
       <td>${esc(r.marca||"")}</td><td>${esc(r.servicio||"")}</td>
       <td>S/ ${x.sinIgv.toFixed(2)}</td><td>S/ ${x.igv.toFixed(2)}</td><td><strong>S/ ${x.total.toFixed(2)}</strong></td>
       <td><span class="facturacion-estado ${facturado?"facturado":"pendiente"}">${facturado?"Facturado":"Pendiente"}</span></td>
@@ -8659,11 +8661,22 @@ function renderDashboard(lista){
 
   const promedioDiario=total/diasPeriodo;
 
-  // Indicador: detracción total depositada en el periodo seleccionado.
+  // Indicador: detracción total generada en las facturas del periodo seleccionado.
+  // Se suma aunque la detracción todavía esté pendiente de depósito.
   const facturas=filtrarFacturasDashboard(desde,hasta);
-  let detraccionDepositada=0;
+  let detraccionTotal=0;
+  let detraccionPendiente=0;
+  let detraccionPagada=0;
   facturas.forEach(function(f){
-    detraccionDepositada+=detraccionDepositadaDashboard(f);
+    if(!!f.aplica_detraccion){
+      const monto=Number(f.monto_detraccion||0);
+      detraccionTotal += monto;
+      if(String(f.estado_detraccion||"").toLowerCase()==="depositada"){
+        detraccionPagada += monto;
+      }else{
+        detraccionPendiente += monto;
+      }
+    }
   });
 
   const porMarca = {};
@@ -8684,7 +8697,14 @@ function renderDashboard(lista){
     <div class="dashboard-card"><span class="dashboard-label">Subtotal sin IGV</span><strong>${dineroDashboard(subtotal)}</strong></div>
     <div class="dashboard-card"><span class="dashboard-label">Total con IGV</span><strong>${dineroDashboard(totalConIgv)}</strong></div>
     <div class="dashboard-card"><span class="dashboard-label">Promedio vehículos/día</span><strong>${promedioDiario.toFixed(1)}</strong><small>${diasPeriodo} días considerados</small></div>
-    <div class="dashboard-card"><span class="dashboard-label">Detracción total</span><strong>${dineroDashboard(detraccionDepositada)}</strong></div>
+    <div class="dashboard-card dashboard-card-detraccion">
+      <span class="dashboard-label">Detracción total</span>
+      <strong>${dineroDashboard(detraccionTotal)}</strong>
+      <div class="dashboard-detraccion-detalle">
+        <small>Pendiente: <b>${dineroDashboard(detraccionPendiente)}</b></small>
+        <small>Pagada: <b>${dineroDashboard(detraccionPagada)}</b></small>
+      </div>
+    </div>
   </div>
 
   <div class="dashboard-grid">
@@ -8694,7 +8714,7 @@ function renderDashboard(lista){
 
   ${renderGraficasDashboard(lista)}
 
-  <div class="card"><h3>📋 Detalle</h3><div class="table-container"><table class="dashboard-table"><thead><tr><th class="numero-registro">N°</th><th>Fecha</th><th>OT</th><th>Placa</th><th>VIN</th><th>Marca</th><th>Servicio</th><th>Sin IGV</th><th>Total</th><th>Estado</th></tr></thead><tbody>${lista.slice((dashboardPaginaActual-1)*DASHBOARD_POR_PAGINA,dashboardPaginaActual*DASHBOARD_POR_PAGINA).map((r,i)=>{const p=Number(r.precio_sin_igv||0);const est=estadoDashboardVehiculo(r);return `<tr><td class="numero-registro">${(dashboardPaginaActual-1)*DASHBOARD_POR_PAGINA+i+1}</td><td>${esc(formatearFechaDashboard(r.hora_inicio_lavado||r.created_at))}</td><td>${esc(r.ot||"")}</td><td>${esc(r.placa||"")}</td><td>${esc(r.vin||"")}</td><td>${esc(r.marca||"")}</td><td>${esc(r.servicio||"")}</td><td>S/ ${p.toFixed(2)}</td><td>S/ ${(p*1.18).toFixed(2)}</td><td><span class="facturacion-estado ${est.clase}" title="${est.factura ? "Factura: "+esc(est.factura) : (est.texto==="No facturado" ? "Aún no tiene factura" : "No se encontró el número de factura")}">${esc(est.texto)}</span></td></tr>`}).join("") || '<tr><td colspan="10" class="dashboard-vacio">Sin registros</td></tr>'}</tbody></table></div>${renderPaginacionDashboardHtml(lista.length)}</div>`;
+  <div class="card"><h3>📋 Detalle</h3><div class="table-container"><table class="dashboard-table"><thead><tr><th class="numero-registro">N°</th><th>Fecha</th><th>Tipo</th><th>OT</th><th>Placa</th><th>VIN</th><th>Marca</th><th>Servicio</th><th>Sin IGV</th><th>Total</th><th>Estado</th></tr></thead><tbody>${lista.slice((dashboardPaginaActual-1)*DASHBOARD_POR_PAGINA,dashboardPaginaActual*DASHBOARD_POR_PAGINA).map((r,i)=>{const p=Number(r.precio_sin_igv||0);const est=estadoDashboardVehiculo(r);return `<tr><td class="numero-registro">${(dashboardPaginaActual-1)*DASHBOARD_POR_PAGINA+i+1}</td><td>${esc(formatearFechaDashboard(r.hora_inicio_lavado||r.created_at))}</td><td>${esc(r.tipo||"")}</td><td>${esc(r.ot||"")}</td><td>${esc(r.placa||"")}</td><td>${esc(r.vin||"")}</td><td>${esc(r.marca||"")}</td><td>${esc(r.servicio||"")}</td><td>S/ ${p.toFixed(2)}</td><td>S/ ${(p*1.18).toFixed(2)}</td><td><span class="facturacion-estado ${est.clase}" title="${est.factura ? "Factura: "+esc(est.factura) : (est.texto==="No facturado" ? "Aún no tiene factura" : "No se encontró el número de factura")}">${esc(est.texto)}</span></td></tr>`}).join("") || '<tr><td colspan="11" class="dashboard-vacio">Sin registros</td></tr>'}</tbody></table></div>${renderPaginacionDashboardHtml(lista.length)}</div>`;
   actualizarResumenFiltrosDashboard();
 }
 function renderPaginacionDashboardHtml(totalRegistros){
@@ -8861,6 +8881,6 @@ programarCierreAutomatico1930();
 </script>
 
 
-<div class="version-app">V5.5 Dashboard</div>
+<div class="version-app">V6.0 Dashboard</div>
 </body>
 </html>
