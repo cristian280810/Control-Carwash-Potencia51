@@ -927,6 +927,8 @@ th.col-vin {
 .factura-pago-estado.pagada{background:#dcfce7;color:#166534;}
 .factura-pago-estado.anulada{background:#fee2e2;color:#991b1b;}
 .factura-acciones{display:flex;gap:6px;flex-wrap:wrap;}
+#nuevaFacturaArchivo{width:100%;box-sizing:border-box;padding:8px;border:1px solid #d1d5db;border-radius:7px;background:#fff;}
+
 @media(max-width:900px){.facturacion-filtros,.facturacion-resumen{grid-template-columns:1fr 1fr;}}
 @media(max-width:600px){.facturacion-filtros,.facturacion-resumen{grid-template-columns:1fr;}}
 
@@ -1475,9 +1477,9 @@ onclick="limpiarFormulario()">
   <p>Consulta las facturas generadas y controla su estado de pago.</p>
   <div class="table-container"><table>
     <thead><tr>
-      <th>N°</th><th>Factura</th><th>Fecha emisión</th><th>Vencimiento</th><th>Cliente</th><th>Subtotal</th><th>IGV</th><th>Total</th><th>Estado de pago</th><th>Fecha pago</th><th>Acción</th>
+      <th>N°</th><th>Factura</th><th>Fecha emisión</th><th>Vencimiento</th><th>Cliente</th><th>Subtotal</th><th>IGV</th><th>Total</th><th>Estado de pago</th><th>Fecha pago</th><th>Factura adjunta</th><th>Acción</th>
     </tr></thead>
-    <tbody id="tablaFacturasEmitidas"><tr><td colspan="11" class="empty">Cargando facturas...</td></tr></tbody>
+    <tbody id="tablaFacturasEmitidas"><tr><td colspan="12" class="empty">Cargando facturas...</td></tr></tbody>
   </table></div>
   <div id="paginacionFacturasEmitidas" class="paginacion-modulo"></div>
 </div>
@@ -1501,6 +1503,11 @@ onclick="limpiarFormulario()">
       <div class="form-group"><label>Fecha de vencimiento</label><input id="nuevaFacturaVencimiento" type="date"></div>
       <div class="form-group"><label>Estado de pago</label><select id="nuevaFacturaEstadoPago"><option value="Pendiente">Pendiente</option><option value="Pagada">Pagada</option></select></div>
       <div class="form-group"><label>Observaciones</label><input id="nuevaFacturaObservaciones" type="text" placeholder="Opcional"></div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>📎 Archivo de factura</label>
+        <input id="nuevaFacturaArchivo" type="file" accept=".pdf,image/*">
+        <small style="display:block;margin-top:5px;color:#6b7280;">Opcional. Puedes adjuntar la factura en PDF o imagen.</small>
+      </div>
     </div>
     <div class="facturacion-resumen" style="margin-top:15px;">
       <div class="facturacion-card">Servicios<strong id="nuevaFacturaCantidad">0</strong></div>
@@ -5795,6 +5802,8 @@ function abrirModalNuevaFactura(){
   document.getElementById("nuevaFacturaVencimiento").value="";
   document.getElementById("nuevaFacturaEstadoPago").value="Pendiente";
   document.getElementById("nuevaFacturaObservaciones").value="";
+  const archivoFactura=document.getElementById("nuevaFacturaArchivo");
+  if(archivoFactura) archivoFactura.value="";
   document.getElementById("nuevaFacturaCantidad").textContent=seleccionados.length;
   document.getElementById("nuevaFacturaSinIgv").textContent="S/ "+resumen.sinIgv.toFixed(2);
   document.getElementById("nuevaFacturaIgv").textContent="S/ "+resumen.igv.toFixed(2);
@@ -5823,10 +5832,26 @@ async function guardarNuevaFactura(){
   const fechaVencimiento=document.getElementById("nuevaFacturaVencimiento").value || null;
   const estadoPago=document.getElementById("nuevaFacturaEstadoPago").value || "Pendiente";
   const observaciones=document.getElementById("nuevaFacturaObservaciones").value.trim();
+  const archivoFacturaInput=document.getElementById("nuevaFacturaArchivo");
+  const archivoFactura=archivoFacturaInput && archivoFacturaInput.files ? archivoFacturaInput.files[0] : null;
 
   if(!numero || !cliente || !fechaEmision){
     mostrarAlerta("Completa número de factura, cliente y fecha de emisión.","error");
     return;
+  }
+
+  if(archivoFactura){
+    const tiposPermitidos=["application/pdf","image/jpeg","image/png","image/webp"];
+    const extension=(archivoFactura.name.split(".").pop() || "").toLowerCase();
+    const extensionesPermitidas=["pdf","jpg","jpeg","png","webp"];
+    if(!tiposPermitidos.includes(archivoFactura.type) && !extensionesPermitidas.includes(extension)){
+      mostrarAlerta("El archivo de factura debe ser PDF o una imagen JPG, PNG o WEBP.","error");
+      return;
+    }
+    if(archivoFactura.size > 10 * 1024 * 1024){
+      mostrarAlerta("El archivo de factura no puede superar los 10 MB.","error");
+      return;
+    }
   }
 
   const resumen=seleccionados.reduce(function(acumulado,r){
@@ -5838,9 +5863,10 @@ async function guardarNuevaFactura(){
   },{sinIgv:0,igv:0,total:0});
 
   const boton=document.querySelector('#modalNuevaFactura button.btn-success');
-  if(boton){boton.disabled=true;boton.textContent="⏳ Guardando...";}
+  if(boton){boton.disabled=true;boton.textContent=archivoFactura ? "⏳ Guardando factura y archivo..." : "⏳ Guardando...";}
 
   let facturaId=null;
+  let vehiculosMarcados=false;
   try{
     // 1. Crear cabecera de factura.
     const respuestaFactura=await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors",{
@@ -5908,13 +5934,59 @@ async function guardarNuevaFactura(){
       body:JSON.stringify({facturado:true,fecha_facturacion:fechaEmision})
     });
     if(!respuestaVehiculos.ok) throw new Error("La factura se creó, pero no se pudieron marcar los vehículos como facturados: "+await respuestaVehiculos.text());
+    vehiculosMarcados=true;
+
+    // 4. Si se adjuntó una factura, enviarla a Google Drive y guardar su URL en Supabase.
+    if(archivoFactura){
+      const base64=await convertirArchivoABase64(archivoFactura);
+      const nombreSeguro=crearNombreArchivoFactura(numero,archivoFactura.name);
+      const respuestaDrive=await enviarDrive({
+        accion:"guardarFactura",
+        id:String(facturaId),
+        numeroFactura:numero,
+        nombreArchivo:nombreSeguro,
+        mimeType:archivoFactura.type || obtenerMimePorExtension(archivoFactura.name),
+        archivo:base64
+      });
+
+      if(!respuestaDrive || !respuestaDrive.ok){
+        throw new Error((respuestaDrive && respuestaDrive.mensaje) || "Google Drive no pudo guardar la factura.");
+      }
+      if(!respuestaDrive.archivoFactura){
+        throw new Error("Google Drive guardó la factura, pero no devolvió su enlace.");
+      }
+
+      const respuestaArchivo=await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors?id=eq."+encodeURIComponent(facturaId),{
+        method:"PATCH",
+        headers:{
+          "apikey":SUPABASE_KEY,
+          "Authorization":"Bearer "+SUPABASE_KEY,
+          "Content-Type":"application/json",
+          "Prefer":"return=minimal"
+        },
+        body:JSON.stringify({archivo_factura:respuestaDrive.archivoFactura})
+      });
+      if(!respuestaArchivo.ok) throw new Error("La factura se guardó en Drive, pero no se pudo registrar el enlace en Supabase: "+await respuestaArchivo.text());
+    }
 
     cerrarModalNuevaFactura();
-    mostrarAlerta("Factura "+numero+" creada correctamente con "+seleccionados.length+" servicio(s).","success");
+    mostrarAlerta("Factura "+numero+" creada correctamente con "+seleccionados.length+" servicio(s)."+(archivoFactura ? " Archivo guardado en Drive." : ""),"success");
     await inicializarFacturacion();
     await cargarFacturasEmitidas();
   }catch(error){
     console.error(error);
+
+    // Revertir los vehículos si ya habían sido marcados.
+    if(vehiculosMarcados){
+      try{
+        const idsFiltro=seleccionados.map(function(r){return String(r.id);}).join(",");
+        await fetch(SUPABASE_URL+"/rest/v1/vehiculos_wankamotors?id=in.("+encodeURIComponent(idsFiltro)+")",{
+          method:"PATCH",
+          headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},
+          body:JSON.stringify({facturado:false,fecha_facturacion:null})
+        });
+      }catch(e){console.error("No se pudo revertir el estado de los vehículos:",e);}
+    }
 
     // Si falló después de crear la cabecera, intentamos eliminarla para no dejar una factura incompleta.
     if(facturaId){
@@ -5938,12 +6010,35 @@ async function guardarNuevaFactura(){
   }
 }
 
+function convertirArchivoABase64(archivo){
+  return new Promise(function(resolve,reject){
+    const lector=new FileReader();
+    lector.onload=function(){resolve(String(lector.result || ""));};
+    lector.onerror=function(){reject(new Error("No se pudo leer el archivo de factura."));};
+    lector.readAsDataURL(archivo);
+  });
+}
+
+function obtenerMimePorExtension(nombre){
+  const extension=(String(nombre||"").split(".").pop() || "").toLowerCase();
+  if(extension==="pdf") return "application/pdf";
+  if(extension==="png") return "image/png";
+  if(extension==="webp") return "image/webp";
+  return "image/jpeg";
+}
+
+function crearNombreArchivoFactura(numero, nombreOriginal){
+  const extension=(String(nombreOriginal||"").split(".").pop() || "pdf").toLowerCase();
+  const base=String(numero||"FACTURA").trim().replace(/[^a-zA-Z0-9_-]+/g,"_");
+  return "FACTURA_"+base+"_"+Date.now()+"."+extension;
+}
+
 let facturasEmitidas=[];
 let facturasEmitidasPaginaActual=1;
 const FACTURAS_EMITIDAS_POR_PAGINA=40;
 
 async function cargarFacturasEmitidas(){
-  const respuesta=await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors?select=id,numero_factura,fecha_emision,fecha_vencimiento,cliente,subtotal_sin_igv,igv,total_con_igv,estado_pago,fecha_pago,observaciones,created_at&order=fecha_emision.desc,created_at.desc",{
+  const respuesta=await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors?select=id,numero_factura,fecha_emision,fecha_vencimiento,cliente,subtotal_sin_igv,igv,total_con_igv,estado_pago,fecha_pago,observaciones,archivo_factura,created_at&order=fecha_emision.desc,created_at.desc",{
     method:"GET",
     headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY},
     cache:"no-store"
@@ -5961,12 +6056,13 @@ function renderFacturasEmitidas(){
   if(facturasEmitidasPaginaActual>paginas) facturasEmitidasPaginaActual=paginas;
   const inicio=(facturasEmitidasPaginaActual-1)*FACTURAS_EMITIDAS_POR_PAGINA;
   const pagina=facturasEmitidas.slice(inicio,inicio+FACTURAS_EMITIDAS_POR_PAGINA);
-  if(!pagina.length){tbody.innerHTML='<tr><td colspan="11" class="empty">No hay facturas emitidas.</td></tr>';}
+  if(!pagina.length){tbody.innerHTML='<tr><td colspan="12" class="empty">No hay facturas emitidas.</td></tr>';}
   else tbody.innerHTML=pagina.map(function(f,i){
     const estado=String(f.estado_pago||"Pendiente");
     const clase=estado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
     const accion=estado==="Pendiente" ? `<button type="button" class="btn btn-success" onclick="marcarFacturaPagada('${esc(f.id)}')">💵 Marcar pagada</button>` : "—";
-    return `<tr><td>${inicio+i+1}</td><td><strong>${esc(f.numero_factura||"")}</strong></td><td>${esc(f.fecha_emision||"")}</td><td>${esc(f.fecha_vencimiento||"—")}</td><td>${esc(f.cliente||"")}</td><td>S/ ${Number(f.subtotal_sin_igv||0).toFixed(2)}</td><td>S/ ${Number(f.igv||0).toFixed(2)}</td><td><strong>S/ ${Number(f.total_con_igv||0).toFixed(2)}</strong></td><td><span class="factura-pago-estado ${clase}">${esc(estado)}</span></td><td>${esc(f.fecha_pago||"—")}</td><td><div class="factura-acciones">${accion}</div></td></tr>`;
+    const enlaceFactura=f.archivo_factura ? `<a href="${esc(f.archivo_factura)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">📎 Ver factura</a>` : "—";
+    return `<tr><td>${inicio+i+1}</td><td><strong>${esc(f.numero_factura||"")}</strong></td><td>${esc(f.fecha_emision||"")}</td><td>${esc(f.fecha_vencimiento||"—")}</td><td>${esc(f.cliente||"")}</td><td>S/ ${Number(f.subtotal_sin_igv||0).toFixed(2)}</td><td>S/ ${Number(f.igv||0).toFixed(2)}</td><td><strong>S/ ${Number(f.total_con_igv||0).toFixed(2)}</strong></td><td><span class="factura-pago-estado ${clase}">${esc(estado)}</span></td><td>${esc(f.fecha_pago||"—")}</td><td>${enlaceFactura}</td><td><div class="factura-acciones">${accion}</div></td></tr>`;
   }).join("");
   renderPaginacionFacturasEmitidas(total);
 }
@@ -6357,7 +6453,6 @@ document.addEventListener("click", cerrarFiltrosDashboard);
 </script>
 
 
-<div class="version-app">V5.5 Dashboard</div>
+<div class="version-app">V5.6 Dashboard</div>
 </body>
 </html>
-
