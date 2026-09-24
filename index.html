@@ -1137,7 +1137,125 @@ th.col-vin {
   }
 }
 </style>
-</head>
+<style>
+.btn-limpiar-filtros{
+  background:#6b7280 !important;
+  color:#fff !important;
+  border-color:#6b7280 !important;
+}
+.btn-limpiar-filtros:hover{
+  background:#4b5563 !important;
+  border-color:#4b5563 !important;
+}
+</style>
+<style>
+.facturas-emitidas-filtros{
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  gap:14px;
+  margin:4px 0 16px;
+  padding:14px 18px;
+  background:#f8fafc;
+  border:1px solid #e2e8f0;
+  border-radius:8px;
+}
+.factura-filtro-selector,
+.factura-filtro-estado,
+.factura-filtro-orden{
+  width:240px;
+}
+.facturas-emitidas-filtros .form-group{
+  margin:0;
+}
+#filtroFacturaEmitidaMenu{position:relative;}
+#filtroFacturaEmitidaDropdown{
+  display:none;
+  position:absolute;
+  top:calc(100% + 5px);
+  left:0;
+  width:100%;
+  max-height:280px;
+  overflow-y:auto;
+  background:#fff;
+  border:1px solid #d1d5db;
+  border-radius:7px;
+  box-shadow:0 8px 20px rgba(15,23,42,.15);
+  z-index:9999;
+  box-sizing:border-box;
+  padding:6px 0;
+}
+#filtroFacturaEmitidaDropdown.show{display:block;}
+#filtroFacturasEmitidasOpciones{
+  border-top:1px solid #f1f5f9;
+  margin-top:4px;
+  padding-top:4px;
+}
+#filtroFacturaEmitidaDropdown .servicios-check-opcion{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:8px 12px;
+  margin:0;
+  cursor:pointer;
+  font-size:13px;
+}
+#filtroFacturaEmitidaDropdown .servicios-check-opcion:hover{background:#f3f4f6;}
+#filtroFacturaEmitidaDropdown input[type="checkbox"]{
+  width:15px;height:15px;margin:0;accent-color:#2563eb;
+}
+@media(max-width:700px){
+  .facturas-emitidas-filtros{flex-direction:column;align-items:stretch;}
+  .factura-filtro-selector,.factura-filtro-orden{width:100%;}
+}
+</style><style>
+.factura-filtro-estado{width:230px;}
+.filtro-estado-ayuda{
+  display:block;
+  margin-top:4px;
+  color:#64748b;
+  font-size:11px;
+}
+#filtroEstadoFacturaEmitida:disabled{
+  background:#f1f5f9;
+  color:#94a3b8;
+  cursor:not-allowed;
+}
+</style><style>
+.filtro-factura-busqueda{
+  padding:8px;
+  border-bottom:1px solid #e5e7eb;
+  background:#fff;
+  position:sticky;
+  top:0;
+  z-index:2;
+}
+.filtro-factura-busqueda input{
+  width:100%;
+  box-sizing:border-box;
+  padding:8px 10px;
+  border:1px solid #cbd5e1;
+  border-radius:6px;
+  font-size:13px;
+  outline:none;
+}
+.filtro-factura-busqueda input:focus{
+  border-color:#2563eb;
+  box-shadow:0 0 0 2px rgba(37,99,235,.12);
+}
+.filtro-factura-sin-resultados{
+  padding:12px;
+  text-align:center;
+  color:#64748b;
+  font-size:13px;
+}
+</style><style>
+.facturas-emitidas-limpiar{
+  align-self:flex-end;
+  white-space:nowrap;
+  min-height:38px;
+}
+</style></head>
 
 <body>
 
@@ -1585,7 +1703,7 @@ onclick="limpiarFormulario()">
 </div>
 <div class="actions">
 
-<button class="btn btn-secondary" onclick="limpiarDashboard()">🧹 Limpiar filtros</button>
+<button class="btn btn-secondary btn-limpiar-filtros" onclick="limpiarDashboard()">🧹 Limpiar filtros</button>
 </div>
 <div id="dashboardResumenFiltros" class="dashboard-resumen-filtros">Filtros activos: Sin filtros</div>
 </div>
@@ -1627,6 +1745,9 @@ onclick="limpiarFormulario()">
 
 <section id="facturacion" class="section">
 <div class="card">
+<div class="admin-modulo-cabecera">
+  <button type="button" class="btn btn-secondary" onclick="mostrarModuloAdministracion('administracion')">↩️ Volver a Administración</button>
+</div>
 <h2>🧾 Facturación</h2>
 <p>Controle los servicios realizados y marque los que ya fueron facturados.</p>
 
@@ -1639,9 +1760,7 @@ onclick="limpiarFormulario()">
   </button>
 </div>
 
-<div class="admin-modulo-cabecera">
-  <button type="button" class="btn btn-secondary" onclick="mostrarModuloAdministracion('administracion')">↩️ Volver a Administración</button>
-</div>
+
 <div id="panelFacturar">
 <div class="facturacion-filtros" style="grid-template-columns:repeat(3,minmax(180px,1fr));">
 <div class="form-group"><label>Desde</label><input id="facturacionDesde" type="date"></div>
@@ -1682,7 +1801,7 @@ onclick="limpiarFormulario()">
 </div>
 <div class="actions">
 <button class="btn btn-primary" onclick="buscarFacturacion()">🔎 Buscar</button>
-<button class="btn btn-secondary" onclick="limpiarFiltrosFacturacion()">🧹 Limpiar</button>
+<button class="btn btn-secondary btn-limpiar-filtros" onclick="limpiarFiltrosFacturacion()">🧹 Limpiar filtros</button>
 <button class="btn btn-success" onclick="abrirModalNuevaFactura()">🧾 Generar factura</button>
 <button class="btn btn-secondary" onclick="exportarFacturacionExcel()">📥 Excel</button>
 
@@ -1716,6 +1835,58 @@ onclick="limpiarFormulario()">
       📊 Generar reporte para cliente
     </button>
   </div>
+
+  <div class="facturas-emitidas-filtros">
+    <div class="form-group factura-filtro-selector">
+      <label>Factura</label>
+      <div id="filtroFacturaEmitidaMenu" class="servicios-multiselect">
+        <button type="button" class="servicios-multiselect-btn" onclick="toggleFiltroFacturasEmitidas(event)">
+          <span id="filtroFacturaEmitidaTexto">Todas las facturas</span><span>▾</span>
+        </button>
+        <div id="filtroFacturaEmitidaDropdown" class="servicios-multiselect-menu">
+          <div class="filtro-factura-busqueda">
+            <input
+              id="buscarFacturaEmitidaFiltro"
+              type="text"
+              placeholder="Escribe el N° de factura..."
+              autocomplete="off"
+              oninput="filtrarOpcionesFacturaEmitida()"
+              onkeydown="if(event.key==='Enter'){aplicarBusquedaFacturaEmitida(event);}">
+          </div>
+          <label class="servicios-check-opcion servicios-multiselect-todos">
+            <input type="checkbox" id="filtroFacturasEmitidasTodas" onchange="seleccionarTodasFacturasEmitidasFiltro(this.checked)">
+            <span>Todas las facturas</span>
+          </label>
+          <div id="filtroFacturasEmitidasOpciones"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group factura-filtro-estado">
+      <label for="filtroEstadoFacturaEmitida">Estado de la factura</label>
+      <select id="filtroEstadoFacturaEmitida" onchange="actualizarFiltroFacturasEmitidas()">
+        <option value="">Todos los estados</option>
+        <option value="Pendiente">Pendiente</option>
+        <option value="Pago parcial">Pago parcial</option>
+        <option value="Pagada">Pagada</option>
+      </select>
+
+    </div>
+
+    <div class="form-group factura-filtro-orden">
+      <label for="ordenFacturasEmitidas">Ordenar por N° de factura</label>
+      <select id="ordenFacturasEmitidas" onchange="actualizarFiltroFacturasEmitidas()">
+        <option value="asc">Ascendente</option>
+        <option value="desc">Descendente</option>
+      </select>
+    </div>
+
+    <button type="button" class="btn btn-secondary btn-limpiar-filtros facturas-emitidas-limpiar"
+            onclick="limpiarFiltrosFacturasEmitidas()">
+      🧹 Limpiar filtros
+    </button>
+  </div>
+
   <div class="table-container"><table>
     <thead><tr>
       <th>N°</th><th>Factura</th><th>Fecha emisión</th><th>Vencimiento</th><th>Cliente</th><th>Subtotal</th><th>IGV</th><th>Total</th><th>Detracción</th><th>Pago directo</th><th>Estado de pago</th><th>Fechas de pago</th><th>Factura</th><th>Acción</th>
@@ -1872,13 +2043,14 @@ id="registrosPasados"
 class="section">
 
 <div class="card">
+<div class="admin-modulo-cabecera">
+  <button type="button" class="btn btn-secondary" onclick="mostrarModuloAdministracion('administracion')">↩️ Volver a Administración</button>
+</div>
 
 <h2>📋 Regularizar registros</h2>
 
 <p>Regularice lavados que fueron atendidos anteriormente y no se registraron en la aplicación.</p>
-<div class="admin-modulo-cabecera">
-  <button type="button" class="btn btn-secondary" onclick="mostrarModuloAdministracion('administracion')">↩️ Volver a Administración</button>
-</div>
+
 
 <div class="search">
 
@@ -1981,7 +2153,7 @@ onclick="buscarRegistroPasado()">
   <div class="filtros-pasados-acciones">
     <button
       type="button"
-      class="btn btn-secondary"
+      class="btn btn-secondary btn-limpiar-filtros"
       onclick="limpiarFiltrosPasados()">
       🧹 Limpiar filtros
     </button>
@@ -2309,10 +2481,10 @@ onclick="buscarHistorial()">
 
 
 <button
-class="btn btn-secondary"
+class="btn btn-secondary btn-limpiar-filtros"
 onclick="limpiarHistorial()">
 
-🧹 Limpiar
+🧹 Limpiar filtros
 
 </button>
 
@@ -6655,6 +6827,8 @@ async function cargarFacturasEmitidas(){
   });
   if(!respuesta.ok) throw new Error("No se pudieron cargar las facturas: "+await respuesta.text());
   facturasEmitidas=await respuesta.json();
+  cargarOpcionesFiltroFacturasEmitidas();
+  actualizarEstadoFiltroFacturaEmitida();
   renderFacturasEmitidas();
 }
 
@@ -6668,14 +6842,221 @@ function obtenerEstadoPagoFactura(f){
   return "Pagada";
 }
 
+let facturasEmitidasFiltroSeleccionadas = new Set();
+
+function toggleFiltroFacturasEmitidas(event){
+  if(event) event.stopPropagation();
+  const menu=document.getElementById("filtroFacturaEmitidaDropdown");
+  if(menu) menu.classList.toggle("show");
+}
+
+function cerrarFiltroFacturasEmitidas(){
+  const menu=document.getElementById("filtroFacturaEmitidaDropdown");
+  if(menu) menu.classList.remove("show");
+}
+
+function cargarOpcionesFiltroFacturasEmitidas(){
+  filtrarOpcionesFacturaEmitida();
+  actualizarTextoFiltroFacturasEmitidas();
+}
+
+function filtrarOpcionesFacturaEmitida(){
+  const cont=document.getElementById("filtroFacturasEmitidasOpciones");
+  if(!cont) return;
+
+  const input=document.getElementById("buscarFacturaEmitidaFiltro");
+  const busqueda=String(input?.value||"").trim().toLowerCase();
+
+  const lista=(facturasEmitidas||[]).slice().sort(function(a,b){
+    return String(a.numero_factura||"").localeCompare(
+      String(b.numero_factura||""),
+      "es",
+      {numeric:true,sensitivity:"base"}
+    );
+  }).filter(function(f){
+    const numero=String(f.numero_factura||"").toLowerCase();
+    return !busqueda || numero.includes(busqueda);
+  });
+
+  cont.innerHTML=lista.map(function(f){
+    const id=String(f.id);
+    return `<label class="servicios-check-opcion">
+      <input type="checkbox" value="${esc(id)}"
+        ${facturasEmitidasFiltroSeleccionadas.has(id)?"checked":""}
+        onchange="cambiarFiltroFacturaEmitida('${esc(id)}',this.checked)">
+      <span>${esc(f.numero_factura||"")}</span>
+    </label>`;
+  }).join("");
+
+  if(!lista.length){
+    cont.innerHTML='<div class="filtro-factura-sin-resultados">No se encontró la factura.</div>';
+  }
+}
+
+function aplicarBusquedaFacturaEmitida(event){
+  if(event) event.preventDefault();
+
+  const input=document.getElementById("buscarFacturaEmitidaFiltro");
+  const termino=String(input?.value||"").trim().toLowerCase();
+  if(!termino) return;
+
+  const coincidencias=(facturasEmitidas||[]).filter(function(f){
+    return String(f.numero_factura||"").trim().toLowerCase()===termino;
+  });
+
+  if(coincidencias.length===1){
+    const id=String(coincidencias[0].id);
+    facturasEmitidasFiltroSeleccionadas.clear();
+    facturasEmitidasFiltroSeleccionadas.add(id);
+
+    actualizarTextoFiltroFacturasEmitidas();
+    actualizarEstadoFiltroFacturaEmitida();
+    facturasEmitidasPaginaActual=1;
+    renderFacturasEmitidas();
+    cerrarFiltroFacturasEmitidas();
+  }
+}
+
+function cambiarFiltroFacturaEmitida(id,checked){
+  id=String(id);
+  if(checked) facturasEmitidasFiltroSeleccionadas.add(id);
+  else facturasEmitidasFiltroSeleccionadas.delete(id);
+
+  const checks=document.querySelectorAll("#filtroFacturasEmitidasOpciones input[type='checkbox']");
+  const todas=document.getElementById("filtroFacturasEmitidasTodas");
+  if(todas) todas.checked=checks.length>0 && Array.from(checks).every(function(x){return x.checked;});
+
+  actualizarTextoFiltroFacturasEmitidas();
+  facturasEmitidasPaginaActual=1;
+  renderFacturasEmitidas();
+}
+
+function seleccionarTodasFacturasEmitidasFiltro(checked){
+  facturasEmitidasFiltroSeleccionadas.clear();
+
+  document.querySelectorAll("#filtroFacturasEmitidasOpciones input[type='checkbox']").forEach(function(el){
+    el.checked=checked;
+    if(checked) facturasEmitidasFiltroSeleccionadas.add(String(el.value));
+  });
+
+  actualizarTextoFiltroFacturasEmitidas();
+  facturasEmitidasPaginaActual=1;
+  renderFacturasEmitidas();
+}
+
+function actualizarTextoFiltroFacturasEmitidas(){
+  const texto=document.getElementById("filtroFacturaEmitidaTexto");
+  if(!texto) return;
+
+  const ids=Array.from(facturasEmitidasFiltroSeleccionadas);
+  if(!ids.length){
+    texto.textContent="Todas las facturas";
+    actualizarEstadoFiltroFacturaEmitida();
+    return;
+  }
+
+  const nombres=ids.map(function(id){
+    const f=(facturasEmitidas||[]).find(function(x){return String(x.id)===id;});
+    return f ? String(f.numero_factura||"") : "";
+  }).filter(Boolean);
+
+  texto.textContent=nombres.length===1 ? nombres[0] : nombres.length+" facturas seleccionadas";
+  actualizarEstadoFiltroFacturaEmitida();
+}
+
+function obtenerFacturasEmitidasFiltradasOrdenadas(){
+  let lista=(facturasEmitidas||[]).slice();
+
+  if(facturasEmitidasFiltroSeleccionadas.size){
+    lista=lista.filter(function(f){
+      return facturasEmitidasFiltroSeleccionadas.has(String(f.id));
+    });
+  }else{
+    const estadoSeleccionado=document.getElementById("filtroEstadoFacturaEmitida")?.value || "";
+    if(estadoSeleccionado){
+      lista=lista.filter(function(f){
+        return obtenerEstadoPagoFactura(f)===estadoSeleccionado;
+      });
+    }
+  }
+
+  const orden=document.getElementById("ordenFacturasEmitidas")?.value || "asc";
+  lista.sort(function(a,b){
+    const aa=String(a.numero_factura||"");
+    const bb=String(b.numero_factura||"");
+    return orden==="desc"
+      ? bb.localeCompare(aa,"es",{numeric:true,sensitivity:"base"})
+      : aa.localeCompare(bb,"es",{numeric:true,sensitivity:"base"});
+  });
+
+  return lista;
+}
+
+function actualizarEstadoFiltroFacturaEmitida(){
+  const select=document.getElementById("filtroEstadoFacturaEmitida");
+  if(!select) return;
+
+  const facturaSeleccionada=facturasEmitidasFiltroSeleccionadas.size>0;
+
+  // Una factura concreta solo puede tener un estado; por eso el filtro
+  // de estado se desactiva cuando se selecciona una factura.
+  select.disabled=facturaSeleccionada;
+
+  if(facturaSeleccionada){
+    select.value="";
+
+  }else{
+
+  }
+}
+
+function limpiarFiltrosFacturasEmitidas(){
+  facturasEmitidasFiltroSeleccionadas.clear();
+
+  const todas=document.getElementById("filtroFacturasEmitidasTodas");
+  if(todas) todas.checked=false;
+
+  document.querySelectorAll("#filtroFacturasEmitidasOpciones input[type='checkbox']").forEach(function(el){
+    el.checked=false;
+  });
+
+  const buscar=document.getElementById("buscarFacturaEmitidaFiltro");
+  if(buscar) buscar.value="";
+
+  const estado=document.getElementById("filtroEstadoFacturaEmitida");
+  if(estado){
+    estado.value="";
+    estado.disabled=false;
+  }
+
+  const orden=document.getElementById("ordenFacturasEmitidas");
+  if(orden) orden.value="asc";
+
+  actualizarTextoFiltroFacturasEmitidas();
+  actualizarEstadoFiltroFacturaEmitida();
+  facturasEmitidasPaginaActual=1;
+  renderFacturasEmitidas();
+}
+
+function actualizarFiltroFacturasEmitidas(){
+  facturasEmitidasPaginaActual=1;
+  renderFacturasEmitidas();
+}
+
+document.addEventListener("click",function(event){
+  const cont=document.getElementById("filtroFacturaEmitidaMenu");
+  if(cont && !cont.contains(event.target)) cerrarFiltroFacturasEmitidas();
+});
+
 function renderFacturasEmitidas(){
   const tbody=document.getElementById("tablaFacturasEmitidas");
   if(!tbody) return;
-  const total=facturasEmitidas.length;
+  const lista=obtenerFacturasEmitidasFiltradasOrdenadas();
+  const total=lista.length;
   const paginas=Math.max(1,Math.ceil(total/FACTURAS_EMITIDAS_POR_PAGINA));
   if(facturasEmitidasPaginaActual>paginas) facturasEmitidasPaginaActual=paginas;
   const inicio=(facturasEmitidasPaginaActual-1)*FACTURAS_EMITIDAS_POR_PAGINA;
-  const pagina=facturasEmitidas.slice(inicio,inicio+FACTURAS_EMITIDAS_POR_PAGINA);
+  const pagina=lista.slice(inicio,inicio+FACTURAS_EMITIDAS_POR_PAGINA);
   if(!pagina.length){tbody.innerHTML='<tr><td colspan="14" class="empty">No hay facturas emitidas.</td></tr>';renderPaginacionFacturasEmitidas(total);return;}
   tbody.innerHTML=pagina.map(function(f,i){
     const estado=obtenerEstadoPagoFactura(f);
@@ -7683,6 +8064,6 @@ programarCierreAutomatico1930();
 </script>
 
 
-<div class="version-app">V5.9 Dashboard</div>
+<div class="version-app">V5.5 Dashboard</div>
 </body>
 </html>
