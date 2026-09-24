@@ -1537,7 +1537,7 @@ onclick="limpiarFormulario()">
     </div>
     <p>Los registros seleccionados quedarán asociados a esta factura.</p>
     <div class="facturacion-filtros" style="grid-template-columns:repeat(2,1fr);">
-      <div class="form-group"><label>Número de factura *</label><input id="nuevaFacturaNumero" type="text" placeholder="F001-00001258"></div>
+      <div class="form-group"><label>Número de factura *</label><input id="nuevaFacturaNumero" type="text" placeholder="F001-00001258" oninput="this.value=this.value.toUpperCase()" style="text-transform:uppercase"></div>
       <div class="form-group">
         <label for="nuevaFacturaCliente">Cliente *</label>
         <select id="nuevaFacturaCliente" onchange="actualizarRucClienteFactura()">
@@ -6028,7 +6028,7 @@ async function guardarNuevaFactura(){
     return;
   }
 
-  const numero=document.getElementById("nuevaFacturaNumero").value.trim();
+  const numero=document.getElementById("nuevaFacturaNumero").value.trim().toUpperCase();
   const cliente=document.getElementById("nuevaFacturaCliente").value.trim();
   const rucCliente=document.getElementById("nuevaFacturaRuc").value.trim();
   const fechaEmision=document.getElementById("nuevaFacturaEmision").value;
@@ -6783,6 +6783,6 @@ document.addEventListener("click", cerrarFiltrosDashboard);
 </script>
 
 
-<div class="version-app">V5.8 Dashboard</div>
+<div class="version-app">V5.5 Dashboard</div>
 </body>
 </html>
