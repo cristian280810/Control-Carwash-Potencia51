@@ -6032,7 +6032,7 @@ function exportarContextoPDF(contexto){
     if(!lista.length){mostrarAlerta('No hay información para exportar.','error');return;}
     const filas=lista.map(function(r){
       const x=calcularImportesFacturacion(r.precio_sin_igv);
-      return `<tr><td>${escaparHtmlExportacion(fechaCortaFacturacion(obtenerFechaServicioFacturacion(r)))}</td><td>${escaparHtmlExportacion(r.ot||'')}</td><td>${escaparHtmlExportacion(r.placa||'')}</td><td>${escaparHtmlExportacion(r.vin||'')}</td><td>${escaparHtmlExportacion(r.marca||'')}</td><td>${escaparHtmlExportacion(r.servicio||'')}</td><td>S/ ${Number(x.sinIgv||0).toFixed(2)}</td><td>S/ ${Number(x.igv||0).toFixed(2)}</td><td>S/ ${Number(x.total||0).toFixed(2)}</td><td>${r.facturado?'Facturado':'Pendiente'}</td></tr>`;
+      return `<tr><td>${escaparHtmlExportacion(fechaCortaFacturacion(obtenerFechaServicioFacturacion(r)))}</td><td>${(v.tipo || "Servicio")}</td><td>${escaparHtmlExportacion(r.ot||'')}</td><td>${escaparHtmlExportacion(r.placa||'')}</td><td>${escaparHtmlExportacion(r.vin||'')}</td><td>${escaparHtmlExportacion(r.marca||'')}</td><td>${escaparHtmlExportacion(r.servicio||'')}</td><td>S/ ${Number(x.sinIgv||0).toFixed(2)}</td><td>S/ ${Number(x.igv||0).toFixed(2)}</td><td>S/ ${Number(x.total||0).toFixed(2)}</td><td>${r.facturado?'Facturado':'Pendiente'}</td></tr>`;
     }).join('');
     abrirVentanaPDF('Facturación Wankamotors',`<table><thead><tr><th>Fecha</th><th>OT</th><th>Placa</th><th>VIN</th><th>Marca</th><th>Servicio</th><th>Sin IGV</th><th>IGV</th><th>Total</th><th>Estado</th></tr></thead><tbody>${filas}</tbody></table>`);
     return;
@@ -8861,7 +8861,6 @@ programarCierreAutomatico1930();
 </script>
 
 
-<div class="version-app">V5.1 Dashboard</div>
+<div class="version-app">V5.5 Dashboard</div>
 </body>
 </html>
-
