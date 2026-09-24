@@ -2487,6 +2487,7 @@ Cancelar
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script>
 
 /* =====================================================
@@ -6441,70 +6442,227 @@ function seleccionarTodasFacturasReporte(marcar){
 }
 
 async function generarReporteClienteExcel(){
-  if(!facturasReporteClienteSeleccionadas.size){
-    mostrarAlerta("Selecciona al menos una factura para generar el reporte.","error");
+  const checks = Array.from(document.querySelectorAll('input[name="reporteFacturaCheck"]:checked'));
+  const ids = checks.map(function(el){ return String(el.value || ""); }).filter(Boolean);
+
+  if(!ids.length){
+    mostrarAlerta("Selecciona al menos una factura.", "error");
     return;
   }
-  if(typeof XLSX==="undefined"){
-    mostrarAlerta("No se pudo cargar el módulo de Excel.","error");
+
+  if(typeof ExcelJS === "undefined"){
+    mostrarAlerta("No se pudo cargar el generador de Excel.", "error");
     return;
   }
-  const ids=Array.from(facturasReporteClienteSeleccionadas);
-  const headers={"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY};
+
   try{
-    const detalleUrl=SUPABASE_URL+"/rest/v1/factura_detalle_wankamotors?select=factura_id,vehiculo_id,servicio,precio_sin_igv,igv,precio_con_igv&factura_id=in.("+ids.map(encodeURIComponent).join(",")+")";
-    const respDetalle=await fetch(detalleUrl,{method:"GET",headers:headers,cache:"no-store"});
+    const headers = {
+      "apikey": SUPABASE_KEY,
+      "Authorization": "Bearer " + SUPABASE_KEY
+    };
+
+    const detalleUrl =
+      SUPABASE_URL +
+      "/rest/v1/factura_detalle_wankamotors?select=id,factura_id,vehiculo_id,precio_sin_igv,precio_con_igv&factura_id=in.(" +
+      ids.map(encodeURIComponent).join(",") + ")";
+
+    const respDetalle = await fetch(detalleUrl,{
+      method:"GET",
+      headers:headers,
+      cache:"no-store"
+    });
+
     if(!respDetalle.ok) throw new Error(await respDetalle.text());
-    const detalles=await respDetalle.json();
+
+    const detalles = await respDetalle.json();
+
     if(!detalles.length){
-      mostrarAlerta("Las facturas seleccionadas no tienen registros asociados para generar el reporte.","error");
+      mostrarAlerta("Las facturas seleccionadas no tienen registros asociados para generar el reporte.", "error");
       return;
     }
 
-    const vehiculoIds=Array.from(new Set(detalles.map(function(d){return String(d.vehiculo_id||"");}).filter(Boolean)));
-    let vehiculos=[];
-    if(vehiculoIds.length){
-      const respVeh=await fetch(SUPABASE_URL+"/rest/v1/vehiculos_wankamotors?select=id,hora_inicio_lavado,created_at,tipo,ot,placa,vin,marca& id=in.("+vehiculoIds.map(encodeURIComponent).join(",")+")".replace("& id=","&id="),{method:"GET",headers:headers,cache:"no-store"});
-      if(!respVeh.ok) throw new Error(await respVeh.text());
-      vehiculos=await respVeh.json();
-    }
-    const vehiculoMap=new Map(vehiculos.map(function(v){return [String(v.id),v];}));
-    const facturaMap=new Map(facturasEmitidas.map(function(f){return [String(f.id),f];}));
+    const vehiculoIds = Array.from(
+      new Set(
+        detalles.map(function(d){
+          return String(d.vehiculo_id || "");
+        }).filter(Boolean)
+      )
+    );
 
-    const datos=detalles.map(function(d){
-      const v=vehiculoMap.get(String(d.vehiculo_id))||{};
-      const f=facturaMap.get(String(d.factura_id))||{};
-      const fecha=v.hora_inicio_lavado||v.created_at||f.fecha_emision||"";
-      return {
-        "Fecha":fechaCortaFacturacion(fecha),
-        "Tipo":v.tipo||"",
-        "OT":v.ot||"",
-        "Marca":v.marca||"",
-        "VIN":v.vin||"",
-        "Placa":v.placa||"",
-        "N° Factura":f.numero_factura||"",
-        "Precio Sin IGV":Number(Number(d.precio_sin_igv||0).toFixed(2)),
-        "Precio Con IGV":Number(Number(d.precio_con_igv||0).toFixed(2))
-      };
+    let vehiculos = [];
+
+    if(vehiculoIds.length){
+      const respVeh = await fetch(
+        SUPABASE_URL +
+        "/rest/v1/vehiculos_wankamotors?select=id,hora_inicio_lavado,created_at,tipo,ot,placa,vin,marca&id=in.(" +
+        vehiculoIds.map(encodeURIComponent).join(",") + ")",
+        {
+          method:"GET",
+          headers:headers,
+          cache:"no-store"
+        }
+      );
+
+      if(!respVeh.ok) throw new Error(await respVeh.text());
+      vehiculos = await respVeh.json();
+    }
+
+    const vehiculoMap = new Map(
+      vehiculos.map(function(v){ return [String(v.id),v]; })
+    );
+
+    const facturaMap = new Map(
+      facturasEmitidas.map(function(f){ return [String(f.id),f]; })
+    );
+
+    // La fecha corresponde a la fecha de lavado del registro.
+    // No se incluye Área.
+    const datos = detalles.map(function(d){
+      const v = vehiculoMap.get(String(d.vehiculo_id)) || {};
+      const f = facturaMap.get(String(d.factura_id)) || {};
+      const fecha = v.hora_inicio_lavado || v.created_at || "";
+
+      return [
+        fecha ? new Date(fecha) : null,
+        v.tipo || "",
+        v.ot || "",
+        v.marca || "",
+        v.vin || "",
+        v.placa || "",
+        f.numero_factura || "",
+        Number(Number(d.precio_sin_igv || 0).toFixed(2)),
+        Number(Number(d.precio_con_igv || 0).toFixed(2))
+      ];
     });
 
     datos.sort(function(a,b){
-      const fa=String(a["Fecha"]||"");
-      const fb=String(b["Fecha"]||"");
-      return fa.localeCompare(fb);
+      const fa = a[0] instanceof Date ? a[0].getTime() : 0;
+      const fb = b[0] instanceof Date ? b[0].getTime() : 0;
+      return fa - fb;
     });
 
-    const hoja=XLSX.utils.json_to_sheet(datos);
-    hoja['!cols']=[{wch:12},{wch:12},{wch:18},{wch:16},{wch:20},{wch:12},{wch:16},{wch:18},{wch:18}];
-    const libro=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(libro,hoja,"Reporte cliente");
-    const nombre="Reporte_Cliente_"+new Date().toISOString().slice(0,10)+".xlsx";
-    XLSX.writeFile(libro,nombre);
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "Wankamotors";
+    workbook.created = new Date();
+
+    const worksheet = workbook.addWorksheet("Reporte cliente", {
+      views:[{state:"frozen", ySplit:1}]
+    });
+
+    worksheet.columns = [
+      {header:"Fecha", key:"fecha", width:14},
+      {header:"Tipo", key:"tipo", width:12},
+      {header:"OT", key:"ot", width:19},
+      {header:"Marca", key:"marca", width:16},
+      {header:"VIN", key:"vin", width:21},
+      {header:"Placa", key:"placa", width:13},
+      {header:"N° Factura", key:"factura", width:16},
+      {header:"Precio Sin IGV", key:"sinIgv", width:18},
+      {header:"Precio Con IGV", key:"conIgv", width:18}
+    ];
+
+    datos.forEach(function(fila){
+      worksheet.addRow({
+        fecha:fila[0],
+        tipo:fila[1],
+        ot:fila[2],
+        marca:fila[3],
+        vin:fila[4],
+        placa:fila[5],
+        factura:fila[6],
+        sinIgv:fila[7],
+        conIgv:fila[8]
+      });
+    });
+
+    // Diseño del reporte: encabezado celeste, bordes, filtros y encabezado congelado.
+    const header = worksheet.getRow(1);
+    header.height = 22;
+
+    header.eachCell(function(cell){
+      cell.font = {
+        bold:true,
+        color:{argb:"FF000000"}
+      };
+      cell.fill = {
+        type:"pattern",
+        pattern:"solid",
+        fgColor:{argb:"FF5BC0DE"}
+      };
+      cell.alignment = {
+        horizontal:"center",
+        vertical:"middle"
+      };
+      cell.border = {
+        top:{style:"thin",color:{argb:"FF000000"}},
+        bottom:{style:"thin",color:{argb:"FF000000"}},
+        left:{style:"thin",color:{argb:"FF000000"}},
+        right:{style:"thin",color:{argb:"FF000000"}}
+      };
+    });
+
+    worksheet.eachRow(function(row, rowNumber){
+      if(rowNumber === 1) return;
+
+      row.height = 20;
+
+      row.eachCell(function(cell){
+        cell.border = {
+          top:{style:"thin",color:{argb:"FF000000"}},
+          bottom:{style:"thin",color:{argb:"FF000000"}},
+          left:{style:"thin",color:{argb:"FF000000"}},
+          right:{style:"thin",color:{argb:"FF000000"}}
+        };
+        cell.alignment = {
+          vertical:"middle",
+          horizontal:"left"
+        };
+      });
+
+      row.getCell(1).numFmt = "dd/mm/yyyy";
+      row.getCell(8).numFmt = '"S/"#,##0.00';
+      row.getCell(9).numFmt = '"S/"#,##0.00';
+
+      row.getCell(8).alignment = {
+        horizontal:"right",
+        vertical:"middle"
+      };
+      row.getCell(9).alignment = {
+        horizontal:"right",
+        vertical:"middle"
+      };
+    });
+
+    // Filtros en todas las columnas.
+    worksheet.autoFilter = {
+      from:"A1",
+      to:"I" + Math.max(1, datos.length + 1)
+    };
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob(
+      [buffer],
+      {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}
+    );
+
+    const url = URL.createObjectURL(blob);
+    const enlace = document.createElement("a");
+    enlace.href = url;
+    enlace.download = "Reporte_Cliente_" + new Date().toISOString().slice(0,10) + ".xlsx";
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+    URL.revokeObjectURL(url);
+
     cerrarModalReporteCliente();
-    mostrarAlerta("Reporte generado correctamente con "+datos.length+" registros.","success");
+    mostrarAlerta(
+      "Reporte generado correctamente con " + datos.length + " registros.",
+      "success"
+    );
+
   }catch(error){
     console.error(error);
-    mostrarAlerta("No se pudo generar el reporte: "+error.message,"error");
+    mostrarAlerta("No se pudo generar el reporte: " + error.message, "error");
   }
 }
 
@@ -7025,6 +7183,6 @@ document.addEventListener("click", cerrarFiltrosDashboard);
 </script>
 
 
-<div class="version-app">V5.1 Dashboard</div>
+<div class="version-app">V5.5 Dashboard</div>
 </body>
 </html>
