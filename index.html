@@ -1885,8 +1885,8 @@ onclick="limpiarFormulario()">
 </div>
 <div class="table-container"><table><thead><tr>
 <th><input type="checkbox" class="facturacion-check" id="facturacionTodos" onchange="seleccionarTodosFacturacion(this)" title="Seleccionar los registros de esta página"></th>
-<th class="numero-registro">N°</th><th>Fecha</th><th>OT</th><th>Placa</th><th>VIN</th><th>Marca</th><th>Servicio</th><th>Sin IGV</th><th>IGV</th><th>Total</th><th>Estado</th><th>Factura asociada</th><th>Fecha facturación</th>
-</tr></thead><tbody id="tablaFacturacion"><tr><td colspan="12" class="empty">Cargando facturación...</td></tr></tbody></table></div>
+<th class="numero-registro">N°</th><th>Fecha</th><th>Tipo</th><th>OT</th><th>Placa</th><th>VIN</th><th>Marca</th><th>Servicio</th><th>Sin IGV</th><th>IGV</th><th>Total</th><th>Estado</th><th>Factura asociada</th><th>Fecha facturación</th>
+</tr></thead><tbody id="tablaFacturacion"><tr><td colspan="15" class="empty">Cargando facturación...</td></tr></tbody></table></div>
 <div id="paginacionFacturacion" class="paginacion-modulo"></div>
 
 </div>
@@ -7120,7 +7120,7 @@ function renderFacturacion(){
       <td>${esc(fechaCortaFacturacion(r.fecha_facturacion)||"—")}</td>
     </tr>`;
   });
-  if(!lista.length) tbody.innerHTML='<tr><td colspan="13" class="empty">No hay servicios para los filtros seleccionados.</td></tr>';
+  if(!lista.length) tbody.innerHTML='<tr><td colspan="15" class="empty">No hay servicios para los filtros seleccionados.</td></tr>';
   // Cantidad y montos representan el total filtrado, aunque la tabla
   // muestre solo 40 registros por página.
   document.getElementById("facturacionCantidad").textContent=lista.length;
@@ -7916,6 +7916,20 @@ document.addEventListener("click",function(event){
   if(cont && !cont.contains(event.target)) cerrarFiltroFacturasEmitidas();
 });
 
+function formatearFechaFacturaEmitida(fecha){
+  if(!fecha) return "";
+  const texto=String(fecha).trim();
+  // Las fechas de Supabase llegan normalmente como YYYY-MM-DD.
+  // Se formatean directamente para evitar desfases por zona horaria.
+  const m=texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return m[3]+"-"+m[2]+"-"+m[1];
+  const d=new Date(texto);
+  if(isNaN(d.getTime())) return texto;
+  const partes=new Intl.DateTimeFormat("es-PE",{timeZone:"America/Lima",day:"2-digit",month:"2-digit",year:"numeric"}).formatToParts(d);
+  const v={}; partes.forEach(function(x){v[x.type]=x.value;});
+  return (v.day||"")+"-"+(v.month||"")+"-"+(v.year||"");
+}
+
 function renderFacturasEmitidas(){
   const tbody=document.getElementById("tablaFacturasEmitidas");
   if(!tbody) return;
@@ -7932,13 +7946,13 @@ function renderFacturasEmitidas(){
     const totalFactura=Number(f.total_con_igv||0);
     const det=!!f.aplica_detraccion?Number(f.monto_detraccion||0):0;
     const directo=Number(f.monto_pago_directo||0);
-    const fechas=(f.fecha_pago_directo?"Directo: "+esc(f.fecha_pago_directo):"Directo: —")+"<br>"+(f.aplica_detraccion?(f.fecha_detraccion?"Detracción: "+esc(f.fecha_detraccion):"Detracción: —"):"Detracción: No aplica");
+    const fechas=(f.fecha_pago_directo?"Directo: "+esc(formatearFechaFacturaEmitida(f.fecha_pago_directo)):"Directo: —")+"<br>"+(f.aplica_detraccion?(f.fecha_detraccion?"Detracción: "+esc(formatearFechaFacturaEmitida(f.fecha_detraccion)):"Detracción: —"):"Detracción: No aplica");
     const archivo=f.archivo_factura ? `<a class="foto-link" href="${esc(f.archivo_factura)}" target="_blank" rel="noopener">📎 Ver factura</a>` : "—";
     const estadoPago=String(f.estado_pago||"").trim().toLowerCase();
     const accion=(estadoPago==="pagada" || estadoPago==="pagado")
       ? `<span class="factura-pago-estado pagada">Pagada</span>`
       : `<button type="button" class="btn btn-success" onclick="abrirModalPagosFactura('${esc(f.id)}')">💰 Registrar pagos</button>`;
-    return `<tr><td>${inicio+i+1}</td><td><strong>${esc(f.numero_factura||"")}</strong></td><td>${esc(f.fecha_emision||"")}</td><td>${esc(f.fecha_vencimiento||"—")}</td><td>${esc(f.cliente||"")}</td><td>S/ ${Number(f.subtotal_sin_igv||0).toFixed(2)}</td><td>S/ ${Number(f.igv||0).toFixed(2)}</td><td><strong>S/ ${totalFactura.toFixed(2)}</strong></td><td><div class="facturacion-detraccion">${f.aplica_detraccion?"Sí – "+Number(f.porcentaje_detraccion||12).toFixed(0)+"%<br><strong>S/ "+det.toFixed(2)+"</strong>":"No aplica"}</div></td><td>S/ ${directo.toFixed(2)}</td><td><span class="factura-pago-estado ${clase}">${esc(estado)}</span></td><td class="facturacion-fechas-pago">${fechas}</td><td>${archivo}</td><td><div class="factura-acciones">${accion}</div></td></tr>`;
+    return `<tr><td>${inicio+i+1}</td><td><strong>${esc(f.numero_factura||"")}</strong></td><td>${esc(formatearFechaFacturaEmitida(f.fecha_emision)||"")}</td><td>${esc(formatearFechaFacturaEmitida(f.fecha_vencimiento)||"—")}</td><td>${esc(f.cliente||"")}</td><td>S/ ${Number(f.subtotal_sin_igv||0).toFixed(2)}</td><td>S/ ${Number(f.igv||0).toFixed(2)}</td><td><strong>S/ ${totalFactura.toFixed(2)}</strong></td><td><div class="facturacion-detraccion">${f.aplica_detraccion?"Sí – "+Number(f.porcentaje_detraccion||12).toFixed(0)+"%<br><strong>S/ "+det.toFixed(2)+"</strong>":"No aplica"}</div></td><td>S/ ${directo.toFixed(2)}</td><td><span class="factura-pago-estado ${clase}">${esc(estado)}</span></td><td class="facturacion-fechas-pago">${fechas}</td><td>${archivo}</td><td><div class="factura-acciones">${accion}</div></td></tr>`;
   }).join("");
   renderPaginacionFacturasEmitidas(total);
 }
@@ -9005,6 +9019,6 @@ programarCierreAutomatico1930();
 </script>
 
 
-<div class="version-app">V5.5 Dashboard</div>
+<div class="version-app">V6.0 Dashboard</div>
 </body>
 </html>
