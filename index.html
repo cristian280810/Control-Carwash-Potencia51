@@ -915,6 +915,14 @@ th.col-vin {
 .facturacion-estado.pendiente{background:#fef3c7;color:#92400e;}
 .facturacion-estado.facturado{background:#dcfce7;color:#166534;}
 .facturacion-check{width:18px;height:18px;}
+.historial-filtro-multiselect .servicios-multiselect{width:100%;}
+.historial-filtro-multiselect .servicios-multiselect-menu{max-height:260px;overflow-y:auto;}
+.historial-filtro-multiselect .servicios-check-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:14px;}
+.historial-filtro-multiselect .servicios-check-item:hover{background:#f3f4f6;}
+.historial-filtro-multiselect .servicios-check-item input[type="checkbox"]{width:17px;height:17px;margin:0;accent-color:#2563eb;}
+.historial-filtro-multiselect .servicios-check-item.disabled{opacity:.45;cursor:not-allowed;}
+.historial-filtro-multiselect .historial-filtro-sin-opciones{padding:10px;text-align:center;color:#64748b;font-size:13px;}
+
 .facturacion-seleccion-global{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0 12px;padding:10px 12px;border:1px solid #dbe2ea;border-radius:9px;background:#f8fafc;}
 .facturacion-seleccion-global span{font-size:13px;font-weight:600;color:#374151;margin-left:auto;}
 
@@ -2502,38 +2510,24 @@ placeholder="OT, placa, VIN o marca">
 </div>
 
 
-<div>
-
-<label>
-Tipo
-</label>
-
-<select id="tipoHistorial">
-  <option value="">Todos</option>
-  <option value="Servicio">Servicio</option>
-  <option value="Nuevo">Nuevo</option>
-</select>
-
+<div class="form-group historial-filtro-multiselect">
+<label>Tipo</label>
+<div id="historialTipo" class="servicios-multiselect">
+  <button type="button" class="servicios-multiselect-btn" onclick="toggleFiltroHistorial('tipo',event)">
+    <span id="historialTipoTexto">Todos</span><span>▾</span>
+  </button>
+  <div id="historialTipoMenu" class="servicios-multiselect-menu"></div>
+</div>
 </div>
 
-<div>
-
-<label>
-Marca
-</label>
-
-<select id="marcaHistorial">
-  <option value="">Todas las marcas</option>
-  <option value="Chery">Chery</option>
-  <option value="Chevrolet">Chevrolet</option>
-  <option value="Ford">Ford</option>
-  <option value="KIA">KIA</option>
-  <option value="MG">MG</option>
-  <option value="Nissan">Nissan</option>
-  <option value="Peugeot">Peugeot</option>
-  <option value="Volkswagen">Volkswagen</option>
-</select>
-
+<div class="form-group historial-filtro-multiselect">
+<label>Marca</label>
+<div id="historialMarca" class="servicios-multiselect">
+  <button type="button" class="servicios-multiselect-btn" onclick="toggleFiltroHistorial('marca',event)">
+    <span id="historialMarcaTexto">Todas las marcas</span><span>▾</span>
+  </button>
+  <div id="historialMarcaMenu" class="servicios-multiselect-menu"></div>
+</div>
 </div>
 
 
@@ -5564,21 +5558,16 @@ document.getElementById(
 "buscarHistorial"
 );
 
-const tipo =
-document.getElementById(
-"tipoHistorial"
-);
-
-const marca =
-document.getElementById(
-"marcaHistorial"
-);
+const tipoMenu = document.getElementById("historialTipoMenu");
+const marcaMenu = document.getElementById("historialMarcaMenu");
 
 if(desde) desde.value = "";
 if(hasta) hasta.value = "";
 if(buscar) buscar.value = "";
-if(tipo) tipo.value = "";
-if(marca) marca.value = "";
+if(tipoMenu) tipoMenu.querySelectorAll('input[type="checkbox"]').forEach(function(el){el.checked=false;});
+if(marcaMenu) marcaMenu.querySelectorAll('input[type="checkbox"]').forEach(function(el){el.checked=false;});
+actualizarFiltrosHistorialRelacionados("tipo");
+actualizarFiltrosHistorialRelacionados("marca");
 
 mostrarMensajeHistorial(
 "Seleccione uno o más filtros y presione Buscar."
@@ -5587,16 +5576,145 @@ mostrarMensajeHistorial(
 }
 
 
+/* =====================================================
+   HISTORIAL - FILTROS TIPO Y MARCA RELACIONADOS
+===================================================== */
+let historialCatalogoFiltros = [];
+
+function obtenerSeleccionHistorial(nombre){
+  const menu=document.getElementById("historial"+nombre.charAt(0).toUpperCase()+nombre.slice(1)+"Menu");
+  if(!menu) return [];
+  return Array.from(menu.querySelectorAll('input[data-historial-filter="'+nombre+'"]:checked'))
+    .map(function(el){ return String(el.value||"").trim(); })
+    .filter(Boolean);
+}
+
+function actualizarTextoFiltroHistorial(nombre){
+  const valores=obtenerSeleccionHistorial(nombre);
+  const id="historial"+nombre.charAt(0).toUpperCase()+nombre.slice(1)+"Texto";
+  const el=document.getElementById(id);
+  if(!el) return;
+  if(!valores.length){
+    el.textContent=nombre==="tipo" ? "Todos" : "Todas las marcas";
+  }else if(valores.length===1){
+    el.textContent=valores[0];
+  }else{
+    el.textContent=valores.length+" seleccionados";
+  }
+}
+
+function toggleFiltroHistorial(nombre,event){
+  if(event) event.stopPropagation();
+  const menu=document.getElementById("historial"+nombre.charAt(0).toUpperCase()+nombre.slice(1));
+  if(!menu) return;
+  document.querySelectorAll(".historial-filtro-multiselect .servicios-multiselect.abierto").forEach(function(el){
+    if(el!==menu) el.classList.remove("abierto");
+  });
+  menu.classList.toggle("abierto");
+}
+
+function cerrarFiltrosHistorial(event){
+  if(event && event.target && event.target.closest(".historial-filtro-multiselect")) return;
+  document.querySelectorAll(".historial-filtro-multiselect .servicios-multiselect.abierto").forEach(function(el){el.classList.remove("abierto");});
+}
+
+document.addEventListener("click", cerrarFiltrosHistorial);
+
+function obtenerValoresUnicosHistorial(campo, registros){
+  return Array.from(new Set((registros||[]).map(function(r){return String(r[campo]||"").trim();}).filter(Boolean)))
+    .sort(function(a,b){return a.localeCompare(b,"es",{numeric:true,sensitivity:"base"});});
+}
+
+function renderOpcionesFiltroHistorial(nombre, opciones, seleccionActual){
+  const menu=document.getElementById("historial"+nombre.charAt(0).toUpperCase()+nombre.slice(1)+"Menu");
+  if(!menu) return [];
+  const seleccionValida=new Set((seleccionActual||[]).filter(function(v){return opciones.includes(v);}));
+  const etiquetaTodos=nombre==="tipo" ? "Todos" : "Todas las marcas";
+  if(!opciones.length){
+    menu.innerHTML='<div class="historial-filtro-sin-opciones">No hay opciones disponibles</div>';
+    actualizarTextoFiltroHistorial(nombre);
+    return [];
+  }
+  menu.innerHTML=`<label class="servicios-check-item servicios-multiselect-todos">\n    <input type="checkbox" data-historial-todos="${nombre}" ${seleccionValida.size===0?"checked":""} onchange="cambiarTodosFiltroHistorial('${nombre}',this.checked)">\n    <span>${etiquetaTodos}</span>\n  </label>` + opciones.map(function(op){
+    const checked=seleccionValida.has(op)?"checked":"";
+    return `<label class="servicios-check-item">\n      <input type="checkbox" data-historial-filter="${nombre}" value="${esc(op)}" ${checked} onchange="cambiarFiltroHistorial('${nombre}',this)">\n      <span>${esc(op)}</span>\n    </label>`;
+  }).join("");
+  actualizarTextoFiltroHistorial(nombre);
+  return Array.from(seleccionValida);
+}
+
+function actualizarFiltrosHistorialRelacionados(origen){
+  const tiposSeleccionados=obtenerSeleccionHistorial("tipo");
+  const marcasSeleccionadas=obtenerSeleccionHistorial("marca");
+  let registros=historialCatalogoFiltros||[];
+
+  // El filtro contrario solo muestra valores compatibles con la selección actual.
+  if(origen!=="tipo" && marcasSeleccionadas.length){
+    registros=registros.filter(function(r){return marcasSeleccionadas.includes(String(r.marca||"").trim());});
+  }
+  const tiposDisponibles=obtenerValoresUnicosHistorial("tipo",registros);
+
+  registros=historialCatalogoFiltros||[];
+  if(origen!=="marca" && tiposSeleccionados.length){
+    registros=registros.filter(function(r){return tiposSeleccionados.includes(String(r.tipo||"").trim());});
+  }
+  const marcasDisponibles=obtenerValoresUnicosHistorial("marca",registros);
+
+  const tiposFinales=renderOpcionesFiltroHistorial("tipo",tiposDisponibles,tiposSeleccionados);
+  const marcasFinales=renderOpcionesFiltroHistorial("marca",marcasDisponibles,marcasSeleccionadas);
+
+  // Si una selección dejó de ser compatible, se conserva solo lo que sigue disponible.
+  if(origen!=="tipo" && tiposFinales.length!==tiposSeleccionados.length){
+    actualizarFiltrosHistorialRelacionados("marca");
+    return;
+  }
+  if(origen!=="marca" && marcasFinales.length!==marcasSeleccionadas.length){
+    actualizarFiltrosHistorialRelacionados("tipo");
+  }
+}
+
+function cambiarTodosFiltroHistorial(nombre,checked){
+  const menu=document.getElementById("historial"+nombre.charAt(0).toUpperCase()+nombre.slice(1)+"Menu");
+  if(!menu) return;
+  if(checked){
+    menu.querySelectorAll('input[data-historial-filter="'+nombre+'"]').forEach(function(el){el.checked=false;});
+  }
+  actualizarFiltrosHistorialRelacionados(nombre);
+}
+
+function cambiarFiltroHistorial(nombre,checkbox){
+  const menu=document.getElementById("historial"+nombre.charAt(0).toUpperCase()+nombre.slice(1)+"Menu");
+  if(!menu) return;
+  const todos=menu.querySelector('input[data-historial-todos="'+nombre+'"]');
+  const seleccionados=menu.querySelectorAll('input[data-historial-filter="'+nombre+'"]:checked');
+  if(todos) todos.checked=seleccionados.length===0;
+  actualizarFiltrosHistorialRelacionados(nombre);
+}
+
+async function cargarFiltrosHistorialRelacionados(){
+  try{
+    const respuesta=await fetch(SUPABASE_URL + "/rest/v1/vehiculos_wankamotors?select=tipo,marca&estado=eq.Finalizado&limit=5000",{
+      headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY},cache:"no-store"
+    });
+    if(!respuesta.ok) throw new Error("Supabase HTTP "+respuesta.status);
+    historialCatalogoFiltros=await respuesta.json() || [];
+  }catch(error){
+    console.warn("No se pudo cargar el catálogo relacionado de Historial:",error);
+    historialCatalogoFiltros=[];
+  }
+  actualizarFiltrosHistorialRelacionados("inicio");
+}
+
 async function buscarHistorial(){
 
 const tbody = document.getElementById("tablaHistorial");
 const desde = document.getElementById("fechaDesde").value;
 const hasta = document.getElementById("fechaHasta").value;
 const buscar = document.getElementById("buscarHistorial").value.trim().toLowerCase();
-const tipoFiltro = document.getElementById("tipoHistorial").value;
-const marcaFiltro = document.getElementById("marcaHistorial").value;
+const tiposFiltro = obtenerSeleccionHistorial("tipo");
+const marcasFiltro = obtenerSeleccionHistorial("marca");
 
-if(!desde && !hasta && !buscar && !tipoFiltro && !marcaFiltro){
+if(!desde && !hasta && !buscar && !tiposFiltro.length && !marcasFiltro.length){
   mostrarMensajeHistorial("Ingrese una fecha o un dato de búsqueda antes de consultar.");
   return;
 }
@@ -5678,8 +5796,8 @@ const filtrados = (filas || []).map(function(r){
     textoGeneral.includes(buscar) ||
     placaNormalizada.includes(terminoPlacaNormalizado);
 
-  const cumpleTipo = !tipoFiltro || String(r.tipo || "").trim() === tipoFiltro;
-  const cumpleMarca = !marcaFiltro || String(r.marca || "").trim() === marcaFiltro;
+  const cumpleTipo = !tiposFiltro.length || tiposFiltro.includes(String(r.tipo || "").trim());
+  const cumpleMarca = !marcasFiltro.length || marcasFiltro.includes(String(r.marca || "").trim());
 
   // El filtro de fecha usa exactamente la misma fecha que se muestra
   // en la columna "Fecha": hora_inicio_lavado.
@@ -8825,6 +8943,8 @@ async function(){
 }
 );
 
+cargarFiltrosHistorialRelacionados();
+
 iniciarRealtimeSupabase();
 
 document.addEventListener("click", cerrarFiltroServiciosFacturacion);
@@ -8881,6 +9001,6 @@ programarCierreAutomatico1930();
 </script>
 
 
-<div class="version-app">V6.0 Dashboard</div>
+<div class="version-app">V6.1 Dashboard</div>
 </body>
 </html>
