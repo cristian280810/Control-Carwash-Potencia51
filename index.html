@@ -1130,10 +1130,14 @@ th.col-vin {
   background:#eef2f7;
 }
 .facturacion-submodulo-btn.activo{
-  background:#f8fafc;
-  color:#374151;
-  border-color:#d1d5db;
-  box-shadow:none;
+  background:#2563eb;
+  color:#fff;
+  border-color:#2563eb;
+  box-shadow:0 2px 6px rgba(37,99,235,.22);
+}
+.facturacion-submodulo-btn.activo:hover{
+  background:#1d4ed8;
+  border-color:#1d4ed8;
 }
 .facturas-emitidas-cabecera{
   display:flex;
@@ -1799,11 +1803,11 @@ onclick="limpiarFormulario()">
   <button type="button" class="btn btn-secondary" onclick="mostrarModuloAdministracion('administracion')">↩️ Volver a Administración</button>
 </div>
 <h2>🧾 Facturación</h2>
-<p>Controle los servicios realizados y marque los que ya fueron facturados.</p>
+<p>Selecciona los servicios que deseas facturar y emite la factura.</p>
 
 <div class="facturacion-submodulos">
   <button type="button" id="btnSubmoduloFacturar" class="facturacion-submodulo-btn activo" onclick="mostrarSubmoduloFacturacion('facturar')">
-    🧾 Facturar
+    📋 Por facturar
   </button>
   <button type="button" id="btnSubmoduloFacturasEmitidas" class="facturacion-submodulo-btn" onclick="mostrarSubmoduloFacturacion('emitidas')">
     📋 Facturas emitidas
@@ -1864,7 +1868,7 @@ onclick="limpiarFormulario()">
 <button class="btn btn-secondary btn-limpiar-filtros" onclick="limpiarFiltrosFacturacion()">🧹 Limpiar filtros</button>
 </div>
 <div class="actions">
-<button class="btn btn-success" onclick="abrirModalNuevaFactura()">🧾 Generar factura</button>
+<button class="btn btn-success" onclick="abrirModalNuevaFactura()">🧾 Emitir factura</button>
 <button class="btn btn-export" onclick="abrirModalExportar('facturacion')">📤 Exportar</button>
 
 </div>
@@ -2009,7 +2013,7 @@ onclick="limpiarFormulario()">
 <div id="modalNuevaFactura" class="modal">
   <div class="modal-content" style="max-width:700px;">
     <div class="modal-header">
-      <h2>🧾 Generar factura</h2>
+      <h2>🧾 Emitir factura</h2>
       <button type="button" class="close" onclick="cerrarModalNuevaFactura()">&times;</button>
     </div>
     <p>Los registros seleccionados quedarán asociados a esta factura.</p>
@@ -9001,6 +9005,6 @@ programarCierreAutomatico1930();
 </script>
 
 
-<div class="version-app">V6.1 Dashboard</div>
+<div class="version-app">V5.5 Dashboard</div>
 </body>
 </html>
