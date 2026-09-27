@@ -1006,6 +1006,12 @@ th.col-vin {
 .dashboard-card-detraccion .dashboard-detraccion-detalle{display:flex;flex-direction:column;gap:2px;margin-top:5px;font-size:11px;line-height:1.25}.dashboard-card-detraccion .dashboard-detraccion-detalle small{font-size:11px}.dashboard-card-detraccion .dashboard-detraccion-detalle b{font-weight:700}
 
 .factura-acciones-stack{display:flex;flex-direction:row;gap:6px;align-items:center;justify-content:center;flex-wrap:nowrap}.factura-acciones-stack small{font-size:11px;color:#6b7280}.factura-pago-estado.anulada{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}.btn-danger{background:#dc2626 !important;color:#fff !important;border:1px solid #dc2626 !important}.btn-danger:hover{background:#b91c1c !important;border-color:#b91c1c !important}.
+
+/* El placeholder de Nota de Crédito debe mostrarse en minúsculas; el valor ingresado se guarda en mayúsculas. */
+#anularFacturaNotaCredito::placeholder{
+  text-transform:none !important;
+  opacity:1;
+}
 </style>
 <style>
 .facturacion-estado.facturado-pagado{background:#dcfce7;color:#166534;}
@@ -2023,7 +2029,7 @@ onclick="limpiarFormulario()">
     <div class="form-grid">
       <div class="form-group full">
         <label>N.º de Nota de Crédito *</label>
-        <input id="anularFacturaNotaCredito" type="text" placeholder="Ingrese el número de nota de crédito" autocomplete="off" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase();">
+        <input id="anularFacturaNotaCredito" type="text" placeholder="Ingrese el número de nota de crédito" autocomplete="off" style="text-transform:none" oninput="this.value=this.value.toUpperCase();">
         <small style="display:block;margin-top:5px;color:#6b7280;">El número de Nota de Crédito se guardará en mayúsculas.</small>
       </div>
       <div class="form-group full">
@@ -9309,7 +9315,7 @@ programarCierreAutomatico1930();
 </script>
 
 
-<div class="version-app">V5.5 Dashboard</div>
+<div class="version-app">V5.9 Dashboard</div>
 </body>
 </html>
 
