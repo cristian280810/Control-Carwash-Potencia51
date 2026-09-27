@@ -939,7 +939,7 @@ th.col-vin {
 .factura-pago-estado.pendiente{background:#fef3c7;color:#92400e;}.factura-pago-estado.pago-parcial{background:#fef3c7;color:#92400e;}
 .factura-pago-estado.pagada{background:#dcfce7;color:#166534;}
 .factura-pago-estado.anulada{background:#fee2e2;color:#991b1b;}
-.factura-acciones{display:flex;gap:6px;flex-wrap:wrap;}
+.factura-acciones{display:flex;gap:6px;flex-wrap:nowrap;align-items:center;white-space:nowrap;}
 @media(max-width:900px){.facturacion-filtros,.facturacion-resumen{grid-template-columns:1fr 1fr;}}
 @media(max-width:600px){.facturacion-filtros,.facturacion-resumen{grid-template-columns:1fr;}}
 
@@ -1005,7 +1005,7 @@ th.col-vin {
 
 .dashboard-card-detraccion .dashboard-detraccion-detalle{display:flex;flex-direction:column;gap:2px;margin-top:5px;font-size:11px;line-height:1.25}.dashboard-card-detraccion .dashboard-detraccion-detalle small{font-size:11px}.dashboard-card-detraccion .dashboard-detraccion-detalle b{font-weight:700}
 
-.factura-acciones-stack{display:flex;flex-direction:column;gap:6px;align-items:center}.factura-acciones-stack small{font-size:11px;color:#6b7280}.factura-pago-estado.anulada{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}.btn-danger{background:#dc2626 !important;color:#fff !important;border:1px solid #dc2626 !important}.btn-danger:hover{background:#b91c1c !important}.
+.factura-acciones-stack{display:flex;flex-direction:row;gap:6px;align-items:center;justify-content:center;flex-wrap:nowrap}.factura-acciones-stack small{font-size:11px;color:#6b7280}.factura-pago-estado.anulada{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}.btn-danger{background:#dc2626 !important;color:#fff !important;border:1px solid #dc2626 !important}.btn-danger:hover{background:#b91c1c !important;border-color:#b91c1c !important}.
 </style>
 <style>
 .facturacion-estado.facturado-pagado{background:#dcfce7;color:#166534;}
@@ -1307,7 +1307,34 @@ th.col-vin {
   color:#64748b;
   font-size:13px;
 }
-</style></head>
+</style><style>
+/* Botones compactos de acciones en Facturas emitidas */
+.factura-acciones-stack{
+  display:flex !important;
+  flex-direction:row !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:5px !important;
+  flex-wrap:nowrap !important;
+  white-space:nowrap !important;
+}
+.factura-acciones-stack .btn{
+  min-width:0 !important;
+  width:auto !important;
+  height:34px !important;
+  padding:6px 9px !important;
+  font-size:11px !important;
+  line-height:1.1 !important;
+  border-radius:6px !important;
+}
+.factura-acciones-stack .btn.btn-success{
+  min-width:108px !important;
+}
+.factura-acciones-stack .btn.btn-danger{
+  min-width:108px !important;
+}
+</style>
+</head>
 
 <body>
 
@@ -2000,6 +2027,28 @@ onclick="limpiarFormulario()">
     <div class="actions" style="justify-content:flex-end;margin-top:18px;">
       <button type="button" class="btn btn-secondary" onclick="cerrarModalAnularFactura()">Cancelar</button>
       <button type="button" class="btn btn-danger" onclick="anularFactura()">🚫 Anular factura</button>
+    </div>
+  </div>
+</div>
+
+<!-- =====================================================
+     MODAL CONTRASEÑA PARA ANULAR FACTURA
+===================================================== -->
+<div id="modalPasswordAnularFactura" class="modal">
+  <div class="modal-content" style="max-width:430px;">
+    <div class="modal-header">
+      <h2>🔐 Confirmar anulación</h2>
+      <button type="button" class="close" onclick="cerrarPasswordAnularFactura()">&times;</button>
+    </div>
+    <p style="margin-top:15px;line-height:1.5;">Para anular la factura, ingrese nuevamente la <strong>contraseña de Administración</strong>.</p>
+    <div class="form-group" style="margin-top:15px;">
+      <label for="passwordAnularFactura">Contraseña</label>
+      <input id="passwordAnularFactura" type="password" autocomplete="off" placeholder="Ingrese la contraseña" onkeydown="if(event.key === 'Enter'){ validarPasswordAnularFactura(); }">
+    </div>
+    <div id="errorPasswordAnularFactura" style="display:none;margin-top:10px;padding:10px;border-radius:8px;background:#fee2e2;color:#991b1b;">Contraseña incorrecta.</div>
+    <div class="actions" style="justify-content:flex-end;margin-top:18px;">
+      <button type="button" class="btn btn-secondary" onclick="cerrarPasswordAnularFactura()">Cancelar</button>
+      <button type="button" class="btn btn-danger" onclick="validarPasswordAnularFactura()">🔐 Confirmar anulación</button>
     </div>
   </div>
 </div>
@@ -7677,7 +7726,7 @@ let facturasEmitidasPaginaActual=1;
 const FACTURAS_EMITIDAS_POR_PAGINA=40;
 
 async function cargarFacturasEmitidas(){
-  const respuesta=await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors?select=id,numero_factura,fecha_emision,fecha_vencimiento,cliente,subtotal_sin_igv,igv,total_con_igv,estado_pago,fecha_pago,observaciones,created_at,archivo_factura,aplica_detraccion,numero_nota_credito,archivo_nota_credito,motivo_anulacion,fecha_anulacion,porcentaje_detraccion,monto_detraccion,monto_pago_directo,fecha_pago_directo,fecha_detraccion,estado_detraccion&order=fecha_emision.desc,created_at.desc",{
+  const respuesta=await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors?select=id,numero_factura,fecha_emision,fecha_vencimiento,cliente,subtotal_sin_igv,igv,total_con_igv,estado_pago,estado_factura,fecha_pago,observaciones,created_at,archivo_factura,aplica_detraccion,numero_nota_credito,archivo_nota_credito,motivo_anulacion,fecha_anulacion,porcentaje_detraccion,monto_detraccion,monto_pago_directo,fecha_pago_directo,fecha_detraccion,estado_detraccion&order=fecha_emision.desc,created_at.desc",{
     method:"GET",headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY},cache:"no-store"
   });
   if(!respuesta.ok) throw new Error("No se pudieron cargar las facturas: "+await respuesta.text());
@@ -7688,6 +7737,8 @@ async function cargarFacturasEmitidas(){
 }
 
 function obtenerEstadoPagoFactura(f){
+  if(String(f.estado_factura||"").trim().toLowerCase()==="anulada") return "Anulada";
+  // Compatibilidad con registros antiguos que pudieran tener "Anulada" en estado_pago.
   if(String(f.estado_pago||"").trim().toLowerCase()==="anulada") return "Anulada";
   const total=Number(f.total_con_igv||0);
   const pagada=String(f.fecha_pago||'').trim() !== '' || String(f.fecha_pago_directo||'').trim() !== '';
@@ -7988,11 +8039,19 @@ function renderFacturasEmitidas(){
     const directo=Number(f.monto_pago_directo||0);
     const fechas=(f.fecha_pago_directo?"Directo: "+esc(formatearFechaFacturaEmitida(f.fecha_pago_directo)):"Directo: —")+"<br>"+(f.aplica_detraccion?(f.fecha_detraccion?"Detracción: "+esc(formatearFechaFacturaEmitida(f.fecha_detraccion)):"Detracción: —"):"Detracción: No aplica");
     const archivo=f.archivo_factura ? `<a class="foto-link" href="${esc(f.archivo_factura)}" target="_blank" rel="noopener">📎 Ver factura</a>` : "—";
-    const estadoPago=String(f.estado_pago||"").trim().toLowerCase();
-    const anulada=estadoPago==="anulada";
-    const accion=anulada
-      ? `<div class="factura-acciones-stack"><span class="factura-pago-estado anulada">Anulada</span>${f.numero_nota_credito?`<small>NC: ${esc(f.numero_nota_credito)}</small>`:""}</div>`
-      : `<div class="factura-acciones-stack"><button type="button" class="btn btn-success" onclick="abrirModalPagosFactura('${esc(f.id)}')">💰 Registrar pagos</button><button type="button" class="btn btn-danger" onclick="abrirModalAnularFactura('${esc(f.id)}')">🚫 Anular factura</button></div>`;
+    const estadoFactura=String(f.estado_factura||"").trim().toLowerCase();
+    const estadoPagoRaw=String(f.estado_pago||"").trim().toLowerCase();
+    const anulada=estadoFactura==="anulada" || estadoPagoRaw==="anulada" || estado==="Anulada";
+    const pagada=estado==="Pagada";
+    let accion="";
+    if(anulada){
+      accion=`<div class="factura-acciones-stack"><span class="factura-pago-estado anulada">Anulada</span>${f.numero_nota_credito?`<small>NC: ${esc(f.numero_nota_credito)}</small>`:""}</div>`;
+    }else if(pagada){
+      // Una factura ya pagada no puede volver a anularse ni registrar pagos.
+      accion=`<span class="factura-pago-estado pagada">Pagada</span>`;
+    }else{
+      accion=`<div class="factura-acciones-stack"><button type="button" class="btn btn-success" onclick="abrirModalPagosFactura('${esc(f.id)}')">💰 Registrar pagos</button><button type="button" class="btn btn-danger" onclick="abrirModalAnularFactura('${esc(f.id)}')">🚫 Anular factura</button></div>`;
+    }
     return `<tr><td>${inicio+i+1}</td><td><strong>${esc(f.numero_factura||"")}</strong></td><td>${esc(formatearFechaFacturaEmitida(f.fecha_emision)||"")}</td><td>${esc(formatearFechaFacturaEmitida(f.fecha_vencimiento)||"—")}</td><td>${esc(f.cliente||"")}</td><td>S/ ${Number(f.subtotal_sin_igv||0).toFixed(2)}</td><td>S/ ${Number(f.igv||0).toFixed(2)}</td><td><strong>S/ ${totalFactura.toFixed(2)}</strong></td><td><div class="facturacion-detraccion">${f.aplica_detraccion?"Sí – "+Number(f.porcentaje_detraccion||12).toFixed(0)+"%<br><strong>S/ "+det.toFixed(2)+"</strong>":"No aplica"}</div></td><td>S/ ${directo.toFixed(2)}</td><td><span class="factura-pago-estado ${clase}">${esc(estado)}</span></td><td class="facturacion-fechas-pago">${fechas}</td><td>${archivo}</td><td><div class="factura-acciones">${accion}</div></td></tr>`;
   }).join("");
   renderPaginacionFacturasEmitidas(total);
@@ -8122,10 +8181,20 @@ async function marcarFacturaPagada(id){
   abrirModalPagosFactura(id);
 }
 
+function puedeAnularFactura(factura){
+  if(!factura) return false;
+  const estado=obtenerEstadoPagoFactura(factura);
+  // Las facturas Pagadas no pueden anularse.
+  if(estado === "Pagada") return false;
+  // Una factura ya anulada tampoco puede volver a anularse.
+  const estadoFactura=String(factura.estado_factura||"").trim().toLowerCase();
+  if(estadoFactura === "anulada") return false;
+  return true;
+}
+
 async function abrirModalAnularFactura(id){
   const factura=facturasEmitidas.find(function(f){return String(f.id)===String(id);});
-  if(!factura) return;
-  if(String(factura.estado_pago||"").trim().toLowerCase()==="anulada") return;
+  if(!factura || !puedeAnularFactura(factura)) return;
   document.getElementById("anularFacturaId").value=factura.id;
   document.getElementById("anularFacturaNumero").textContent="Factura "+(factura.numero_factura||"");
   document.getElementById("anularFacturaNotaCredito").value=factura.numero_nota_credito||"";
@@ -8140,16 +8209,84 @@ function cerrarModalAnularFactura(){
   if(modal) modal.classList.remove("active");
 }
 
+let facturaAnulacionPendienteId = null;
+
+function abrirPasswordAnularFactura(){
+  const modal=document.getElementById("modalPasswordAnularFactura");
+  const input=document.getElementById("passwordAnularFactura");
+  const error=document.getElementById("errorPasswordAnularFactura");
+  if(error) error.style.display="none";
+  if(input) input.value="";
+  if(modal) modal.classList.add("active");
+  setTimeout(function(){ if(input) input.focus(); },100);
+}
+
+function cerrarPasswordAnularFactura(){
+  const modal=document.getElementById("modalPasswordAnularFactura");
+  const input=document.getElementById("passwordAnularFactura");
+  const error=document.getElementById("errorPasswordAnularFactura");
+  if(modal) modal.classList.remove("active");
+  if(input) input.value="";
+  if(error) error.style.display="none";
+  facturaAnulacionPendienteId=null;
+}
+
+function validarPasswordAnularFactura(){
+  const input=document.getElementById("passwordAnularFactura");
+  const error=document.getElementById("errorPasswordAnularFactura");
+  if(!input) return;
+
+  if(input.value === PASSWORD_ADMINISTRACION){
+    const id=facturaAnulacionPendienteId;
+    const modal=document.getElementById("modalPasswordAnularFactura");
+    if(modal) modal.classList.remove("active");
+    input.value="";
+    if(error) error.style.display="none";
+    facturaAnulacionPendienteId=null;
+    if(id) procesarAnulacionFactura(id);
+    return;
+  }
+
+  if(error) error.style.display="block";
+  input.select();
+}
+
 async function anularFactura(){
   const id=document.getElementById("anularFacturaId").value;
   const factura=facturasEmitidas.find(function(f){return String(f.id)===String(id);});
   if(!factura) return;
+  if(!puedeAnularFactura(factura)){
+    mostrarAlerta("Esta factura está Pagada y no puede ser anulada.","error");
+    cerrarModalAnularFactura();
+    return;
+  }
   const numeroNC=document.getElementById("anularFacturaNotaCredito").value.trim().toUpperCase();
   const motivo=document.getElementById("anularFacturaMotivo").value.trim();
-  const archivo=document.getElementById("anularFacturaArchivo").files[0] || null;
   if(!numeroNC){mostrarAlerta("Ingresa el número de Nota de Crédito.","error");return;}
   if(!motivo){mostrarAlerta("Ingresa el motivo de la anulación.","error");return;}
   if(!confirm("¿Confirmas la anulación de la factura "+(factura.numero_factura||"")+"?\n\nNota de Crédito: "+numeroNC)){return;}
+
+  // La contraseña de Administración se solicita nuevamente justo antes de ejecutar la anulación.
+  facturaAnulacionPendienteId=String(id);
+  abrirPasswordAnularFactura();
+}
+
+async function procesarAnulacionFactura(id){
+  const factura=facturasEmitidas.find(function(f){return String(f.id)===String(id);});
+  if(!factura) return;
+  if(!puedeAnularFactura(factura)){
+    mostrarAlerta("Esta factura está Pagada y no puede ser anulada.","error");
+    cerrarPasswordAnularFactura();
+    cerrarModalAnularFactura();
+    return;
+  }
+
+  const numeroNC=document.getElementById("anularFacturaNotaCredito").value.trim().toUpperCase();
+  const motivo=document.getElementById("anularFacturaMotivo").value.trim();
+  const archivoInput=document.getElementById("anularFacturaArchivo");
+  const archivo=archivoInput && archivoInput.files ? (archivoInput.files[0] || null) : null;
+  if(!numeroNC){mostrarAlerta("Ingresa el número de Nota de Crédito.","error");return;}
+  if(!motivo){mostrarAlerta("Ingresa el motivo de la anulación.","error");return;}
 
   const boton=document.querySelector('#modalAnularFactura button.btn-danger');
   if(boton){boton.disabled=true;boton.textContent="⏳ Anulando...";}
@@ -8173,7 +8310,7 @@ async function anularFactura(){
 
     const fechaAnulacion=new Intl.DateTimeFormat("en-CA",{timeZone:"America/Lima",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
     const body={
-      estado_pago:"Anulada",
+      estado_factura:"Anulada",
       numero_nota_credito:numeroNC,
       archivo_nota_credito:archivoNota,
       motivo_anulacion:motivo,
@@ -8208,6 +8345,7 @@ async function anularFactura(){
       if(!liberar.ok) throw new Error("La factura fue anulada, pero no se pudieron liberar los vehículos: "+await liberar.text());
     }
 
+    cerrarPasswordAnularFactura();
     cerrarModalAnularFactura();
     mostrarAlerta("Factura "+factura.numero_factura+" anulada correctamente.","success");
     await inicializarFacturacion();
@@ -8706,7 +8844,7 @@ let detallesFacturasDashboard = [];
 
 async function cargarFacturasDashboard(){
   const headers={"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY};
-  const respuesta = await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors?select=id,numero_factura,fecha_emision,total_con_igv,estado_pago,fecha_pago,aplica_detraccion,monto_detraccion,monto_pago_directo,fecha_pago_directo,fecha_detraccion,estado_detraccion&order=fecha_emision.asc,created_at.asc",{
+  const respuesta = await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors?select=id,numero_factura,fecha_emision,total_con_igv,estado_pago,estado_factura,fecha_pago,aplica_detraccion,monto_detraccion,monto_pago_directo,fecha_pago_directo,fecha_detraccion,estado_detraccion&order=fecha_emision.asc,created_at.asc",{
     method:"GET",headers:headers,cache:"no-store"
   });
   if(!respuesta.ok) throw new Error("No se pudieron cargar las facturas del Dashboard: "+await respuesta.text());
