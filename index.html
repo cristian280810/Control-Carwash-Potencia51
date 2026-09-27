@@ -1334,6 +1334,17 @@ th.col-vin {
   min-width:108px !important;
 }
 </style>
+
+<style>
+/* Facturas emitidas: evitar saltos de línea en fechas y montos */
+.facturas-emitidas-nowrap{
+  white-space:nowrap !important;
+  word-break:normal !important;
+  overflow-wrap:normal !important;
+}
+.facturas-emitidas-fecha{min-width:82px !important;}
+.facturas-emitidas-monto{min-width:72px !important;}
+</style>
 </head>
 
 <body>
@@ -2013,6 +2024,7 @@ onclick="limpiarFormulario()">
       <div class="form-group full">
         <label>N.º de Nota de Crédito *</label>
         <input id="anularFacturaNotaCredito" type="text" placeholder="Ingrese el número de nota de crédito" autocomplete="off" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase();">
+        <small style="display:block;margin-top:5px;color:#6b7280;">El número de Nota de Crédito se guardará en mayúsculas.</small>
       </div>
       <div class="form-group full">
         <label>Motivo de anulación *</label>
@@ -8052,7 +8064,7 @@ function renderFacturasEmitidas(){
     }else{
       accion=`<div class="factura-acciones-stack"><button type="button" class="btn btn-success" onclick="abrirModalPagosFactura('${esc(f.id)}')">💰 Registrar pagos</button><button type="button" class="btn btn-danger" onclick="abrirModalAnularFactura('${esc(f.id)}')">🚫 Anular factura</button></div>`;
     }
-    return `<tr><td>${inicio+i+1}</td><td><strong>${esc(f.numero_factura||"")}</strong></td><td>${esc(formatearFechaFacturaEmitida(f.fecha_emision)||"")}</td><td>${esc(formatearFechaFacturaEmitida(f.fecha_vencimiento)||"—")}</td><td>${esc(f.cliente||"")}</td><td>S/ ${Number(f.subtotal_sin_igv||0).toFixed(2)}</td><td>S/ ${Number(f.igv||0).toFixed(2)}</td><td><strong>S/ ${totalFactura.toFixed(2)}</strong></td><td><div class="facturacion-detraccion">${f.aplica_detraccion?"Sí – "+Number(f.porcentaje_detraccion||12).toFixed(0)+"%<br><strong>S/ "+det.toFixed(2)+"</strong>":"No aplica"}</div></td><td>S/ ${directo.toFixed(2)}</td><td><span class="factura-pago-estado ${clase}">${esc(estado)}</span></td><td class="facturacion-fechas-pago">${fechas}</td><td>${archivo}</td><td><div class="factura-acciones">${accion}</div></td></tr>`;
+    return `<tr><td>${inicio+i+1}</td><td><strong>${esc(f.numero_factura||"")}</strong></td><td class="facturas-emitidas-nowrap facturas-emitidas-fecha">${esc(formatearFechaFacturaEmitida(f.fecha_emision)||"")}</td><td class="facturas-emitidas-nowrap facturas-emitidas-fecha">${esc(formatearFechaFacturaEmitida(f.fecha_vencimiento)||"—")}</td><td>${esc(f.cliente||"")}</td><td class="facturas-emitidas-nowrap facturas-emitidas-monto">S/ ${Number(f.subtotal_sin_igv||0).toFixed(2)}</td><td class="facturas-emitidas-nowrap facturas-emitidas-monto">S/ ${Number(f.igv||0).toFixed(2)}</td><td class="facturas-emitidas-nowrap facturas-emitidas-monto"><strong>S/ ${totalFactura.toFixed(2)}</strong></td><td><div class="facturacion-detraccion">${f.aplica_detraccion?"Sí – "+Number(f.porcentaje_detraccion||12).toFixed(0)+"%<br><strong class="facturas-emitidas-nowrap">S/ "+det.toFixed(2)+"</strong>":"No aplica"}</div></td><td class="facturas-emitidas-nowrap facturas-emitidas-monto">S/ ${directo.toFixed(2)}</td><td><span class="factura-pago-estado ${clase}">${esc(estado)}</span></td><td class="facturacion-fechas-pago">${fechas}</td><td>${archivo}</td><td><div class="factura-acciones">${accion}</div></td></tr>`;
   }).join("");
   renderPaginacionFacturasEmitidas(total);
 }
@@ -9297,6 +9309,6 @@ programarCierreAutomatico1930();
 </script>
 
 
-<div class="version-app">V5.5 Dashboard</div>
+<div class="version-app">V5.7 Dashboard</div>
 </body>
 </html>
