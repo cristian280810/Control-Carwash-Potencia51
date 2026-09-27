@@ -7146,21 +7146,23 @@ function actualizarEstadoFiltroFacturacion(){
 function estaFacturadoFacturacion(r){
   if(!r) return false;
 
-  // El campo facturado es la fuente principal.
+  // El campo facturado es la fuente de verdad para liberar/re-facturar.
+  // Si una factura fue anulada, el detalle de la factura puede seguir
+  // existiendo como historial; eso NO debe volver a marcar el vehículo
+  // como facturado.
   const valor=r.facturado;
   if(valor === true || valor === 1) return true;
+  if(valor === false || valor === 0) return false;
+
   if(typeof valor === "string") {
     const texto=valor.trim().toLowerCase();
     if(["true","1","si","sí","yes","facturado"].includes(texto)) return true;
-    if(["false","0","no","null","undefined",""].includes(texto)) {
-      // Si el campo quedó desactualizado, la relación con una factura
-      // confirma que el vehículo ya fue facturado.
-      return !!obtenerFacturaDashboardPorVehiculo(r.id);
-    }
+    if(["false","0","no","null","undefined",""].includes(texto)) return false;
   }
-  if(valor === false || valor === 0 || valor == null){
-    return !!obtenerFacturaDashboardPorVehiculo(r.id);
-  }
+
+  // Solo para registros antiguos donde el campo facturado venga realmente
+  // vacío/null, usamos la relación como respaldo.
+  if(valor == null) return !!obtenerFacturaDashboardPorVehiculo(r.id);
   return false;
 }
 
@@ -9315,7 +9317,6 @@ programarCierreAutomatico1930();
 </script>
 
 
-<div class="version-app">V5.9 Dashboard</div>
+<div class="version-app">V5.5 Dashboard</div>
 </body>
 </html>
-
