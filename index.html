@@ -619,10 +619,10 @@ th{
    DASHBOARD
 ===================================================== */
 .dashboard-filtros{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
-.dashboard-resumen{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:15px 0;}
+.dashboard-resumen{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:15px 0;}
 .dashboard-card{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;}
 .dashboard-card .dashboard-label{font-size:13px;color:#6b7280;font-weight:700;}
-.dashboard-card strong{display:block;font-size:25px;margin-top:6px;color:#111827;}
+.dashboard-card strong{display:block;font-size:25px;margin-top:6px;color:#111827;} .dashboard-cobrar-detalle{display:flex;flex-direction:column;gap:2px;margin-top:5px;} .dashboard-cobrar-detalle small{font-size:10px;color:#6b7280;}
 .dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
 .dashboard-panel{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;}
 .dashboard-panel h3{margin-top:0;}
@@ -657,6 +657,7 @@ th{
 .dashboard-bar-row{display:grid;grid-template-columns:140px 1fr 70px;gap:10px;align-items:center;margin:10px 0;font-size:13px;}
 .dashboard-bar{height:14px;background:#e5e7eb;border-radius:99px;overflow:hidden;}
 .dashboard-bar > span{display:block;height:100%;background:#1d4ed8;border-radius:99px;}
+.dashboard-clickable{cursor:pointer;transition:transform .12s,opacity .12s,box-shadow .12s;} .dashboard-clickable:hover{opacity:.86;transform:translateY(-1px);} .dashboard-clickable.activo{box-shadow:0 0 0 2px rgba(29,78,216,.25);border-radius:6px;} .dashboard-bar-row.dashboard-clickable{padding:4px 5px;margin:6px 0;border-radius:7px;} .dashboard-leyenda-item.dashboard-clickable{padding:5px 6px;border-radius:7px;} .dashboard-mes-col.dashboard-clickable{padding:4px 6px;border-radius:8px;} .dashboard-fact-col.dashboard-clickable{padding:4px 6px;border-radius:8px;}
 .dashboard-table{width:100%;min-width:0;}
 .dashboard-table th,.dashboard-table td{padding:8px;}
 .dashboard-vacio{text-align:center;color:#6b7280;padding:25px;}
@@ -8947,6 +8948,40 @@ function actualizarDashboardAutomaticamente(){
   }, 120);
 }
 
+let dashboardMesSeleccionado = '';
+
+function aplicarFiltroGraficoDashboard(nombre, valor){
+  const menu=document.getElementById('dashboard'+nombre.charAt(0).toUpperCase()+nombre.slice(1)+'Menu');
+  if(!menu) return;
+  let valorReal=String(valor||'');
+  try{ valorReal=decodeURIComponent(valorReal); }catch(e){}
+  const input=Array.from(menu.querySelectorAll('input[data-dashboard-filter="'+nombre+'"]')).find(function(el){return String(el.value||'').trim()===valorReal.trim();});
+  if(!input || input.disabled) return;
+  input.checked=!input.checked;
+  actualizarTextoFiltroDashboard(nombre);
+  actualizarResumenFiltrosDashboard();
+  actualizarDashboardAutomaticamente();
+}
+
+function aplicarMesGraficoDashboard(clave){
+  const desde=document.getElementById('dashboardDesde');
+  const hasta=document.getElementById('dashboardHasta');
+  if(!desde || !hasta || !clave) return;
+  if(dashboardMesSeleccionado===clave && desde.value===clave+'-01'){
+    dashboardMesSeleccionado='';
+    desde.value='';
+    hasta.value='';
+  }else{
+    const partes=clave.split('-').map(Number);
+    const ultimoDia=new Date(partes[0],partes[1],0).getDate();
+    dashboardMesSeleccionado=clave;
+    desde.value=clave+'-01';
+    hasta.value=clave+'-'+String(ultimoDia).padStart(2,'0');
+  }
+  actualizarResumenFiltrosDashboard();
+  actualizarDashboardAutomaticamente();
+}
+
 function toggleFiltroDashboard(nombre,event){
   if(event) event.stopPropagation();
   const cont=document.getElementById('dashboard'+nombre.charAt(0).toUpperCase()+nombre.slice(1));
@@ -9107,7 +9142,7 @@ async function cargarFacturasDashboard(){
 
   // Relación factura -> vehículo para poder mostrar el estado real de pago
   // en cada registro del detalle del Dashboard.
-  const respuestaDetalle = await fetch(SUPABASE_URL+"/rest/v1/factura_detalle_wankamotors?select=factura_id,vehiculo_id,servicio",{
+  const respuestaDetalle = await fetch(SUPABASE_URL+"/rest/v1/factura_detalle_wankamotors?select=factura_id,vehiculo_id,servicio,precio_sin_igv,precio_con_igv",{
     method:"GET",headers:headers,cache:"no-store"
   });
   if(!respuestaDetalle.ok) throw new Error("No se pudieron cargar los detalles de las facturas: "+await respuestaDetalle.text());
@@ -9153,6 +9188,72 @@ function montoDirectoDashboard(f){
 
 function detraccionDepositadaDashboard(f){
   return String(f.estado_detraccion||"").toLowerCase()==="depositada" ? Number(f.monto_detraccion||0) : 0;
+}
+
+function saldoPendienteFacturaDashboard(f){
+  if(!f) return 0;
+  if(String(f.estado_factura||"Vigente").toLowerCase()==='anulada') return 0;
+  const total=Number(f.total_con_igv||0);
+  if(!total) return 0;
+  const estado=String(f.estado_pago||"").trim().toLowerCase();
+  if(estado==='pagada' || estado==='pagado') return 0;
+  const directo=Math.max(0,Number(f.monto_pago_directo||0));
+  const detraccionPagada=detraccionDepositadaDashboard(f);
+  return Math.max(0,total-directo-detraccionPagada);
+}
+
+function calcularDineroPorCobrarDashboard(lista){
+  const seleccionados=new Set((lista||[]).map(function(r){return String(r.id);}));
+  let noFacturado=0;
+  let facturadoPorCobrar=0;
+  const facturasContadas=new Set();
+
+  (lista||[]).forEach(function(r){
+    const precio=Number(r.precio_con_igv);
+    const totalServicio=Number.isFinite(precio) && precio>0 ? precio : Number(r.precio_sin_igv||0)*1.18;
+    if(!r.facturado){
+      noFacturado += totalServicio;
+      return;
+    }
+
+    const detalle=(detallesFacturasDashboard||[]).find(function(d){return String(d.vehiculo_id)===String(r.id);});
+    if(!detalle) return;
+    const factura=(facturasDashboard||[]).find(function(f){return String(f.id)===String(detalle.factura_id);});
+    if(!factura || facturasContadas.has(String(factura.id))) return;
+    if(String(factura.estado_factura||"Vigente").toLowerCase()==='anulada') return;
+
+    // Distribuye el saldo de la factura según las líneas visibles/seleccionadas,
+    // evitando contar una factura completa cuando el usuario filtra por servicio o marca.
+    const detallesFactura=(detallesFacturasDashboard||[]).filter(function(d){return String(d.factura_id)===String(factura.id);});
+    const totalLineas=detallesFactura.reduce(function(a,d){
+      const pc=Number(d.precio_con_igv);
+      return a + (Number.isFinite(pc)&&pc>0 ? pc : Number(d.precio_sin_igv||0)*1.18);
+    },0);
+    const lineasSeleccionadas=detallesFactura.filter(function(d){return seleccionados.has(String(d.vehiculo_id));});
+    const importeSeleccionado=lineasSeleccionadas.reduce(function(a,d){
+      const pc=Number(d.precio_con_igv);
+      return a + (Number.isFinite(pc)&&pc>0 ? pc : Number(d.precio_sin_igv||0)*1.18);
+    },0);
+    const saldo=saldoPendienteFacturaDashboard(factura);
+    if(totalLineas>0) facturadoPorCobrar += saldo*(importeSeleccionado/totalLineas);
+    else facturadoPorCobrar += saldo;
+    facturasContadas.add(String(factura.id));
+  });
+
+  // Las facturas adicionales no tienen vehículos asociados. Se incluyen cuando no hay
+  // filtros de marca/servicio/tipo activos y respetan el rango de fecha del Dashboard.
+  const hayFiltrosVehiculo=obtenerSeleccionDashboard('marca').length || obtenerSeleccionDashboard('servicio').length || obtenerSeleccionDashboard('tipo').length;
+  const desde=document.getElementById('dashboardDesde')?.value||'';
+  const hasta=document.getElementById('dashboardHasta')?.value||'';
+  if(!hayFiltrosVehiculo){
+    (filtrarFacturasDashboard(desde,hasta)||[]).forEach(function(f){
+      if(facturasContadas.has(String(f.id))) return;
+      if((detallesFacturasDashboard||[]).some(function(d){return String(d.factura_id)===String(f.id);})) return;
+      facturadoPorCobrar += saldoPendienteFacturaDashboard(f);
+    });
+  }
+
+  return {noFacturado:noFacturado,facturado:facturadoPorCobrar,total:noFacturado+facturadoPorCobrar};
 }
 
 
@@ -9227,14 +9328,16 @@ function renderGraficasDashboard(lista){
     const hN=(d.Nuevo/maxMes*180).toFixed(1);
     const hS=(d.Servicio/maxMes*180).toFixed(1);
     const hO=(d.Otro/maxMes*180).toFixed(1);
-    return `<div class="dashboard-mes-col"><div class="dashboard-mes-valores"><div class="dashboard-mes-bar" style="height:${hN}px"><span>${d.Nuevo}</span></div><div class="dashboard-mes-bar servicio" style="height:${hS}px"><span>${d.Servicio}</span></div>${d.Otro ? `<div class="dashboard-mes-bar" style="height:${hO}px;opacity:.45"><span>${d.Otro}</span></div>` : ''}</div><div class="dashboard-mes-total">Total: ${d.Nuevo + d.Servicio}</div><div class="dashboard-mes-label">${esc(nombreMesDashboard(k))}</div></div>`;
+    const activo=dashboardMesSeleccionado===k ? ' activo' : '';
+    return `<div class="dashboard-mes-col dashboard-clickable${activo}" title="Clic para filtrar por ${esc(nombreMesDashboard(k))}" onclick="aplicarMesGraficoDashboard('${k}')"><div class="dashboard-mes-valores"><div class="dashboard-mes-bar" style="height:${hN}px"><span>${d.Nuevo}</span></div><div class="dashboard-mes-bar servicio" style="height:${hS}px"><span>${d.Servicio}</span></div>${d.Otro ? `<div class="dashboard-mes-bar" style="height:${hO}px;opacity:.45"><span>${d.Otro}</span></div>` : ''}</div><div class="dashboard-mes-total">Total: ${d.Nuevo + d.Servicio}</div><div class="dashboard-mes-label">${esc(nombreMesDashboard(k))}</div></div>`;
   }).join('');
 
   const desde=document.getElementById("dashboardDesde")?.value||"";
   const hasta=document.getElementById("dashboardHasta")?.value||"";
-  // La facturación mensual es un indicador global y NO depende de los filtros
-  // de vehículos (fecha, marca, servicio o tipo) del Dashboard.
-  const facturas=Array.isArray(facturasDashboard) ? facturasDashboard : [];
+  // La facturación mensual es global respecto a marca, servicio y tipo,
+  // pero sí respeta el rango de fechas seleccionado en el Dashboard.
+  const tiposSeleccionadosDashboard=obtenerSeleccionDashboard('tipo');
+  const facturas=filtrarFacturasDashboard(desde,hasta);
   const porMesFacturacion={};
   facturas.forEach(function(f){
     const clave=String(f.fecha_emision||"").slice(0,7);
@@ -9247,7 +9350,8 @@ function renderGraficasDashboard(lista){
   const barrasFact=clavesFact.map(function(k){
     const totalMes=porMesFacturacion[k];
     const altura=Math.max(12,totalMes/maxFact*180);
-    return `<div class="dashboard-fact-col" style="min-width:105px;flex:1;max-width:180px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:235px">
+    const activo=dashboardMesSeleccionado===k ? ' activo' : '';
+    return `<div class="dashboard-fact-col dashboard-clickable${activo}" title="Clic para filtrar por ${esc(nombreMesDashboard(k))}" onclick="aplicarMesGraficoDashboard('${k}')" style="min-width:105px;flex:1;max-width:180px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:235px">
       <div style="font-size:12px;font-weight:700;margin-bottom:7px;white-space:nowrap">${dineroDashboard(totalMes)}</div>
       <div style="height:180px;width:54px;display:flex;align-items:flex-end;justify-content:center">
         <div style="height:${altura.toFixed(1)}px;width:54px;border-radius:7px 7px 2px 2px;background:#1d4ed8;box-shadow:0 2px 5px rgba(0,0,0,.12)"></div>
@@ -9263,9 +9367,9 @@ function renderGraficasDashboard(lista){
       <div class="dashboard-donut-wrap">
         <div class="dashboard-donut" style="background:${gradiente}"><div class="dashboard-donut-centro">${totalTipos}<small>registros</small></div></div>
         <div class="dashboard-leyenda">
-          <div class="dashboard-leyenda-item"><span class="dashboard-leyenda-color"></span><span>Nuevos</span><strong>${nuevos} (${pctNuevo.toFixed(1)}%)</strong></div>
-          <div class="dashboard-leyenda-item"><span class="dashboard-leyenda-color servicio"></span><span>Servicios</span><strong>${servicios} (${pctServicio.toFixed(1)}%)</strong></div>
-          ${otros ? `<div class="dashboard-leyenda-item"><span class="dashboard-leyenda-color" style="opacity:.45"></span><span>Otros</span><strong>${otros} (${(otros/totalTipos*100).toFixed(1)}%)</strong></div>` : ''}
+          <div class="dashboard-leyenda-item dashboard-clickable${tiposSeleccionadosDashboard.indexOf('Nuevo')>=0?' activo':''}" title="Clic para filtrar por Nuevo" onclick="aplicarFiltroGraficoDashboard('tipo','Nuevo')"><span class="dashboard-leyenda-color"></span><span>Nuevos</span><strong>${nuevos} (${pctNuevo.toFixed(1)}%)</strong></div>
+          <div class="dashboard-leyenda-item dashboard-clickable${tiposSeleccionadosDashboard.indexOf('Servicio')>=0?' activo':''}" title="Clic para filtrar por Servicio" onclick="aplicarFiltroGraficoDashboard('tipo','Servicio')"><span class="dashboard-leyenda-color servicio"></span><span>Servicios</span><strong>${servicios} (${pctServicio.toFixed(1)}%)</strong></div>
+          ${otros ? `<div class="dashboard-leyenda-item dashboard-clickable" title="Clic para filtrar por Otros" onclick="aplicarFiltroGraficoDashboard('tipo','Otro')"><span class="dashboard-leyenda-color" style="opacity:.45"></span><span>Otros</span><strong>${otros} (${(otros/totalTipos*100).toFixed(1)}%)</strong></div>` : ''}
         </div>
       </div>
     </div>
@@ -9348,6 +9452,8 @@ function renderDashboard(lista){
     }
   });
 
+  const dineroPorCobrar=calcularDineroPorCobrarDashboard(lista);
+
   const porMarca = {};
   const porServicio = {};
   lista.forEach(r=>{
@@ -9356,7 +9462,9 @@ function renderDashboard(lista){
     porMarca[m]=(porMarca[m]||0)+1;
     porServicio[sv]=(porServicio[sv]||0)+1;
   });
-  const barras = obj=>{const arr=Object.entries(obj).sort((a,b)=>b[1]-a[1]);const max=arr.length?arr[0][1]:1;return arr.slice(0,10).map(([k,v])=>`<div class="dashboard-bar-row"><span>${esc(k)}</span><div class="dashboard-bar"><span style="width:${(v/max*100).toFixed(1)}%"></span></div><strong>${v}</strong></div>`).join("") || '<div class="dashboard-vacio">Sin datos</div>';};
+  const marcasSeleccionadasDashboard=obtenerSeleccionDashboard('marca');
+  const serviciosSeleccionadosDashboard=obtenerSeleccionDashboard('servicio');
+  const barras = (obj,nombreFiltro,seleccionados)=>{const arr=Object.entries(obj).sort((a,b)=>b[1]-a[1]);const max=arr.length?arr[0][1]:1;return arr.slice(0,10).map(([k,v])=>{const activo=seleccionados.indexOf(k)>=0?' activo':'';const valorGrafico=encodeURIComponent(k);return `<div class="dashboard-bar-row dashboard-clickable${activo}" title="Clic para filtrar por ${esc(k)}" onclick="aplicarFiltroGraficoDashboard('${nombreFiltro}','${valorGrafico}')"><span>${esc(k)}</span><div class="dashboard-bar"><span style="width:${(v/max*100).toFixed(1)}%"></span></div><strong>${v}</strong></div>`;}).join("") || '<div class="dashboard-vacio">Sin datos</div>';};
 
   cont.innerHTML = `
   <div class="dashboard-resumen">
@@ -9365,6 +9473,7 @@ function renderDashboard(lista){
     <div class="dashboard-card"><span class="dashboard-label">Pendientes</span><strong>${pendientes}</strong></div>
     <div class="dashboard-card"><span class="dashboard-label">Subtotal sin IGV</span><strong>${dineroDashboard(subtotal)}</strong></div>
     <div class="dashboard-card"><span class="dashboard-label">Total con IGV</span><strong>${dineroDashboard(totalConIgv)}</strong></div>
+    <div class="dashboard-card dashboard-card-cobrar"><span class="dashboard-label">💰 Dinero por cobrar</span><strong>${dineroDashboard(dineroPorCobrar.total)}</strong><div class="dashboard-cobrar-detalle"><small>Facturado: <b>${dineroDashboard(dineroPorCobrar.facturado)}</b></small><small>No facturado: <b>${dineroDashboard(dineroPorCobrar.noFacturado)}</b></small></div></div>
     <div class="dashboard-card"><span class="dashboard-label">Promedio vehículos/día</span><strong>${promedioDiario.toFixed(1)}</strong><small>${diasPeriodo} días considerados</small></div>
     <div class="dashboard-card dashboard-card-detraccion">
       <span class="dashboard-label">Detracción total</span>
@@ -9377,8 +9486,8 @@ function renderDashboard(lista){
   </div>
 
   <div class="dashboard-grid">
-    <div class="dashboard-panel"><h3>🚗 Servicios por marca</h3>${barras(porMarca)}</div>
-    <div class="dashboard-panel"><h3>🔧 Servicios realizados</h3>${barras(porServicio)}</div>
+    <div class="dashboard-panel"><h3>🚗 Servicios por marca</h3>${barras(porMarca,'marca',marcasSeleccionadasDashboard)}</div>
+    <div class="dashboard-panel"><h3>🔧 Servicios realizados</h3>${barras(porServicio,'servicio',serviciosSeleccionadosDashboard)}</div>
   </div>
 
   ${renderGraficasDashboard(lista)}
@@ -9402,6 +9511,7 @@ function irPaginaDashboard(p){dashboardPaginaActual=Math.max(1,p); const desde=d
 
 function limpiarDashboard(){
   dashboardPaginaActual=1;
+  dashboardMesSeleccionado='';
   document.getElementById("dashboardDesde").value="";
   document.getElementById("dashboardHasta").value="";
   ['marca','servicio','tipo'].forEach(function(nombre){
