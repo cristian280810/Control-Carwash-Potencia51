@@ -7736,7 +7736,6 @@ async function guardarFacturaAdicional(){
         igv:igv,
         total_con_igv:total,
         estado_pago:"Pendiente",
-        tipo_factura:"Servicio",
         fecha_pago:null,
         observaciones:observaciones || null,
         aplica_detraccion:detraccion.aplica,
@@ -7935,11 +7934,25 @@ let facturasEmitidasPaginaActual=1;
 const FACTURAS_EMITIDAS_POR_PAGINA=40;
 
 async function cargarFacturasEmitidas(){
-  const respuesta=await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors?select=id,numero_factura,fecha_emision,fecha_vencimiento,cliente,subtotal_sin_igv,igv,total_con_igv,estado_pago,estado_factura,tipo_factura,concepto_adicional,fecha_pago,observaciones,created_at,archivo_factura,aplica_detraccion,numero_nota_credito,archivo_nota_credito,motivo_anulacion,fecha_anulacion,porcentaje_detraccion,monto_detraccion,monto_pago_directo,fecha_pago_directo,fecha_detraccion,estado_detraccion&order=fecha_emision.desc,created_at.desc",{
-    method:"GET",headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY},cache:"no-store"
-  });
+  const headers={"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY};
+  const selectCompleto="id,numero_factura,fecha_emision,fecha_vencimiento,cliente,subtotal_sin_igv,igv,total_con_igv,estado_pago,estado_factura,tipo_factura,concepto_adicional,fecha_pago,observaciones,created_at,archivo_factura,aplica_detraccion,numero_nota_credito,archivo_nota_credito,motivo_anulacion,fecha_anulacion,porcentaje_detraccion,monto_detraccion,monto_pago_directo,fecha_pago_directo,fecha_detraccion,estado_detraccion";
+  const selectCompatible="id,numero_factura,fecha_emision,fecha_vencimiento,cliente,subtotal_sin_igv,igv,total_con_igv,estado_pago,estado_factura,fecha_pago,observaciones,created_at,archivo_factura,aplica_detraccion,numero_nota_credito,archivo_nota_credito,motivo_anulacion,fecha_anulacion,porcentaje_detraccion,monto_detraccion,monto_pago_directo,fecha_pago_directo,fecha_detraccion,estado_detraccion";
+  let respuesta=await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors?select="+encodeURIComponent(selectCompleto)+"&order=fecha_emision.desc,created_at.desc",{method:"GET",headers,cache:"no-store"});
+  let modoCompatible=false;
+  if(!respuesta.ok){
+    const detalle=await respuesta.text();
+    if(/column .*tipo_factura.* does not exist|column .*concepto_adicional.* does not exist/i.test(detalle)){
+      respuesta=await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors?select="+encodeURIComponent(selectCompatible)+"&order=fecha_emision.desc,created_at.desc",{method:"GET",headers,cache:"no-store"});
+      modoCompatible=true;
+    }else{
+      throw new Error("No se pudieron cargar las facturas: "+detalle);
+    }
+  }
   if(!respuesta.ok) throw new Error("No se pudieron cargar las facturas: "+await respuesta.text());
   facturasEmitidas=await respuesta.json();
+  if(modoCompatible){
+    facturasEmitidas=facturasEmitidas.map(f=>({...f,tipo_factura:String(f.tipo_factura||"Servicio"),concepto_adicional:f.concepto_adicional||null}));
+  }
   cargarOpcionesFiltroFacturasEmitidas();
   actualizarEstadoFiltroFacturaEmitida();
   renderFacturasEmitidas();
@@ -8687,7 +8700,7 @@ async function generarReporteClienteExcel(){
 
     const detalleUrl =
       SUPABASE_URL +
-      "/rest/v1/factura_detalle_wankamotors?select=id,factura_id,vehiculo_id,precio_sin_igv,precio_con_igv&factura_id=in.(" +
+      "/rest/v1/factura_detalle_wankamotors?select=id,factura_id,vehiculo_id,servicio,precio_sin_igv,precio_con_igv&factura_id=in.(" +
       ids.map(encodeURIComponent).join(",") + ")";
 
     const respDetalle = await fetch(detalleUrl,{
@@ -8753,6 +8766,7 @@ async function generarReporteClienteExcel(){
         v.marca || "",
         v.vin || "",
         v.placa || "",
+        d.servicio || v.servicio || "",
         f.numero_factura || "",
         Number(Number(d.precio_sin_igv || 0).toFixed(2)),
         Number(Number(d.precio_con_igv || 0).toFixed(2))
@@ -8780,6 +8794,7 @@ async function generarReporteClienteExcel(){
       {header:"Marca", key:"marca", width:16},
       {header:"VIN", key:"vin", width:21},
       {header:"Placa", key:"placa", width:13},
+      {header:"Servicio", key:"servicio", width:22},
       {header:"N° Factura", key:"factura", width:16},
       {header:"Precio Sin IGV", key:"sinIgv", width:18},
       {header:"Precio Con IGV", key:"conIgv", width:18}
@@ -8793,9 +8808,10 @@ async function generarReporteClienteExcel(){
         marca:fila[3],
         vin:fila[4],
         placa:fila[5],
-        factura:fila[6],
-        sinIgv:fila[7],
-        conIgv:fila[8]
+        servicio:fila[6],
+        factura:fila[7],
+        sinIgv:fila[8],
+        conIgv:fila[9]
       });
     });
 
@@ -8844,14 +8860,14 @@ async function generarReporteClienteExcel(){
       });
 
       row.getCell(1).numFmt = "dd/mm/yyyy";
-      row.getCell(8).numFmt = '"S/"#,##0.00';
       row.getCell(9).numFmt = '"S/"#,##0.00';
+      row.getCell(10).numFmt = '"S/"#,##0.00';
 
-      row.getCell(8).alignment = {
+      row.getCell(9).alignment = {
         horizontal:"right",
         vertical:"middle"
       };
-      row.getCell(9).alignment = {
+      row.getCell(10).alignment = {
         horizontal:"right",
         vertical:"middle"
       };
@@ -8860,7 +8876,7 @@ async function generarReporteClienteExcel(){
     // Filtros en todas las columnas.
     worksheet.autoFilter = {
       from:"A1",
-      to:"I" + Math.max(1, datos.length + 1)
+      to:"J" + Math.max(1, datos.length + 1)
     };
 
     const buffer = await workbook.xlsx.writeBuffer();
