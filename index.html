@@ -992,6 +992,11 @@ th.col-vin {
 .reporte-cliente-info span{font-size:12px;color:#6b7280;}
 .reporte-cliente-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;}
 .reporte-cliente-toolbar span{margin-left:auto;font-size:13px;font-weight:600;color:#374151;}
+.reporte-cliente-busqueda{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;margin:10px 0 6px;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;background:#fff;}
+.reporte-cliente-busqueda span{font-size:15px;line-height:1;}
+.reporte-cliente-busqueda input{width:100%;border:0;outline:0;background:transparent;font-size:14px;color:#111827;}
+.reporte-cliente-busqueda input::placeholder{color:#6b7280;}
+.reporte-cliente-orden{font-size:12px;color:#6b7280;margin:0 0 10px 2px;}
 
 @media(max-width:600px){.facturacion-pagos-grid{grid-template-columns:1fr;}}
 
@@ -2082,6 +2087,11 @@ onclick="limpiarFormulario()">
       <button type="button" class="close" onclick="cerrarModalReporteCliente()">&times;</button>
     </div>
     <p>Selecciona una o varias facturas emitidas. El reporte incluirá todos los registros asociados a las facturas seleccionadas.</p><div style="margin:10px 0 14px;padding:10px 12px;border:1px solid #dbe4f0;border-radius:8px;background:#f7f9fc;color:#4b5563;font-size:13px;"><strong>📅 Fecha:</strong> corresponde a la <strong>fecha de lavado del registro</strong>, no a la fecha de emisión de la factura.</div>
+    <div class="reporte-cliente-busqueda">
+      <span>🔎</span>
+      <input id="buscarFacturaReporteCliente" type="text" placeholder="Buscar factura por número" oninput="filtrarFacturasReporteCliente()" autocomplete="off">
+    </div>
+    <div class="reporte-cliente-orden">📅 Orden: <strong>más reciente → más antigua</strong></div>
     <div class="reporte-cliente-toolbar">
       <button type="button" class="btn btn-secondary" onclick="seleccionarTodasFacturasReporte(true)">☑️ Seleccionar todas</button>
       <button type="button" class="btn btn-secondary" onclick="seleccionarTodasFacturasReporte(false)">🧹 Limpiar</button>
@@ -6334,7 +6344,13 @@ function exportarContextoPDF(contexto){
     if(!ids.length && facturasReporteClienteSeleccionadas && facturasReporteClienteSeleccionadas.size) ids.push(...Array.from(facturasReporteClienteSeleccionadas).map(String));
     if(!ids.length){mostrarAlerta('Selecciona al menos una factura.','error');return;}
     const seleccion=new Set(ids);
-    const facturas=(facturasEmitidas||[]).filter(f=>seleccion.has(String(f.id)));
+    const facturas=(facturasEmitidas||[]).filter(f=>seleccion.has(String(f.id))).sort(function(a,b){
+      return String(b && b.numero_factura || '').localeCompare(
+        String(a && a.numero_factura || ''),
+        'es',
+        {numeric:true,sensitivity:'base'}
+      );
+    });
     const filas=facturas.map(f=>`<tr><td>${escaparHtmlExportacion(f.fecha_emision||'')}</td><td>${escaparHtmlExportacion(f.numero_factura||'')}</td><td>${escaparHtmlExportacion(f.cliente||'')}</td><td>S/ ${Number(f.subtotal_sin_igv||0).toFixed(2)}</td><td>S/ ${Number(f.total_con_igv||0).toFixed(2)}</td><td>${escaparHtmlExportacion(obtenerEstadoPagoFactura(f))}</td></tr>`).join('');
     abrirVentanaPDF('Reporte de facturas Wankamotors',`<table><thead><tr><th>Fecha emisión</th><th>N° Factura</th><th>Cliente</th><th>Sin IGV</th><th>Total con IGV</th><th>Estado</th></tr></thead><tbody>${filas}</tbody></table>`);
   }
@@ -8580,23 +8596,52 @@ function actualizarResumenReporteCliente(){
   if(el) el.textContent=facturasReporteClienteSeleccionadas.size+" factura"+(facturasReporteClienteSeleccionadas.size===1?"":"s")+" seleccionada"+(facturasReporteClienteSeleccionadas.size===1?"":"s");
 }
 
+function obtenerFacturasReporteClienteOrdenadas(){
+  // El orden del reporte se determina por el N° de factura,
+  // no por la fecha de emisión. Se muestra de la más reciente
+  // a la más antigua (ej.: E001-10, E001-9, E001-8...).
+  return (Array.isArray(facturasEmitidas) ? facturasEmitidas.slice() : []).sort(function(a,b){
+    return String(b && b.numero_factura || '').localeCompare(
+      String(a && a.numero_factura || ''),
+      'es',
+      {numeric:true,sensitivity:'base'}
+    );
+  });
+}
+
+function filtrarFacturasReporteCliente(){
+  renderListaFacturasReporteCliente();
+}
+
 function renderListaFacturasReporteCliente(){
-  const cont=document.getElementById("reporteClienteLista");
+  const cont=document.getElementById('reporteClienteLista');
   if(!cont) return;
-  if(!facturasEmitidas.length){
+  const todas=obtenerFacturasReporteClienteOrdenadas();
+  const input=document.getElementById('buscarFacturaReporteCliente');
+  const termino=String(input ? input.value : '').trim().toLowerCase();
+  const facturas=termino ? todas.filter(function(f){
+    return String(f && f.numero_factura || '').toLowerCase().includes(termino);
+  }) : todas;
+
+  if(!todas.length){
     cont.innerHTML='<div class="empty" style="padding:25px;text-align:center;">No hay facturas emitidas disponibles.</div>';
     actualizarResumenReporteCliente();
     return;
   }
-  cont.innerHTML=facturasEmitidas.map(function(f){
+  if(!facturas.length){
+    cont.innerHTML='<div class="empty" style="padding:25px;text-align:center;">No se encontraron facturas con ese número.</div>';
+    actualizarResumenReporteCliente();
+    return;
+  }
+
+  cont.innerHTML=facturas.map(function(f){
     const id=String(f.id);
-    const checked=facturasReporteClienteSeleccionadas.has(id)?"checked":"";
+    const checked=facturasReporteClienteSeleccionadas.has(id)?'checked':'';
     const estado=obtenerEstadoPagoFactura(f);
-    return `<label class="reporte-cliente-item">\n      <input type="checkbox" value="${esc(id)}" ${checked} onchange="cambiarFacturaReporteCliente('${esc(id)}',this.checked)">\n      <div class="reporte-cliente-info">\n        <strong>🧾 ${esc(f.numero_factura||"")}</strong>\n        <span>Emisión: ${esc(f.fecha_emision||"—")} · Cliente: ${esc(f.cliente||"—")} · Total: S/ ${Number(f.total_con_igv||0).toFixed(2)} · ${esc(estado)}</span>\n      </div>\n    </label>`;
-  }).join("");
+    return `<label class="reporte-cliente-item">\n      <input type="checkbox" value="${esc(id)}" ${checked} onchange="cambiarFacturaReporteCliente('${esc(id)}',this.checked)">\n      <div class="reporte-cliente-info">\n        <strong>🧾 ${esc(f.numero_factura||'')}</strong>\n        <span>Emisión: ${esc(f.fecha_emision||'—')} · Cliente: ${esc(f.cliente||'—')} · Total: S/ ${Number(f.total_con_igv||0).toFixed(2)} · ${esc(estado)}</span>\n      </div>\n    </label>`;
+  }).join('');
   actualizarResumenReporteCliente();
 }
-
 function cambiarFacturaReporteCliente(id,seleccionada){
   const clave=String(id);
   if(seleccionada) facturasReporteClienteSeleccionadas.add(clave);
@@ -9491,7 +9536,6 @@ programarCierreAutomatico1930();
 </script>
 
 
-<div class="version-app">V4.0 Dashboard</div>
+<div class="version-app">V5.5 Dashboard</div>
 </body>
 </html>
-
