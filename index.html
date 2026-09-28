@@ -1915,6 +1915,7 @@ onclick="limpiarFormulario()">
 </div>
 <div class="actions">
 <button class="btn btn-success" onclick="abrirModalNuevaFactura()">🧾 Emitir factura</button>
+<button class="btn btn-primary" onclick="abrirModalFacturaAdicional()">➕ Factura adicional</button>
 <button class="btn btn-export" onclick="abrirModalExportar('facturacion')">📤 Exportar</button>
 
 </div>
@@ -2166,6 +2167,59 @@ onclick="limpiarFormulario()">
       <button type="button" class="btn btn-success" onclick="guardarNuevaFactura()">💾 Guardar factura</button>
     </div>
     <div id="nuevaFacturaMensaje" class="empty" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- =====================================================
+     MODAL FACTURA ADICIONAL
+===================================================== -->
+<div id="modalFacturaAdicional" class="modal">
+  <div class="modal-content" style="max-width:700px;">
+    <div class="modal-header">
+      <h2>➕ Factura adicional</h2>
+      <button type="button" class="close" onclick="cerrarModalFacturaAdicional()">&times;</button>
+    </div>
+    <p>Registra una factura por <strong>otros cargos por cobrar</strong> que no corresponden a un vehículo o servicio del listado.</p>
+    <div class="facturacion-filtros" style="grid-template-columns:repeat(2,1fr);">
+      <div class="form-group"><label>Número de factura *</label><input id="adicionalFacturaNumero" type="text" placeholder="F001-00001259" oninput="this.value=this.value.toUpperCase()" style="text-transform:uppercase"></div>
+      <div class="form-group">
+        <label for="adicionalFacturaCliente">Cliente *</label>
+        <select id="adicionalFacturaCliente" onchange="actualizarRucFacturaAdicional()">
+          <option value="">Seleccione un cliente</option>
+          <option value="WankaMotors S.A.C" data-ruc="20536196901">WankaMotors S.A.C</option>
+          <option value="Multimarkas S.A.C" data-ruc="20401080920">Multimarkas S.A.C</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>RUC</label>
+        <input id="adicionalFacturaRuc" type="text" readonly placeholder="Se completa automáticamente" style="background:#f3f4f6;cursor:not-allowed;">
+      </div>
+      <div class="form-group"><label>Fecha de emisión *</label><input id="adicionalFacturaEmision" type="date"></div>
+      <div class="form-group"><label>Fecha de vencimiento</label><input id="adicionalFacturaVencimiento" type="date"></div>
+      <div class="form-group"><label>Concepto / cargo por cobrar *</label><input id="adicionalFacturaConcepto" type="text" placeholder="Ej.: Reembolso de gasto, penalidad, alquiler, etc."></div>
+      <div class="form-group"><label>Subtotal sin IGV *</label><input id="adicionalFacturaSubtotal" type="number" min="0" step="0.01" placeholder="0.00" oninput="calcularFacturaAdicional()"></div>
+      <div class="form-group"><label>IGV (18%)</label><input id="adicionalFacturaIgv" type="text" readonly value="S/ 0.00" style="background:#f3f4f6;cursor:not-allowed;"></div>
+      <div class="form-group"><label>Total con IGV</label><input id="adicionalFacturaTotal" type="text" readonly value="S/ 0.00" style="background:#f3f4f6;cursor:not-allowed;font-weight:700;"></div>
+      <div class="form-group"><label>Observaciones</label><input id="adicionalFacturaObservaciones" type="text" placeholder="Opcional"></div>
+    </div>
+    <div class="facturacion-pagos-box">
+      <h3>💰 Detracción y forma de pago</h3>
+      <p id="adicionalFacturaDetraccionTexto" class="facturacion-ayuda">El sistema evaluará automáticamente la detracción sobre el total.</p>
+      <div class="facturacion-pagos-grid">
+        <div class="facturacion-card"><span>Detracción</span><strong id="adicionalFacturaDetraccion">No aplica</strong></div>
+        <div class="facturacion-card"><span>Pago directo</span><strong id="adicionalFacturaPagoDirecto">S/ 0.00</strong></div>
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:14px;">
+      <label>📎 Archivo de factura</label>
+      <input id="adicionalFacturaArchivo" type="file" accept=".pdf,image/*">
+      <small style="display:block;margin-top:5px;color:#6b7280;">Opcional. Se guardará en la carpeta FACTURAS WANKAMOTORS de Google Drive.</small>
+    </div>
+    <div class="actions" style="justify-content:flex-end;margin-top:18px;">
+      <button type="button" class="btn btn-secondary" onclick="cerrarModalFacturaAdicional()">Cancelar</button>
+      <button type="button" class="btn btn-success" onclick="guardarFacturaAdicional()">💾 Guardar factura adicional</button>
+    </div>
+    <div id="adicionalFacturaMensaje" class="empty" style="display:none;"></div>
   </div>
 </div>
 
@@ -7586,6 +7640,125 @@ function abrirModalNuevaFactura(){
   setTimeout(function(){document.getElementById("nuevaFacturaNumero").focus();},100);
 }
 
+function abrirModalFacturaAdicional(){
+  const fechaHoy=obtenerFechaHoyLima();
+  document.getElementById("adicionalFacturaNumero").value="";
+  document.getElementById("adicionalFacturaCliente").value="";
+  document.getElementById("adicionalFacturaRuc").value="";
+  document.getElementById("adicionalFacturaEmision").value=fechaHoy;
+  document.getElementById("adicionalFacturaVencimiento").value="";
+  document.getElementById("adicionalFacturaConcepto").value="";
+  document.getElementById("adicionalFacturaSubtotal").value="";
+  document.getElementById("adicionalFacturaIgv").value="S/ 0.00";
+  document.getElementById("adicionalFacturaTotal").value="S/ 0.00";
+  document.getElementById("adicionalFacturaObservaciones").value="";
+  document.getElementById("adicionalFacturaArchivo").value="";
+  document.getElementById("adicionalFacturaDetraccion").textContent="No aplica";
+  document.getElementById("adicionalFacturaPagoDirecto").textContent="S/ 0.00";
+  document.getElementById("adicionalFacturaDetraccionTexto").textContent="El sistema evaluará automáticamente la detracción sobre el total.";
+  document.getElementById("adicionalFacturaMensaje").style.display="none";
+  document.getElementById("modalFacturaAdicional").classList.add("active");
+  setTimeout(function(){document.getElementById("adicionalFacturaNumero").focus();},100);
+}
+
+function cerrarModalFacturaAdicional(){
+  const modal=document.getElementById("modalFacturaAdicional");
+  if(modal) modal.classList.remove("active");
+}
+
+function actualizarRucFacturaAdicional(){
+  const cliente=document.getElementById("adicionalFacturaCliente");
+  const ruc=document.getElementById("adicionalFacturaRuc");
+  if(!cliente || !ruc) return;
+  const opcion=cliente.options[cliente.selectedIndex];
+  ruc.value=opcion ? (opcion.getAttribute("data-ruc") || "") : "";
+}
+
+function calcularFacturaAdicional(){
+  const subtotal=Math.max(0,Number(document.getElementById("adicionalFacturaSubtotal").value||0));
+  const igv=Number((subtotal*0.18).toFixed(2));
+  const total=Number((subtotal+igv).toFixed(2));
+  const det=calcularDetraccionFactura(total);
+  document.getElementById("adicionalFacturaIgv").value="S/ "+igv.toFixed(2);
+  document.getElementById("adicionalFacturaTotal").value="S/ "+total.toFixed(2);
+  document.getElementById("adicionalFacturaDetraccion").textContent=det.aplica ? "S/ "+det.monto.toFixed(2)+" (12%)" : "No aplica";
+  document.getElementById("adicionalFacturaPagoDirecto").textContent="S/ "+det.pagoDirecto.toFixed(2);
+  document.getElementById("adicionalFacturaDetraccionTexto").textContent=det.aplica
+    ? "Detracción aplicada automáticamente: 12% sobre el total porque supera S/ 700."
+    : "No se aplica detracción automática porque el total no supera S/ 700.";
+}
+
+async function guardarFacturaAdicional(){
+  const numero=document.getElementById("adicionalFacturaNumero").value.trim().toUpperCase();
+  const cliente=document.getElementById("adicionalFacturaCliente").value.trim();
+  const fechaEmision=document.getElementById("adicionalFacturaEmision").value;
+  const fechaVencimiento=document.getElementById("adicionalFacturaVencimiento").value || null;
+  const concepto=document.getElementById("adicionalFacturaConcepto").value.trim();
+  const subtotal=Math.max(0,Number(document.getElementById("adicionalFacturaSubtotal").value||0));
+  const observaciones=document.getElementById("adicionalFacturaObservaciones").value.trim();
+  const archivo=document.getElementById("adicionalFacturaArchivo").files[0] || null;
+  if(!numero || !cliente || !fechaEmision || !concepto || subtotal<=0){
+    mostrarAlerta("Completa número de factura, cliente, fecha, concepto y un subtotal mayor a 0.","error");
+    return;
+  }
+  const igv=Number((subtotal*0.18).toFixed(2));
+  const total=Number((subtotal+igv).toFixed(2));
+  const detraccion=calcularDetraccionFactura(total);
+  const boton=document.querySelector('#modalFacturaAdicional button.btn-success');
+  if(boton){boton.disabled=true;boton.textContent="⏳ Guardando...";}
+  let facturaId=null;
+  try{
+    const respuesta=await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors",{
+      method:"POST",
+      headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,"Content-Type":"application/json","Prefer":"return=representation"},
+      body:JSON.stringify({
+        numero_factura:numero,
+        fecha_emision:fechaEmision,
+        fecha_vencimiento:fechaVencimiento,
+        cliente:cliente,
+        subtotal_sin_igv:Number(subtotal.toFixed(2)),
+        igv:igv,
+        total_con_igv:total,
+        estado_pago:"Pendiente",
+        tipo_factura:"Servicio",
+        fecha_pago:null,
+        observaciones:observaciones || null,
+        aplica_detraccion:detraccion.aplica,
+        porcentaje_detraccion:detraccion.porcentaje,
+        monto_detraccion:detraccion.monto,
+        monto_pago_directo:0,
+        fecha_pago_directo:null,
+        fecha_detraccion:null,
+        estado_detraccion:detraccion.aplica ? "Pendiente" : "No aplica",
+        tipo_factura:"Adicional",
+        concepto_adicional:concepto
+      })
+    });
+    if(!respuesta.ok) throw new Error("No se pudo crear la factura adicional: "+await respuesta.text());
+    const creada=await respuesta.json();
+    facturaId=Array.isArray(creada)&&creada[0]?creada[0].id:null;
+    if(!facturaId) throw new Error("Supabase creó la factura pero no devolvió su ID.");
+
+    if(archivo){
+      const archivoData=await leerArchivoComoDataURL(archivo);
+      const respuestaDrive=await enviarDrive({accion:"guardarFactura",id:String(facturaId),numeroFactura:numero,nombreArchivo:archivo.name,mimeType:archivo.type||"application/octet-stream",archivo:archivoData});
+      if(!respuestaDrive || respuestaDrive.ok!==true || !respuestaDrive.archivoFactura) throw new Error(respuestaDrive&&respuestaDrive.mensaje?respuestaDrive.mensaje:"No se pudo guardar el archivo de la factura en Google Drive.");
+      const patch=await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors?id=eq."+encodeURIComponent(facturaId),{method:"PATCH",headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({archivo_factura:respuestaDrive.archivoFactura})});
+      if(!patch.ok) throw new Error("La factura se creó, pero no se pudo guardar el enlace del archivo: "+await patch.text());
+    }
+
+    cerrarModalFacturaAdicional();
+    mostrarAlerta("Factura adicional "+numero+" creada correctamente.","success");
+    await cargarFacturasEmitidas();
+  }catch(error){
+    console.error(error);
+    if(facturaId){try{await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors?id=eq."+encodeURIComponent(facturaId),{method:"DELETE",headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY}});}catch(e){}}
+    mostrarAlerta(error.message||"No se pudo generar la factura adicional.","error");
+  }finally{
+    if(boton){boton.disabled=false;boton.textContent="💾 Guardar factura adicional";}
+  }
+}
+
 function cerrarModalNuevaFactura(){
   const modal=document.getElementById("modalNuevaFactura");
   if(modal) modal.classList.remove("active");
@@ -7746,7 +7919,7 @@ let facturasEmitidasPaginaActual=1;
 const FACTURAS_EMITIDAS_POR_PAGINA=40;
 
 async function cargarFacturasEmitidas(){
-  const respuesta=await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors?select=id,numero_factura,fecha_emision,fecha_vencimiento,cliente,subtotal_sin_igv,igv,total_con_igv,estado_pago,estado_factura,fecha_pago,observaciones,created_at,archivo_factura,aplica_detraccion,numero_nota_credito,archivo_nota_credito,motivo_anulacion,fecha_anulacion,porcentaje_detraccion,monto_detraccion,monto_pago_directo,fecha_pago_directo,fecha_detraccion,estado_detraccion&order=fecha_emision.desc,created_at.desc",{
+  const respuesta=await fetch(SUPABASE_URL+"/rest/v1/facturas_wankamotors?select=id,numero_factura,fecha_emision,fecha_vencimiento,cliente,subtotal_sin_igv,igv,total_con_igv,estado_pago,estado_factura,tipo_factura,concepto_adicional,fecha_pago,observaciones,created_at,archivo_factura,aplica_detraccion,numero_nota_credito,archivo_nota_credito,motivo_anulacion,fecha_anulacion,porcentaje_detraccion,monto_detraccion,monto_pago_directo,fecha_pago_directo,fecha_detraccion,estado_detraccion&order=fecha_emision.desc,created_at.desc",{
     method:"GET",headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY},cache:"no-store"
   });
   if(!respuesta.ok) throw new Error("No se pudieron cargar las facturas: "+await respuesta.text());
@@ -8072,7 +8245,8 @@ function renderFacturasEmitidas(){
     }else{
       accion=`<div class="factura-acciones-stack"><button type="button" class="btn btn-success" onclick="abrirModalPagosFactura('${esc(f.id)}')">💰 Registrar pagos</button><button type="button" class="btn btn-danger" onclick="abrirModalAnularFactura('${esc(f.id)}')">🚫 Anular factura</button></div>`;
     }
-    return `<tr><td>${inicio+i+1}</td><td><strong>${esc(f.numero_factura||"")}</strong></td><td class="facturas-emitidas-nowrap facturas-emitidas-fecha">${esc(formatearFechaFacturaEmitida(f.fecha_emision)||"")}</td><td class="facturas-emitidas-nowrap facturas-emitidas-fecha">${esc(formatearFechaFacturaEmitida(f.fecha_vencimiento)||"—")}</td><td>${esc(f.cliente||"")}</td><td class="facturas-emitidas-nowrap facturas-emitidas-monto">S/ ${Number(f.subtotal_sin_igv||0).toFixed(2)}</td><td class="facturas-emitidas-nowrap facturas-emitidas-monto">S/ ${Number(f.igv||0).toFixed(2)}</td><td class="facturas-emitidas-nowrap facturas-emitidas-monto"><strong>S/ ${totalFactura.toFixed(2)}</strong></td><td><div class="facturacion-detraccion">${f.aplica_detraccion?"Sí – "+Number(f.porcentaje_detraccion||12).toFixed(0)+"%<br><strong class='facturas-emitidas-nowrap'>S/ "+det.toFixed(2)+"</strong>":"No aplica"}</div></td><td class="facturas-emitidas-nowrap facturas-emitidas-monto">S/ ${directo.toFixed(2)}</td><td><span class="factura-pago-estado ${clase}">${esc(estado)}</span></td><td class="facturacion-fechas-pago">${fechas}</td><td>${archivo}</td><td><div class="factura-acciones">${accion}</div></td></tr>`;
+    const tipoFactura=String(f.tipo_factura||"Servicio").trim().toLowerCase()==="adicional" ? `<br><small style="display:inline-block;margin-top:3px;padding:2px 6px;border-radius:999px;background:#ede9fe;color:#6d28d9;font-weight:700;">Adicional</small>` : "";
+    return `<tr><td>${inicio+i+1}</td><td><strong>${esc(f.numero_factura||"")}</strong>${tipoFactura}</td><td class="facturas-emitidas-nowrap facturas-emitidas-fecha">${esc(formatearFechaFacturaEmitida(f.fecha_emision)||"")}</td><td class="facturas-emitidas-nowrap facturas-emitidas-fecha">${esc(formatearFechaFacturaEmitida(f.fecha_vencimiento)||"—")}</td><td>${esc(f.cliente||"")}</td><td class="facturas-emitidas-nowrap facturas-emitidas-monto">S/ ${Number(f.subtotal_sin_igv||0).toFixed(2)}</td><td class="facturas-emitidas-nowrap facturas-emitidas-monto">S/ ${Number(f.igv||0).toFixed(2)}</td><td class="facturas-emitidas-nowrap facturas-emitidas-monto"><strong>S/ ${totalFactura.toFixed(2)}</strong></td><td><div class="facturacion-detraccion">${f.aplica_detraccion?"Sí – "+Number(f.porcentaje_detraccion||12).toFixed(0)+"%<br><strong class='facturas-emitidas-nowrap'>S/ "+det.toFixed(2)+"</strong>":"No aplica"}</div></td><td class="facturas-emitidas-nowrap facturas-emitidas-monto">S/ ${directo.toFixed(2)}</td><td><span class="factura-pago-estado ${clase}">${esc(estado)}</span></td><td class="facturacion-fechas-pago">${fechas}</td><td>${archivo}</td><td><div class="factura-acciones">${accion}</div></td></tr>`;
   }).join("");
   renderPaginacionFacturasEmitidas(total);
 }
@@ -9317,6 +9491,7 @@ programarCierreAutomatico1930();
 </script>
 
 
-<div class="version-app">V5.5 Dashboard</div>
+<div class="version-app">V4.0 Dashboard</div>
 </body>
 </html>
+
