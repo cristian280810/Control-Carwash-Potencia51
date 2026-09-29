@@ -1363,6 +1363,33 @@ th.col-vin {
 html, body {
   zoom: 0.85;
 }
+
+/* Alinear perfectamente los filtros del Historial */
+.historial-filtros > div {
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+}
+.historial-filtros > div > label {
+  display:block;
+  min-height:19px;
+  line-height:19px;
+  margin-bottom:6px;
+}
+.historial-filtros > div > input,
+.historial-filtros > div .servicios-multiselect-btn {
+  margin-top:0 !important;
+  height:38px !important;
+  min-height:38px !important;
+  box-sizing:border-box !important;
+}
+.historial-filtros > div > input {
+  padding:9px 11px !important;
+}
+.historial-filtros > div .servicios-multiselect-btn {
+  padding:9px 12px !important;
+  line-height:18px !important;
+}
 </style>
 </head>
 
@@ -9669,6 +9696,6 @@ programarCierreAutomatico1930();
 </script>
 
 
-<div class="version-app">V7.0 Dashboard</div>
+<div class="version-app">V5.5 Dashboard</div>
 </body>
 </html>
