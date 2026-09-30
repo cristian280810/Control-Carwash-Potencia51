@@ -9299,7 +9299,7 @@ function etiquetaTipoRegistro(valor){
 function normalizarTipoDashboard(valor){
   const t=String(valor||'').trim().toLowerCase();
   if(t==='nuevo' || t==='nuevos' || t==='new') return 'Nuevo';
-  if(t==='servicio' || t==='servicios') return 'Taller';
+  if(t==='taller' || t==='talleres' || t==='servicio' || t==='servicios') return 'Taller';
   return 'Otro';
 }
 
@@ -9320,7 +9320,7 @@ function renderGraficasDashboard(lista){
     const fecha=r.hora_inicio_lavado || r.created_at;
     const clave=fechaLocalDashboard(fecha).slice(0,7);
     if(clave){
-      if(!porMes[clave]) porMes[clave]={Nuevo:0,Servicio:0,Otro:0};
+      if(!porMes[clave]) porMes[clave]={Nuevo:0,Taller:0,Otro:0};
       porMes[clave][tipo]++;
     }
   });
@@ -9330,7 +9330,7 @@ function renderGraficasDashboard(lista){
   const g1=pctNuevo*3.6, g2=g1+pctServicio*3.6;
   const gradiente=totalTipos ? `conic-gradient(#1d4ed8 0deg ${g1}deg,#64748b ${g1}deg ${g2}deg,#e5e7eb ${g2}deg 360deg)` : 'conic-gradient(#e5e7eb 0deg 360deg)';
   const claves=Object.keys(porMes).sort();
-  const maxMes=Math.max(1,...claves.map(k=>Math.max(porMes[k].Nuevo,porMes[k].Servicio,porMes[k].Otro)));
+  const maxMes=Math.max(1,...claves.map(k=>Math.max(porMes[k].Nuevo,porMes[k].Taller,porMes[k].Otro)));
   const barrasMes=claves.map(function(k){
     const d=porMes[k];
     const hN=(d.Nuevo/maxMes*180).toFixed(1);
