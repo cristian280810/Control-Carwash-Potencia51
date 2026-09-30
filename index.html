@@ -18,7 +18,7 @@
 }
 
 body{
-    zoom:0.85;
+    zoom:0.83;
     margin:0;
     font-family:Arial,sans-serif;
     background:#f3f4f6;
@@ -620,6 +620,16 @@ th{
    DASHBOARD
 ===================================================== */
 .dashboard-filtros{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+.dashboard-filtros .servicios-multiselect-btn{
+    min-height:47px;
+    height:47px;
+    padding:11px 12px;
+    box-sizing:border-box;
+}
+.dashboard-filtros .servicios-multiselect{
+    width:100%;
+}
+
 .dashboard-resumen{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:15px 0;}
 .dashboard-card{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;}
 .dashboard-card .dashboard-label{font-size:13px;color:#6b7280;font-weight:700;}
@@ -1636,6 +1646,10 @@ Chevrolet
 Ford
 </option>
 
+<option value="Hyundai">
+Hyundai
+</option>
+
 <option value="KIA">
 KIA
 </option>
@@ -2467,6 +2481,7 @@ onclick="buscarRegistroPasado()">
 <option value="Chery">Chery</option>
 <option value="Chevrolet">Chevrolet</option>
 <option value="Ford">Ford</option>
+<option value="Hyundai">Hyundai</option>
 <option value="KIA">KIA</option>
 <option value="MG">MG</option>
 <option value="Nissan">Nissan</option>
@@ -9334,10 +9349,10 @@ function renderGraficasDashboard(lista){
   const barrasMes=claves.map(function(k){
     const d=porMes[k];
     const hN=(d.Nuevo/maxMes*180).toFixed(1);
-    const hS=(d.Servicio/maxMes*180).toFixed(1);
+    const hS=(d.Taller/maxMes*180).toFixed(1);
     const hO=(d.Otro/maxMes*180).toFixed(1);
     const activo=dashboardMesSeleccionado===k ? ' activo' : '';
-    return `<div class="dashboard-mes-col dashboard-clickable${activo}" title="Clic para filtrar por ${esc(nombreMesDashboard(k))}" onclick="aplicarMesGraficoDashboard('${k}')"><div class="dashboard-mes-valores"><div class="dashboard-mes-bar" style="height:${hN}px"><span>${d.Nuevo}</span></div><div class="dashboard-mes-bar servicio" style="height:${hS}px"><span>${d.Servicio}</span></div>${d.Otro ? `<div class="dashboard-mes-bar" style="height:${hO}px;opacity:.45"><span>${d.Otro}</span></div>` : ''}</div><div class="dashboard-mes-total">Total: ${d.Nuevo + d.Servicio}</div><div class="dashboard-mes-label">${esc(nombreMesDashboard(k))}</div></div>`;
+    return `<div class="dashboard-mes-col dashboard-clickable${activo}" title="Clic para filtrar por ${esc(nombreMesDashboard(k))}" onclick="aplicarMesGraficoDashboard('${k}')"><div class="dashboard-mes-valores"><div class="dashboard-mes-bar" style="height:${hN}px"><span>${d.Nuevo}</span></div><div class="dashboard-mes-bar servicio" style="height:${hS}px"><span>${d.Taller}</span></div>${d.Otro ? `<div class="dashboard-mes-bar" style="height:${hO}px;opacity:.45"><span>${d.Otro}</span></div>` : ''}</div><div class="dashboard-mes-total">Total: ${d.Nuevo + d.Taller + d.Otro}</div><div class="dashboard-mes-label">${esc(nombreMesDashboard(k))}</div></div>`;
   }).join('');
 
   const desde=document.getElementById("dashboardDesde")?.value||"";
